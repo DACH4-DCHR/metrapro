@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   X,
   LogOut,
+  CloudOff,
+  RefreshCw,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -25,6 +27,8 @@ export function Layout() {
   const error = useProjectStore((s) => s.error);
   const clearError = useProjectStore((s) => s.clearError);
   const resetProject = useProjectStore((s) => s.reset);
+  const isOffline = useProjectStore((s) => s.isOffline);
+  const pendingCount = useProjectStore((s) => s.pendingCount);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -72,6 +76,25 @@ export function Layout() {
             <span className="truncate">{projectInfo.nombreObra || "Sin obra configurada"}</span>
           </div>
         </div>
+
+        {(isOffline || pendingCount > 0) && (
+          <div className="border-t border-white/10 px-4 py-3 text-xs">
+            {isOffline ? (
+              <div className="flex items-center gap-2 text-amber-400">
+                <CloudOff size={14} />
+                <span>
+                  Sin conexión
+                  {pendingCount > 0 && ` — ${pendingCount} cambio${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"}`}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-steel-300">
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Sincronizando {pendingCount} cambio{pendingCount === 1 ? "" : "s"}…</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="border-t border-white/10 px-4 py-3">
           <div className="mb-2 truncate text-xs text-steel-400">{user?.email}</div>

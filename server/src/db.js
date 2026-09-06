@@ -204,8 +204,11 @@ export function setPrices(projectId, prices) {
 }
 
 export function addElement(projectId, element) {
+  // INSERT OR REPLACE (no solo INSERT): el frontend puede reintentar este POST tras
+  // recuperar la conexión sin saber si la petición original ya había llegado al
+  // servidor, así que el mismo id debe poder reenviarse sin producir un error.
   db.prepare(
-    `INSERT INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
+    `INSERT OR REPLACE INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     element.id,

@@ -12,13 +12,13 @@ Aplicación web para el metrado automático de elementos estructurales de concre
 - **Reportes**: PDF profesional (logo, datos del proyecto, metrados, presupuesto, firma) y Excel multi-hoja (Resumen, Metrados, Presupuesto, Elementos).
 - **Backend real**: API REST (Node/Express) + base de datos SQLite. El proyecto y los elementos calculados se guardan en el servidor, no en el navegador — persisten entre dispositivos que apunten al mismo backend.
 - **Usuarios**: registro e inicio de sesión con email/contraseña. Cada cuenta tiene su propio proyecto, completamente aislado de los demás usuarios. Sesión mantenida por cookie httpOnly (no hay tokens expuestos a JavaScript).
+- **PWA instalable y modo offline completo**: la app se instala en Android/PC (Service Worker + manifest). Puedes seguir metrando sin señal — los cambios (datos del proyecto, elementos, precios) se guardan localmente y se sincronizan solos apenas vuelve la conexión, sin perder nada. El sidebar muestra "Sin conexión — N cambios pendientes" mientras eso ocurre. La sesión de usuario también funciona offline una vez que iniciaste sesión al menos una vez con internet.
 
 ## Próximas fases (no incluidas aún)
 
 - Roles/permisos dentro de un mismo proyecto (ej. solo-lectura vs. edición) — hoy todo usuario autenticado tiene control total sobre su propio proyecto.
 - Varios proyectos por usuario con pantalla de selección (hoy cada cuenta tiene exactamente uno).
 - Migración a PostgreSQL para producción (el esquema SQLite actual es directamente portable).
-- Modo offline real (PWA con Service Worker) e instalación en Android.
 - Base de datos editable de materiales (más allá de los precios referenciales actuales).
 - Preparación para integración BIM.
 
@@ -49,7 +49,21 @@ Si el backend no está corriendo, el frontend muestra un aviso claro con un bot�
 
 La primera vez que abras la app te pedirá crear una cuenta (correo + contraseña, mínimo 8 caracteres). Cada cuenta empieza con su propio proyecto vacío.
 
+**Para probar la instalación como PWA** (el Service Worker no corre en `npm run dev`, solo en producción):
+
+```bash
+npm run build
+npm run preview
+```
+
 ## Stack
 
-- **Frontend**: React + TypeScript + Vite, Tailwind CSS v4, React Router, Zustand, lucide-react, jsPDF (reporte PDF, carga diferida).
+- **Frontend**: React + TypeScript + Vite, Tailwind CSS v4, React Router, Zustand, lucide-react, jsPDF (reporte PDF, carga diferida), `vite-plugin-pwa` (Service Worker + manifest).
 - **Backend**: Node.js + Express, `node:sqlite` (módulo nativo de Node, sin dependencias binarias externas), contraseñas con `scrypt` + sal, sesiones por cookie httpOnly.
+
+## Cómo funciona la sincronización offline
+
+- Cada cambio (datos del proyecto, elementos, precios) se aplica de inmediato en pantalla y se intenta guardar en el servidor.
+- Si no hay conexión (o el servidor no responde), el cambio se guarda en una cola local (`localStorage`) en vez de perderse.
+- Al volver la conexión —evento `online` del navegador, o un chequeo cada 20 s mientras haya pendientes— la cola se reenvía automáticamente al servidor.
+- Al abrir la app sin conexión, se muestra la última copia local del proyecto en vez de una pantalla de error, siempre que ya se haya cargado exitosamente al menos una vez antes.

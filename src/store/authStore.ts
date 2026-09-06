@@ -1,9 +1,11 @@
 import { create } from "zustand";
-import { authMe, authLogin, authRegister, authLogout, type AuthUser } from "../lib/api";
+import { authMe, authLogin, authRegister, authLogout, NetworkError, type AuthUser } from "../lib/api";
+import { readCachedAuthUser, writeCachedAuthUser, clearCachedAuthUser, clearOfflineData } from "../lib/offlineCache";
 
 interface AuthState {
   status: "idle" | "loading" | "authenticated" | "unauthenticated";
   user: AuthUser | null;
+  isOfflineSession: boolean;
   error: string | null;
   checkAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<boolean>;
@@ -15,15 +17,29 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set) => ({
   status: "idle",
   user: null,
+  isOfflineSession: false,
   error: null,
 
   checkAuth: async () => {
     set({ status: "loading" });
     try {
       const user = await authMe();
-      set({ user, status: user ? "authenticated" : "unauthenticated" });
-    } catch {
-      set({ status: "unauthenticated", user: null });
+      if (user) {
+        writeCachedAuthUser(user);
+        set({ user, status: "authenticated", isOfflineSession: false });
+      } else {
+        clearCachedAuthUser();
+        set({ user: null, status: "unauthenticated", isOfflineSession: false });
+      }
+    } catch (e) {
+      if (e instanceof NetworkError) {
+        const cached = readCachedAuthUser();
+        if (cached) {
+          set({ user: cached, status: "authenticated", isOfflineSession: true });
+          return;
+        }
+      }
+      set({ status: "unauthenticated", user: null, isOfflineSession: false });
     }
   },
 
@@ -31,10 +47,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ error: null });
     try {
       const user = await authLogin(email, password);
-      set({ user, status: "authenticated" });
+      writeCachedAuthUser(user);
+      set({ user, status: "authenticated", isOfflineSession: false });
       return true;
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : "No se pudo iniciar sesión" });
+      const message =
+        e instanceof NetworkError
+          ? "No hay conexión con el servidor. Necesitas iniciar sesión al menos una vez con internet."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo iniciar sesión";
+      set({ error: message });
       return false;
     }
   },
@@ -43,17 +66,25 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ error: null });
     try {
       const user = await authRegister(email, password);
-      set({ user, status: "authenticated" });
+      writeCachedAuthUser(user);
+      set({ user, status: "authenticated", isOfflineSession: false });
       return true;
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : "No se pudo crear la cuenta" });
+      const message =
+        e instanceof NetworkError
+          ? "No hay conexión con el servidor. Necesitas crear tu cuenta con internet la primera vez."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo crear la cuenta";
+      set({ error: message });
       return false;
     }
   },
 
   logout: async () => {
     await authLogout();
-    set({ user: null, status: "unauthenticated" });
+    clearOfflineData();
+    set({ user: null, status: "unauthenticated", isOfflineSession: false });
   },
 
   clearError: () => set({ error: null }),
