@@ -26,7 +26,12 @@ export function VigaElevation({ input }: VigaElevationProps) {
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full min-w-[420px]" role="img" aria-label="Elevación de viga con distribución de estribos">
+      <svg
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        className="mx-auto block w-full max-w-lg"
+        role="img"
+        aria-label="Elevación de viga con distribución de estribos"
+      >
         {input.incluirConfinamiento && (
           <>
             <rect x={x0} y={yTop} width={Math.min(loM, longitud) * scale} height={BEAM_H} fill="#fef3e2" />

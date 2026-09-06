@@ -77,7 +77,12 @@ export function EscaleraProfile({ input }: EscaleraProfileProps) {
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${viewW} ${VIEW_H}`} className="w-full min-w-[420px]" role="img" aria-label="Perfil de escalera">
+      <svg
+        viewBox={`0 0 ${viewW} ${VIEW_H}`}
+        className="mx-auto block w-full max-w-md"
+        role="img"
+        aria-label="Perfil de escalera"
+      >
         <polygon fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} points={fillPath} />
         <polyline
           fill="none"

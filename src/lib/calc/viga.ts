@@ -3,6 +3,11 @@ import { getRebar } from "../materials";
 export type TipoSeccionViga = "rectangular" | "T" | "personalizada";
 export type SistemaSismorresistente = "muros" | "porticos_dual";
 
+export interface BarraGrupo {
+  diametroId: string;
+  cantidad: number;
+}
+
 export interface VigaInput {
   numeroVigas: number;
   longitud: number; // m
@@ -16,9 +21,9 @@ export interface VigaInput {
   areaSeccionPersonalizada?: number; // m2
   perimetroEncofradoPersonalizado?: number; // m
 
-  // Acero
-  diametroLongitudinalId: string;
-  numeroBarrasLongitudinales: number;
+  // Acero longitudinal: varios grupos para diámetros variables (ej. bastones, refuerzo
+  // adicional en apoyos) en vez de un único diámetro para toda la viga.
+  barrasLongitudinales: BarraGrupo[];
   diametroEstribosId: string;
   separacionEstribos: number; // cm (zona central, o única si no hay confinamiento)
   recubrimiento: number; // cm
@@ -28,6 +33,11 @@ export interface VigaInput {
   sistemaSismorresistente: SistemaSismorresistente;
   longitudConfinamiento: number; // cm (Lo), medida desde la cara del apoyo, por extremo
   separacionConfinamiento: number; // cm (S1), dentro de la zona de confinamiento
+
+  // Acero de piel (armadura de piel en el alma, E.060 10.5.4 / ACI 318 9.7.2.3)
+  incluirAceroPiel: boolean;
+  pielDiametroId: string;
+  pielNumeroBarras: number; // total, ambas caras del alma
 }
 
 export interface VigaResult {
@@ -35,7 +45,7 @@ export interface VigaResult {
   volumenConcreto: number; // m3
   perimetroEncofrado: number; // m
   areaEncofrado: number; // m2
-  longitudBarraLongitudinal: number; // m (por barra, incluye viga completa)
+  numeroBarrasLongitudinales: number; // suma de todos los grupos, por viga
   longitudTotalBarrasLongitudinales: number; // m
   pesoAceroLongitudinal: number; // kg
   numeroEstribosConfinamientoPorExtremo: number; // por extremo (multiplicar x2 para ambos extremos)
@@ -45,6 +55,8 @@ export interface VigaResult {
   longitudPorEstribo: number; // m
   longitudTotalEstribos: number; // m
   pesoEstribos: number; // kg
+  longitudTotalAceroPiel: number; // m
+  pesoAceroPiel: number; // kg
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
   warnings: string[];
@@ -55,6 +67,7 @@ const GANCHO_ESTRIBO_M = 0.2; // longitud adicional por ganchos a 135°, referen
 // Sugiere Lo (longitud de confinamiento) y S1 (separación) según NTE E.060.
 // Art. 21.4.4 (edificios con muros estructurales): d/4, 8·db_long, 24·db_estribo, 30 cm.
 // Art. 21.5.3 (edificios de pórticos o sistema dual, más exigente): d/4, 6·db_long, 15 cm.
+// diametroLongitudinalMm debe ser el menor diámetro entre los grupos de barras confinados.
 // Siempre editable: es un punto de partida, no reemplaza el diseño estructural.
 export function sugerirConfinamiento(
   sistema: SistemaSismorresistente,
@@ -133,11 +146,19 @@ export function calcularViga(input: VigaInput): VigaResult {
   const volumenConcreto = areaSeccion * input.longitud * input.numeroVigas;
   const areaEncofrado = perimetroEncofrado * input.longitud * input.numeroVigas;
 
-  const rebarLong = getRebar(input.diametroLongitudinalId);
-  const longitudBarraLongitudinal = input.longitud; // referencial, sin longitud de anclaje/traslape
-  const longitudTotalBarrasLongitudinales =
-    longitudBarraLongitudinal * input.numeroBarrasLongitudinales * input.numeroVigas;
-  const pesoAceroLongitudinal = longitudTotalBarrasLongitudinales * rebarLong.weightKgPerM;
+  const grupos = input.barrasLongitudinales.length > 0 ? input.barrasLongitudinales : [];
+  if (grupos.length === 0) {
+    warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
+  }
+  const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const longitudTotalBarrasLongitudinales = grupos.reduce(
+    (acc, g) => acc + Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas,
+    0
+  );
+  const pesoAceroLongitudinal = grupos.reduce(
+    (acc, g) => acc + Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas * getRebar(g.diametroId).weightKgPerM,
+    0
+  );
 
   const rebarEstribo = getRebar(input.diametroEstribosId);
   const separacionCentralM = input.separacionEstribos / 100;
@@ -170,8 +191,13 @@ export function calcularViga(input: VigaInput): VigaResult {
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
-  const pesoAceroTotal = pesoAceroLongitudinal + pesoEstribos;
-  const longitudTotalFierro = longitudTotalBarrasLongitudinales + longitudTotalEstribos;
+  const longitudTotalAceroPiel = input.incluirAceroPiel
+    ? Math.max(input.pielNumeroBarras, 0) * input.longitud * input.numeroVigas
+    : 0;
+  const pesoAceroPiel = longitudTotalAceroPiel * getRebar(input.pielDiametroId).weightKgPerM;
+
+  const pesoAceroTotal = pesoAceroLongitudinal + pesoEstribos + pesoAceroPiel;
+  const longitudTotalFierro = longitudTotalBarrasLongitudinales + longitudTotalEstribos + longitudTotalAceroPiel;
 
   if (input.recubrimiento * 2 >= Math.min(input.base, input.altura)) {
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la viga.");
@@ -182,7 +208,7 @@ export function calcularViga(input: VigaInput): VigaResult {
     volumenConcreto,
     perimetroEncofrado,
     areaEncofrado,
-    longitudBarraLongitudinal,
+    numeroBarrasLongitudinales,
     longitudTotalBarrasLongitudinales,
     pesoAceroLongitudinal,
     numeroEstribosConfinamientoPorExtremo,
@@ -192,6 +218,8 @@ export function calcularViga(input: VigaInput): VigaResult {
     longitudPorEstribo,
     longitudTotalEstribos,
     pesoEstribos,
+    longitudTotalAceroPiel,
+    pesoAceroPiel,
     pesoAceroTotal,
     longitudTotalFierro,
     warnings,

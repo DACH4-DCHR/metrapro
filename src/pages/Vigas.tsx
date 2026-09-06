@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RectangleHorizontal, Save } from "lucide-react";
+import { RectangleHorizontal, Save, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -15,6 +15,7 @@ import {
   type VigaInput,
   type TipoSeccionViga,
   type SistemaSismorresistente,
+  type BarraGrupo,
 } from "../lib/calc/viga";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -38,6 +39,18 @@ function nextVigaName() {
   return `Grupo de Vigas ${count + 1}`;
 }
 
+function minDiametroMm(grupos: BarraGrupo[]): number {
+  const dbs = grupos.filter((g) => g.cantidad > 0).map((g) => getRebar(g.diametroId).diameterMm);
+  return dbs.length > 0 ? Math.min(...dbs) : 16;
+}
+
+function grupoLabel(grupos: BarraGrupo[]): string {
+  return grupos
+    .filter((g) => g.cantidad > 0)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .join(" + ");
+}
+
 export function VigasPage() {
   const addElement = useProjectStore((s) => s.addElement);
   const [saved, setSaved] = useState(false);
@@ -53,8 +66,7 @@ export function VigasPage() {
     alaEspesor: 20,
     areaSeccionPersonalizada: 0.1,
     perimetroEncofradoPersonalizado: 1.2,
-    diametroLongitudinalId: "16",
-    numeroBarrasLongitudinales: 4,
+    barrasLongitudinales: [{ diametroId: "16", cantidad: 4 }],
     diametroEstribosId: "8",
     separacionEstribos: 20,
     recubrimiento: 4,
@@ -62,6 +74,9 @@ export function VigasPage() {
     sistemaSismorresistente: "muros",
     longitudConfinamiento: 0,
     separacionConfinamiento: 0,
+    incluirAceroPiel: false,
+    pielDiametroId: "8",
+    pielNumeroBarras: 2,
   });
 
   const result = useMemo(() => calcularViga(input), [input]);
@@ -77,12 +92,36 @@ export function VigasPage() {
     setSaved(false);
   }
 
+  function updateGrupo(index: number, patch: Partial<BarraGrupo>) {
+    setInput((prev) => ({
+      ...prev,
+      barrasLongitudinales: prev.barrasLongitudinales.map((g, i) => (i === index ? { ...g, ...patch } : g)),
+    }));
+    setSaved(false);
+  }
+
+  function addGrupo() {
+    setInput((prev) => ({
+      ...prev,
+      barrasLongitudinales: [...prev.barrasLongitudinales, { diametroId: "12", cantidad: 2 }],
+    }));
+    setSaved(false);
+  }
+
+  function removeGrupo(index: number) {
+    setInput((prev) => ({
+      ...prev,
+      barrasLongitudinales: prev.barrasLongitudinales.filter((_, i) => i !== index),
+    }));
+    setSaved(false);
+  }
+
   function calcularSugerencia(sistema: SistemaSismorresistente, base: VigaInput) {
     return sugerirConfinamiento(
       sistema,
       base.altura,
       base.recubrimiento,
-      getRebar(base.diametroLongitudinalId).diameterMm,
+      minDiametroMm(base.barrasLongitudinales),
       getRebar(base.diametroEstribosId).diameterMm
     );
   }
@@ -128,6 +167,8 @@ export function VigasPage() {
         Cantidad: `${input.numeroVigas} vigas`,
         Sección: `${input.base} x ${input.altura} cm`,
         Longitud: `${input.longitud} m`,
+        "Acero longitudinal": grupoLabel(input.barrasLongitudinales) || "-",
+        ...(input.incluirAceroPiel ? { "Acero de piel": `${input.pielNumeroBarras}Ø${getRebar(input.pielDiametroId).diameterMm}mm` } : {}),
       },
     };
     addElement(el);
@@ -219,20 +260,49 @@ export function VigasPage() {
           </SectionCard>
 
           <SectionCard title="Acero de refuerzo">
-            <div className="grid grid-cols-2 gap-4">
-              <SelectField
-                label="Ø barras longitudinales"
-                value={input.diametroLongitudinalId}
-                onChange={(v) => update("diametroLongitudinalId", v)}
-                options={rebarOptions}
-              />
-              <NumberField
-                label="N° de barras"
-                unit="und"
-                step={1}
-                value={input.numeroBarrasLongitudinales}
-                onChange={(v) => update("numeroBarrasLongitudinales", v)}
-              />
+            <div className="flex flex-col gap-3">
+              <span className="text-sm font-medium text-navy-800">
+                Barras longitudinales (varios grupos, para diámetro variable / bastones)
+              </span>
+              {input.barrasLongitudinales.map((grupo, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <div className="w-24">
+                    <NumberField
+                      label={i === 0 ? "Cantidad" : ""}
+                      unit="und"
+                      step={1}
+                      value={grupo.cantidad}
+                      onChange={(v) => updateGrupo(i, { cantidad: v })}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <SelectField
+                      label={i === 0 ? "Diámetro" : ""}
+                      value={grupo.diametroId}
+                      onChange={(v) => updateGrupo(i, { diametroId: v })}
+                      options={rebarOptions}
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeGrupo(i)}
+                    disabled={input.barrasLongitudinales.length <= 1}
+                    aria-label="Quitar grupo"
+                    className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={addGrupo}
+                className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
+              >
+                <Plus size={14} />
+                Agregar grupo (ej. bastón / refuerzo adicional)
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-4 border-t border-steel-100 pt-4">
               <SelectField
                 label="Ø de estribos"
                 value={input.diametroEstribosId}
@@ -293,6 +363,39 @@ export function VigasPage() {
                 </div>
               )}
             </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.incluirAceroPiel}
+                  onChange={(e) => update("incluirAceroPiel", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Incluir acero de piel (vigas de gran peralte)
+                </span>
+              </label>
+
+              {input.incluirAceroPiel && (
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <NumberField
+                    label="N° de barras de piel"
+                    unit="und"
+                    step={1}
+                    value={input.pielNumeroBarras}
+                    onChange={(v) => update("pielNumeroBarras", v)}
+                    helper="Total, ambas caras del alma"
+                  />
+                  <SelectField
+                    label="Ø de barra de piel"
+                    value={input.pielDiametroId}
+                    onChange={(v) => update("pielDiametroId", v)}
+                    options={rebarOptions}
+                  />
+                </div>
+              )}
+            </div>
           </SectionCard>
         </div>
 
@@ -312,6 +415,7 @@ export function VigasPage() {
               <Metric label="Área de sección" value={result.areaSeccion} unit="m²" />
               <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
               <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
+              <Metric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
               <Metric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" />
               {input.incluirConfinamiento ? (
                 <>
@@ -325,6 +429,7 @@ export function VigasPage() {
               ) : null}
               <Metric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
               <Metric label="Peso de estribos" value={result.pesoEstribos} unit="kg" />
+              {input.incluirAceroPiel && <Metric label="Peso acero de piel" value={result.pesoAceroPiel} unit="kg" />}
               <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
               <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
             </div>
