@@ -7,6 +7,7 @@ import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
+import { LosaCrossSection } from "../components/diagrams/LosaCrossSection";
 import { calcularLosaAligerada, type AceroViguetasMetodo, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
 import { HOLLOW_BLOCK_HEIGHT_OPTIONS, HOLLOW_BLOCK_MATERIALS, REBAR_SIZES, type HollowBlockMaterialId } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -237,6 +238,10 @@ export function LosaAligeradaPage() {
 
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
+
+          <SectionCard title="Corte transversal (vista en vivo)">
+            <LosaCrossSection input={input} />
+          </SectionCard>
 
           <SectionCard title="Resultados de cálculo">
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

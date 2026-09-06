@@ -7,6 +7,7 @@ import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
+import { EscaleraProfile } from "../components/diagrams/EscaleraProfile";
 import { calcularEscalera, type EscaleraInput, type TipoEscalera } from "../lib/calc/escalera";
 import { REBAR_SIZES } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -264,6 +265,10 @@ export function EscalerasPage() {
 
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
+
+          <SectionCard title="Perfil de escalera (vista en vivo)">
+            <EscaleraProfile input={input} />
+          </SectionCard>
 
           <SectionCard title="Resultados de cálculo">
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

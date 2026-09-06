@@ -75,6 +75,37 @@ export function sugerirConfinamiento(
   };
 }
 
+// Posiciones (en metros, desde 0 hasta la longitud de la viga) de cada estribo en UNA
+// viga. Usa exactamente los mismos conteos que calcularViga, para que el diagrama y el
+// metrado nunca queden desincronizados.
+export function estribosPositionsM(input: VigaInput): number[] {
+  const separacionCentralM = input.separacionEstribos / 100;
+
+  if (!input.incluirConfinamiento) {
+    if (separacionCentralM <= 0) return [];
+    const n = Math.floor(input.longitud / separacionCentralM) + 1;
+    return Array.from({ length: n }, (_, i) => Math.min(i * separacionCentralM, input.longitud));
+  }
+
+  const loM = input.longitudConfinamiento / 100;
+  const s1M = input.separacionConfinamiento / 100;
+  const positions: number[] = [];
+
+  if (s1M > 0) {
+    const nConf = Math.floor(loM / s1M) + 1;
+    for (let i = 0; i < nConf; i++) positions.push(Math.min(i * s1M, loM));
+    for (let i = 0; i < nConf; i++) positions.push(Math.max(input.longitud - i * s1M, input.longitud - loM));
+  }
+
+  if (separacionCentralM > 0) {
+    const longitudCentral = Math.max(input.longitud - 2 * loM, 0);
+    const nCentral = Math.max(Math.floor(longitudCentral / separacionCentralM) - 1, 0);
+    for (let i = 1; i <= nCentral; i++) positions.push(loM + i * separacionCentralM);
+  }
+
+  return positions.sort((a, b) => a - b);
+}
+
 export function calcularViga(input: VigaInput): VigaResult {
   const warnings: string[] = [];
   const baseM = input.base / 100;
