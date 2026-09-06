@@ -6,6 +6,8 @@ import {
   MoveUpRight,
   HardHat,
   Building2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 
@@ -18,6 +20,8 @@ const navItems = [
 
 export function Layout() {
   const projectInfo = useProjectStore((s) => s.projectInfo);
+  const error = useProjectStore((s) => s.error);
+  const clearError = useProjectStore((s) => s.clearError);
 
   return (
     <div className="flex min-h-screen bg-steel-50">
@@ -61,6 +65,17 @@ export function Layout() {
       </aside>
 
       <main className="flex-1 overflow-x-hidden">
+        {error && (
+          <div className="no-print flex items-center justify-between gap-3 bg-red-50 px-6 py-2 text-sm text-red-700">
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={16} />
+              {error}
+            </span>
+            <button onClick={clearError} aria-label="Cerrar aviso" className="rounded p-1 hover:bg-red-100">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

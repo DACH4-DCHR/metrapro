@@ -1,0 +1,141 @@
+import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { mkdirSync } from "node:fs";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const dataDir = join(__dirname, "..", "data");
+mkdirSync(dataDir, { recursive: true });
+
+const db = new DatabaseSync(join(dataDir, "metrados.sqlite"));
+db.exec("PRAGMA foreign_keys = ON");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_obra TEXT NOT NULL DEFAULT '',
+    cliente TEXT NOT NULL DEFAULT '',
+    ubicacion TEXT NOT NULL DEFAULT '',
+    responsable TEXT NOT NULL DEFAULT '',
+    fecha TEXT NOT NULL DEFAULT '',
+    logo_data_url TEXT,
+    prices_json TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS elements (
+    id TEXT PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    module TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    concrete_m3 REAL NOT NULL,
+    steel_kg REAL NOT NULL,
+    formwork_m2 REAL NOT NULL,
+    lines_json TEXT NOT NULL,
+    inputs_summary_json TEXT NOT NULL
+  );
+`);
+
+function rowToProjectInfo(row) {
+  return {
+    id: row.id,
+    nombreObra: row.nombre_obra,
+    cliente: row.cliente,
+    ubicacion: row.ubicacion,
+    responsable: row.responsable,
+    fecha: row.fecha,
+    logoDataUrl: row.logo_data_url ?? undefined,
+  };
+}
+
+function rowToElement(row) {
+  return {
+    id: row.id,
+    module: row.module,
+    name: row.name,
+    createdAt: row.created_at,
+    concreteM3: row.concrete_m3,
+    steelKg: row.steel_kg,
+    formworkM2: row.formwork_m2,
+    lines: JSON.parse(row.lines_json),
+    inputsSummary: JSON.parse(row.inputs_summary_json),
+  };
+}
+
+export function getOrCreateDefaultProject() {
+  const existing = db.prepare("SELECT * FROM projects ORDER BY id ASC LIMIT 1").get();
+  if (existing) return existing.id;
+  const insert = db.prepare(
+    "INSERT INTO projects (nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at) VALUES ('', '', '', '', ?, '{}', ?)"
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  const info = insert.run(today, Date.now());
+  return Number(info.lastInsertRowid);
+}
+
+export function getProject(projectId) {
+  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
+  if (!row) return null;
+  const elementRows = db
+    .prepare("SELECT * FROM elements WHERE project_id = ? ORDER BY created_at DESC")
+    .all(projectId);
+  return {
+    projectInfo: rowToProjectInfo(row),
+    prices: JSON.parse(row.prices_json),
+    elements: elementRows.map(rowToElement),
+  };
+}
+
+export function updateProjectInfo(projectId, fields) {
+  const columnMap = {
+    nombreObra: "nombre_obra",
+    cliente: "cliente",
+    ubicacion: "ubicacion",
+    responsable: "responsable",
+    fecha: "fecha",
+    logoDataUrl: "logo_data_url",
+  };
+  const setClauses = [];
+  const values = [];
+  for (const [key, column] of Object.entries(columnMap)) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) {
+      setClauses.push(`${column} = ?`);
+      values.push(fields[key] ?? null);
+    }
+  }
+  if (setClauses.length === 0) return;
+  values.push(projectId);
+  db.prepare(`UPDATE projects SET ${setClauses.join(", ")} WHERE id = ?`).run(...values);
+}
+
+export function setPrices(projectId, prices) {
+  db.prepare("UPDATE projects SET prices_json = ? WHERE id = ?").run(JSON.stringify(prices), projectId);
+}
+
+export function addElement(projectId, element) {
+  db.prepare(
+    `INSERT INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    element.id,
+    projectId,
+    element.module,
+    element.name,
+    element.createdAt,
+    element.concreteM3,
+    element.steelKg,
+    element.formworkM2,
+    JSON.stringify(element.lines),
+    JSON.stringify(element.inputsSummary)
+  );
+  return element;
+}
+
+export function removeElement(projectId, elementId) {
+  db.prepare("DELETE FROM elements WHERE id = ? AND project_id = ?").run(elementId, projectId);
+}
+
+export function clearElements(projectId) {
+  db.prepare("DELETE FROM elements WHERE project_id = ?").run(projectId);
+}
