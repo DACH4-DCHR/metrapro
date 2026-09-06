@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# MetraPro — Metrados Estructurales
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web para el metrado automático de elementos estructurales de concreto armado: **losas aligeradas**, **vigas** y **escaleras**. Pensada para ingenieros civiles, arquitectos, residentes de obra y metradores.
 
-Currently, two official plugins are available:
+## Estado actual (Fase 1 — MVP)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Esta primera fase cubre el motor de cálculo y la interfaz de los 3 módulos, corriendo 100% en el navegador (sin backend todavía):
 
-## React Compiler
+- **Losa Aligerada**: geometría, tipo de ladrillo (12/15/20 cm o personalizado), volumen de concreto (nervios + capa de compresión), N° y peso de ladrillos, acero estimado, encofrado.
+- **Vigas**: sección rectangular / T invertida / personalizada, acero longitudinal y estribos, encofrado.
+- **Escaleras**: un tramo, dos tramos, L o U (con descanso), desarrollo horizontal, longitud inclinada, volumen, acero principal y de distribución.
+- **Dashboard**: datos del proyecto (obra, cliente, ubicación, responsable, fecha), indicadores (m³ concreto, kg acero, m² encofrado, N° elementos), listado de elementos guardados y cuadro de metrados consolidado.
+- **Exportación**: CSV (abre en Excel) e impresión/PDF vía el diálogo de impresión del navegador.
+- Los proyectos y elementos calculados se guardan localmente en el navegador (localStorage) — no se pierden al recargar.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Próximas fases (no incluidas aún)
 
-## Expanding the Oxlint configuration
+- Backend (Node/Express) + base de datos (PostgreSQL) para proyectos multiusuario.
+- Sistema de usuarios y permisos.
+- Reportes PDF/Excel con formato profesional (logo, firma, membrete).
+- Modo offline real (PWA con Service Worker) e instalación en Android.
+- Base de datos editable de materiales (precios, presupuesto referencial).
+- Preparación para integración BIM.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Desarrollo
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Abre `http://localhost:5173`.
+
+## Stack
+
+React + TypeScript + Vite, Tailwind CSS v4, React Router, Zustand (con persistencia local), lucide-react para iconografía.
