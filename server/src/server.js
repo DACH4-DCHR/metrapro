@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import {
+  initSchema,
   createUser,
   findUserByEmail,
   getUserById,
@@ -36,10 +37,10 @@ function setSessionCookie(res, sessionId) {
   });
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const sid = req.cookies?.[SESSION_COOKIE];
   if (!sid) return res.status(401).json({ error: "No autenticado" });
-  const session = getSession(sid);
+  const session = await getSession(sid);
   if (!session) return res.status(401).json({ error: "Sesión expirada, vuelve a iniciar sesión" });
   req.userId = session.user_id;
   next();
@@ -47,7 +48,7 @@ function requireAuth(req, res, next) {
 
 // --- Autenticación ---
 
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { email, password } = req.body ?? {};
   if (typeof email !== "string" || !EMAIL_RE.test(email)) {
     return res.status(400).json({ error: "Correo electrónico inválido" });
@@ -55,35 +56,35 @@ app.post("/api/auth/register", (req, res) => {
   if (typeof password !== "string" || password.length < 8) {
     return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres" });
   }
-  if (findUserByEmail(email)) {
+  if (await findUserByEmail(email)) {
     return res.status(409).json({ error: "Ya existe una cuenta con ese correo" });
   }
-  const user = createUser(email, password);
-  const session = createSession(user.id);
+  const user = await createUser(email, password);
+  const session = await createSession(user.id);
   setSessionCookie(res, session.id);
   res.status(201).json({ id: user.id, email: user.email });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body ?? {};
-  const user = typeof email === "string" ? findUserByEmail(email) : null;
+  const user = typeof email === "string" ? await findUserByEmail(email) : null;
   if (!user || typeof password !== "string" || !verifyUserPassword(user, password)) {
     return res.status(401).json({ error: "Correo o contraseña incorrectos" });
   }
-  const session = createSession(user.id);
+  const session = await createSession(user.id);
   setSessionCookie(res, session.id);
   res.json({ id: user.id, email: user.email });
 });
 
-app.post("/api/auth/logout", (req, res) => {
+app.post("/api/auth/logout", async (req, res) => {
   const sid = req.cookies?.[SESSION_COOKIE];
-  if (sid) deleteSession(sid);
+  if (sid) await deleteSession(sid);
   res.clearCookie(SESSION_COOKIE, { path: "/" });
   res.json({ ok: true });
 });
 
-app.get("/api/auth/me", requireAuth, (req, res) => {
-  const user = getUserById(req.userId);
+app.get("/api/auth/me", requireAuth, async (req, res) => {
+  const user = await getUserById(req.userId);
   if (!user) return res.status(401).json({ error: "No autenticado" });
   res.json({ id: user.id, email: user.email });
 });
@@ -92,47 +93,58 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
 
 app.use("/api/project", requireAuth);
 
-function projectIdFor(req) {
-  return getOrCreateProjectForUser(req.userId);
-}
-
-app.get("/api/project", (req, res) => {
-  res.json(getProject(projectIdFor(req)));
+app.get("/api/project", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
+  res.json(await getProject(id));
 });
 
-app.patch("/api/project", (req, res) => {
-  const id = projectIdFor(req);
-  updateProjectInfo(id, req.body ?? {});
-  res.json(getProject(id));
+app.patch("/api/project", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
+  await updateProjectInfo(id, req.body ?? {});
+  res.json(await getProject(id));
 });
 
-app.put("/api/project/prices", (req, res) => {
-  const id = projectIdFor(req);
-  setPrices(id, req.body ?? {});
-  res.json(getProject(id));
+app.put("/api/project/prices", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
+  await setPrices(id, req.body ?? {});
+  res.json(await getProject(id));
 });
 
-app.post("/api/project/elements", (req, res) => {
-  const id = projectIdFor(req);
+app.post("/api/project/elements", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
   const el = req.body;
   if (!el || !el.id || !el.module || !el.name) {
     return res.status(400).json({ error: "Elemento inválido" });
   }
-  addElement(id, el);
-  res.status(201).json(getProject(id));
+  await addElement(id, el);
+  res.status(201).json(await getProject(id));
 });
 
-app.delete("/api/project/elements/:elementId", (req, res) => {
-  const id = projectIdFor(req);
-  removeElement(id, req.params.elementId);
-  res.json(getProject(id));
+app.delete("/api/project/elements/:elementId", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
+  await removeElement(id, req.params.elementId);
+  res.json(await getProject(id));
 });
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`MetraPro API escuchando en http://localhost:${PORT}`);
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "Error interno del servidor" });
 });
+
+const PORT = process.env.PORT || 4000;
+
+initSchema()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`MetraPro API escuchando en http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("No se pudo inicializar el esquema de la base de datos:", err);
+    process.exit(1);
+  });

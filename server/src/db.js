@@ -1,58 +1,28 @@
-import { DatabaseSync } from "node:sqlite";
+import pg from "pg";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
+const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(__dirname, "..", "data");
-mkdirSync(dataDir, { recursive: true });
 
-const db = new DatabaseSync(join(dataDir, "metrados.sqlite"));
-db.exec("PRAGMA foreign_keys = ON");
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL }
+    : {
+        host: process.env.PGHOST ?? "localhost",
+        port: Number(process.env.PGPORT ?? 5432),
+        database: process.env.PGDATABASE ?? "metrapro",
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+      }
+);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    password_salt TEXT NOT NULL,
-    created_at INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at INTEGER NOT NULL,
-    created_at INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    nombre_obra TEXT NOT NULL DEFAULT '',
-    cliente TEXT NOT NULL DEFAULT '',
-    ubicacion TEXT NOT NULL DEFAULT '',
-    responsable TEXT NOT NULL DEFAULT '',
-    fecha TEXT NOT NULL DEFAULT '',
-    logo_data_url TEXT,
-    prices_json TEXT NOT NULL DEFAULT '{}',
-    created_at INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS elements (
-    id TEXT PRIMARY KEY,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    module TEXT NOT NULL,
-    name TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    concrete_m3 REAL NOT NULL,
-    steel_kg REAL NOT NULL,
-    formwork_m2 REAL NOT NULL,
-    lines_json TEXT NOT NULL,
-    inputs_summary_json TEXT NOT NULL
-  );
-`);
+export async function initSchema() {
+  const schema = readFileSync(join(__dirname, "schema.sql"), "utf8");
+  await pool.query(schema);
+}
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -73,23 +43,24 @@ function rowToElement(row) {
     id: row.id,
     module: row.module,
     name: row.name,
-    createdAt: row.created_at,
+    createdAt: Number(row.created_at),
     concreteM3: row.concrete_m3,
     steelKg: row.steel_kg,
     formworkM2: row.formwork_m2,
-    lines: JSON.parse(row.lines_json),
-    inputsSummary: JSON.parse(row.inputs_summary_json),
+    lines: row.lines_json,
+    inputsSummary: row.inputs_summary_json,
   };
 }
 
-function createProjectRow(userId) {
+async function createProjectRow(userId) {
   const today = new Date().toISOString().slice(0, 10);
-  const info = db
-    .prepare(
-      "INSERT INTO projects (user_id, nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at) VALUES (?, '', '', '', '', ?, '{}', ?)"
-    )
-    .run(userId, today, Date.now());
-  return Number(info.lastInsertRowid);
+  const { rows } = await pool.query(
+    `INSERT INTO projects (user_id, nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at)
+     VALUES ($1, '', '', '', '', $2, '{}'::jsonb, $3)
+     RETURNING id`,
+    [userId, today, Date.now()]
+  );
+  return rows[0].id;
 }
 
 // --- Usuarios y contraseñas ---
@@ -106,22 +77,25 @@ function verifyPassword(password, salt, expectedHash) {
   return candidate.length === expected.length && timingSafeEqual(candidate, expected);
 }
 
-export function createUser(email, password) {
+export async function createUser(email, password) {
   const { salt, hash } = hashPassword(password);
-  const info = db
-    .prepare("INSERT INTO users (email, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?)")
-    .run(email, hash, salt, Date.now());
-  const userId = Number(info.lastInsertRowid);
-  createProjectRow(userId);
+  const { rows } = await pool.query(
+    "INSERT INTO users (email, password_hash, password_salt, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+    [email, hash, salt, Date.now()]
+  );
+  const userId = rows[0].id;
+  await createProjectRow(userId);
   return { id: userId, email };
 }
 
-export function findUserByEmail(email) {
-  return db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+export async function findUserByEmail(email) {
+  const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+  return rows[0] ?? null;
 }
 
-export function getUserById(id) {
-  return db.prepare("SELECT id, email, created_at FROM users WHERE id = ?").get(id);
+export async function getUserById(id) {
+  const { rows } = await pool.query("SELECT id, email, created_at FROM users WHERE id = $1", [id]);
+  return rows[0] ?? null;
 }
 
 export function verifyUserPassword(user, password) {
@@ -130,54 +104,60 @@ export function verifyUserPassword(user, password) {
 
 // --- Sesiones ---
 
-export function createSession(userId) {
+export async function createSession(userId) {
   const id = randomBytes(32).toString("hex");
   const expiresAt = Date.now() + SESSION_DURATION_MS;
-  db.prepare("INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(
+  await pool.query("INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES ($1, $2, $3, $4)", [
     id,
     userId,
     expiresAt,
-    Date.now()
-  );
+    Date.now(),
+  ]);
   return { id, expiresAt };
 }
 
-export function getSession(sessionId) {
-  const row = db.prepare("SELECT * FROM sessions WHERE id = ?").get(sessionId);
+export async function getSession(sessionId) {
+  const { rows } = await pool.query("SELECT * FROM sessions WHERE id = $1", [sessionId]);
+  const row = rows[0];
   if (!row) return null;
-  if (row.expires_at < Date.now()) {
-    db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
+  if (Number(row.expires_at) < Date.now()) {
+    await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
     return null;
   }
   return row;
 }
 
-export function deleteSession(sessionId) {
-  db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
+export async function deleteSession(sessionId) {
+  await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
 }
 
 // --- Proyectos (uno por usuario) ---
 
-export function getOrCreateProjectForUser(userId) {
-  const existing = db.prepare("SELECT id FROM projects WHERE user_id = ? ORDER BY id ASC LIMIT 1").get(userId);
-  if (existing) return existing.id;
+export async function getOrCreateProjectForUser(userId) {
+  const { rows } = await pool.query(
+    "SELECT id FROM projects WHERE user_id = $1 ORDER BY id ASC LIMIT 1",
+    [userId]
+  );
+  if (rows[0]) return rows[0].id;
   return createProjectRow(userId);
 }
 
-export function getProject(projectId) {
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
+export async function getProject(projectId) {
+  const { rows } = await pool.query("SELECT * FROM projects WHERE id = $1", [projectId]);
+  const row = rows[0];
   if (!row) return null;
-  const elementRows = db
-    .prepare("SELECT * FROM elements WHERE project_id = ? ORDER BY created_at DESC")
-    .all(projectId);
+  const { rows: elementRows } = await pool.query(
+    "SELECT * FROM elements WHERE project_id = $1 ORDER BY created_at DESC",
+    [projectId]
+  );
   return {
     projectInfo: rowToProjectInfo(row),
-    prices: JSON.parse(row.prices_json),
+    prices: row.prices_json,
     elements: elementRows.map(rowToElement),
   };
 }
 
-export function updateProjectInfo(projectId, fields) {
+export async function updateProjectInfo(projectId, fields) {
   const columnMap = {
     nombreObra: "nombre_obra",
     cliente: "cliente",
@@ -188,43 +168,58 @@ export function updateProjectInfo(projectId, fields) {
   };
   const setClauses = [];
   const values = [];
+  let i = 1;
   for (const [key, column] of Object.entries(columnMap)) {
     if (Object.prototype.hasOwnProperty.call(fields, key)) {
-      setClauses.push(`${column} = ?`);
+      setClauses.push(`${column} = $${i++}`);
       values.push(fields[key] ?? null);
     }
   }
   if (setClauses.length === 0) return;
   values.push(projectId);
-  db.prepare(`UPDATE projects SET ${setClauses.join(", ")} WHERE id = ?`).run(...values);
+  await pool.query(`UPDATE projects SET ${setClauses.join(", ")} WHERE id = $${i}`, values);
 }
 
-export function setPrices(projectId, prices) {
-  db.prepare("UPDATE projects SET prices_json = ? WHERE id = ?").run(JSON.stringify(prices), projectId);
-}
-
-export function addElement(projectId, element) {
-  // INSERT OR REPLACE (no solo INSERT): el frontend puede reintentar este POST tras
-  // recuperar la conexión sin saber si la petición original ya había llegado al
-  // servidor, así que el mismo id debe poder reenviarse sin producir un error.
-  db.prepare(
-    `INSERT OR REPLACE INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    element.id,
+export async function setPrices(projectId, prices) {
+  await pool.query("UPDATE projects SET prices_json = $1::jsonb WHERE id = $2", [
+    JSON.stringify(prices),
     projectId,
-    element.module,
-    element.name,
-    element.createdAt,
-    element.concreteM3,
-    element.steelKg,
-    element.formworkM2,
-    JSON.stringify(element.lines),
-    JSON.stringify(element.inputsSummary)
+  ]);
+}
+
+export async function addElement(projectId, element) {
+  // ON CONFLICT (upsert), no un INSERT simple: el frontend puede reintentar este POST
+  // tras recuperar la conexión sin saber si la petición original ya había llegado al
+  // servidor, así que el mismo id debe poder reenviarse sin producir un error.
+  await pool.query(
+    `INSERT INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)
+     ON CONFLICT (id) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       module = EXCLUDED.module,
+       name = EXCLUDED.name,
+       created_at = EXCLUDED.created_at,
+       concrete_m3 = EXCLUDED.concrete_m3,
+       steel_kg = EXCLUDED.steel_kg,
+       formwork_m2 = EXCLUDED.formwork_m2,
+       lines_json = EXCLUDED.lines_json,
+       inputs_summary_json = EXCLUDED.inputs_summary_json`,
+    [
+      element.id,
+      projectId,
+      element.module,
+      element.name,
+      element.createdAt,
+      element.concreteM3,
+      element.steelKg,
+      element.formworkM2,
+      JSON.stringify(element.lines),
+      JSON.stringify(element.inputsSummary),
+    ]
   );
   return element;
 }
 
-export function removeElement(projectId, elementId) {
-  db.prepare("DELETE FROM elements WHERE id = ? AND project_id = ?").run(elementId, projectId);
+export async function removeElement(projectId, elementId) {
+  await pool.query("DELETE FROM elements WHERE id = $1 AND project_id = $2", [elementId, projectId]);
 }
