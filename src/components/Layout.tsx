@@ -8,8 +8,10 @@ import {
   Building2,
   AlertTriangle,
   X,
+  LogOut,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
+import { useAuthStore } from "../store/authStore";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -22,6 +24,14 @@ export function Layout() {
   const projectInfo = useProjectStore((s) => s.projectInfo);
   const error = useProjectStore((s) => s.error);
   const clearError = useProjectStore((s) => s.clearError);
+  const resetProject = useProjectStore((s) => s.reset);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  async function handleLogout() {
+    await logout();
+    resetProject();
+  }
 
   return (
     <div className="flex min-h-screen bg-steel-50">
@@ -61,6 +71,17 @@ export function Layout() {
             <Building2 size={14} />
             <span className="truncate">{projectInfo.nombreObra || "Sin obra configurada"}</span>
           </div>
+        </div>
+
+        <div className="border-t border-white/10 px-4 py-3">
+          <div className="mb-2 truncate text-xs text-steel-400">{user?.email}</div>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-steel-300 hover:bg-navy-800 hover:text-white"
+          >
+            <LogOut size={14} />
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 

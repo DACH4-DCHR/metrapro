@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mkdirSync } from "node:fs";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(__dirname, "..", "data");
@@ -11,8 +12,24 @@ const db = new DatabaseSync(join(dataDir, "metrados.sqlite"));
 db.exec("PRAGMA foreign_keys = ON");
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    password_salt TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nombre_obra TEXT NOT NULL DEFAULT '',
     cliente TEXT NOT NULL DEFAULT '',
     ubicacion TEXT NOT NULL DEFAULT '',
@@ -36,6 +53,8 @@ db.exec(`
     inputs_summary_json TEXT NOT NULL
   );
 `);
+
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 function rowToProjectInfo(row) {
   return {
@@ -63,15 +82,86 @@ function rowToElement(row) {
   };
 }
 
-export function getOrCreateDefaultProject() {
-  const existing = db.prepare("SELECT * FROM projects ORDER BY id ASC LIMIT 1").get();
-  if (existing) return existing.id;
-  const insert = db.prepare(
-    "INSERT INTO projects (nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at) VALUES ('', '', '', '', ?, '{}', ?)"
-  );
+function createProjectRow(userId) {
   const today = new Date().toISOString().slice(0, 10);
-  const info = insert.run(today, Date.now());
+  const info = db
+    .prepare(
+      "INSERT INTO projects (user_id, nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at) VALUES (?, '', '', '', '', ?, '{}', ?)"
+    )
+    .run(userId, today, Date.now());
   return Number(info.lastInsertRowid);
+}
+
+// --- Usuarios y contraseñas ---
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return { salt, hash };
+}
+
+function verifyPassword(password, salt, expectedHash) {
+  const candidate = scryptSync(password, salt, 64);
+  const expected = Buffer.from(expectedHash, "hex");
+  return candidate.length === expected.length && timingSafeEqual(candidate, expected);
+}
+
+export function createUser(email, password) {
+  const { salt, hash } = hashPassword(password);
+  const info = db
+    .prepare("INSERT INTO users (email, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?)")
+    .run(email, hash, salt, Date.now());
+  const userId = Number(info.lastInsertRowid);
+  createProjectRow(userId);
+  return { id: userId, email };
+}
+
+export function findUserByEmail(email) {
+  return db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+}
+
+export function getUserById(id) {
+  return db.prepare("SELECT id, email, created_at FROM users WHERE id = ?").get(id);
+}
+
+export function verifyUserPassword(user, password) {
+  return verifyPassword(password, user.password_salt, user.password_hash);
+}
+
+// --- Sesiones ---
+
+export function createSession(userId) {
+  const id = randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + SESSION_DURATION_MS;
+  db.prepare("INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(
+    id,
+    userId,
+    expiresAt,
+    Date.now()
+  );
+  return { id, expiresAt };
+}
+
+export function getSession(sessionId) {
+  const row = db.prepare("SELECT * FROM sessions WHERE id = ?").get(sessionId);
+  if (!row) return null;
+  if (row.expires_at < Date.now()) {
+    db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
+    return null;
+  }
+  return row;
+}
+
+export function deleteSession(sessionId) {
+  db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
+}
+
+// --- Proyectos (uno por usuario) ---
+
+export function getOrCreateProjectForUser(userId) {
+  const existing = db.prepare("SELECT id FROM projects WHERE user_id = ? ORDER BY id ASC LIMIT 1").get(userId);
+  if (existing) return existing.id;
+  return createProjectRow(userId);
 }
 
 export function getProject(projectId) {
@@ -134,8 +224,4 @@ export function addElement(projectId, element) {
 
 export function removeElement(projectId, elementId) {
   db.prepare("DELETE FROM elements WHERE id = ? AND project_id = ?").run(elementId, projectId);
-}
-
-export function clearElements(projectId) {
-  db.prepare("DELETE FROM elements WHERE project_id = ?").run(projectId);
 }

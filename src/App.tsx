@@ -6,9 +6,20 @@ import { DashboardPage } from "./pages/Dashboard";
 import { LosaAligeradaPage } from "./pages/LosaAligerada";
 import { VigasPage } from "./pages/Vigas";
 import { EscalerasPage } from "./pages/Escaleras";
+import { LoginPage } from "./pages/Login";
+import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
 
-function App() {
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-steel-50 text-navy-800">
+      <Loader2 size={32} className="animate-spin" />
+      <p className="text-sm font-medium">{message}</p>
+    </div>
+  );
+}
+
+function ProjectGate() {
   const status = useProjectStore((s) => s.status);
   const error = useProjectStore((s) => s.error);
   const init = useProjectStore((s) => s.init);
@@ -18,12 +29,7 @@ function App() {
   }, [init]);
 
   if (status === "idle" || status === "loading") {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-steel-50 text-navy-800">
-        <Loader2 size={32} className="animate-spin" />
-        <p className="text-sm font-medium">Conectando con el servidor…</p>
-      </div>
-    );
+    return <LoadingScreen message="Cargando tu proyecto…" />;
   }
 
   if (status === "error") {
@@ -53,6 +59,25 @@ function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+function App() {
+  const authStatus = useAuthStore((s) => s.status);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (authStatus === "idle" || authStatus === "loading") {
+    return <LoadingScreen message="Verificando sesión…" />;
+  }
+
+  if (authStatus === "unauthenticated") {
+    return <LoginPage />;
+  }
+
+  return <ProjectGate />;
 }
 
 export default App;

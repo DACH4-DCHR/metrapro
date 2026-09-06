@@ -24,6 +24,7 @@ interface ProjectState {
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   init: () => Promise<void>;
+  reset: () => void;
   clearError: () => void;
   setProjectInfo: (info: Partial<ProjectInfo>) => void;
   addElement: (el: CalculatedElement) => void;
@@ -59,6 +60,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       });
     }
   },
+
+  reset: () => set({ projectInfo: emptyProjectInfo, elements: [], prices: {}, status: "idle", error: null }),
 
   clearError: () => set({ error: null }),
 

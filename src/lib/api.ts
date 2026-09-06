@@ -47,6 +47,38 @@ export function deleteElement(id: string): Promise<ProjectDto> {
   return request<ProjectDto>(`/project/elements/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
-export function deleteAllElements(): Promise<ProjectDto> {
-  return request<ProjectDto>("/project/elements", { method: "DELETE" });
+export interface AuthUser {
+  id: number;
+  email: string;
+}
+
+async function authRequest(path: string, options?: RequestInit): Promise<AuthUser> {
+  const res = await fetch(`/api/auth${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Ocurrió un error. Intenta de nuevo.");
+  }
+  return res.json() as Promise<AuthUser>;
+}
+
+export async function authMe(): Promise<AuthUser | null> {
+  const res = await fetch("/api/auth/me");
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error("No se pudo verificar la sesión");
+  return res.json() as Promise<AuthUser>;
+}
+
+export function authLogin(email: string, password: string): Promise<AuthUser> {
+  return authRequest("/login", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function authRegister(email: string, password: string): Promise<AuthUser> {
+  return authRequest("/register", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export async function authLogout(): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST" });
 }
