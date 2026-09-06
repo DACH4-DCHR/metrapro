@@ -6,6 +6,7 @@ import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
+import { ModuleElementsList } from "../components/ModuleElementsList";
 import { calcularViga, type VigaInput, type TipoSeccionViga } from "../lib/calc/viga";
 import { REBAR_SIZES } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -20,10 +21,15 @@ const tipoSeccionOptions: { value: TipoSeccionViga; label: string }[] = [
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
+function nextVigaName() {
+  const count = useProjectStore.getState().elements.filter((e) => e.module === "viga").length;
+  return `Grupo de Vigas ${count + 1}`;
+}
+
 export function VigasPage() {
   const addElement = useProjectStore((s) => s.addElement);
   const [saved, setSaved] = useState(false);
-  const [nombre, setNombre] = useState("Vigas principales - Eje A");
+  const [nombre, setNombre] = useState(nextVigaName);
 
   const [input, setInput] = useState<VigaInput>({
     numeroVigas: 4,
@@ -73,6 +79,7 @@ export function VigasPage() {
     };
     addElement(el);
     setSaved(true);
+    setNombre(nextVigaName());
   }
 
   return (
@@ -87,7 +94,7 @@ export function VigasPage() {
             className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700"
           >
             <Save size={16} />
-            {saved ? "Guardado ✓" : "Guardar elemento"}
+            {saved ? "Agregado ✓ (puedes calcular otro)" : "Agregar a la lista"}
           </button>
         }
       />
@@ -213,6 +220,10 @@ export function VigasPage() {
 
           <SectionCard title="Resumen">
             <ResultTable lines={lines} />
+          </SectionCard>
+
+          <SectionCard title="Grupos de vigas registrados en este proyecto">
+            <ModuleElementsList module="viga" emptyLabel="Aún no has agregado ningún grupo de vigas. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>

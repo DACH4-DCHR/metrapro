@@ -6,6 +6,7 @@ import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
+import { ModuleElementsList } from "../components/ModuleElementsList";
 import { calcularLosaAligerada, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
 import { HOLLOW_BRICK_TYPES, REBAR_SIZES } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -20,10 +21,15 @@ const rebarOptions = REBAR_SIZES.map((r) => ({ value: r.id, label: r.label }));
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
+function nextLosaName() {
+  const count = useProjectStore.getState().elements.filter((e) => e.module === "losa").length;
+  return `Losa Aligerada ${count + 1}`;
+}
+
 export function LosaAligeradaPage() {
   const addElement = useProjectStore((s) => s.addElement);
   const [saved, setSaved] = useState(false);
-  const [nombre, setNombre] = useState("Losa Aligerada - Nivel 1");
+  const [nombre, setNombre] = useState(nextLosaName);
 
   const [input, setInput] = useState<LosaAligeradaInput>({
     largo: 6,
@@ -71,6 +77,7 @@ export function LosaAligeradaPage() {
     };
     addElement(el);
     setSaved(true);
+    setNombre(nextLosaName());
   }
 
   return (
@@ -85,7 +92,7 @@ export function LosaAligeradaPage() {
             className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700"
           >
             <Save size={16} />
-            {saved ? "Guardado ✓" : "Guardar elemento"}
+            {saved ? "Agregado ✓ (puedes calcular otra)" : "Agregar a la lista"}
           </button>
         }
       />
@@ -197,6 +204,10 @@ export function LosaAligeradaPage() {
 
           <SectionCard title="Cuadro de metrados">
             <ResultTable lines={lines} />
+          </SectionCard>
+
+          <SectionCard title="Losas registradas en este proyecto">
+            <ModuleElementsList module="losa" emptyLabel="Aún no has agregado ninguna losa. Calcula arriba y presiona 'Guardar elemento'." />
           </SectionCard>
         </div>
       </div>

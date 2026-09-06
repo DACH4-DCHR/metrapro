@@ -6,6 +6,7 @@ import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
+import { ModuleElementsList } from "../components/ModuleElementsList";
 import { calcularEscalera, type EscaleraInput, type TipoEscalera } from "../lib/calc/escalera";
 import { REBAR_SIZES } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
@@ -21,10 +22,15 @@ const tipoOptions: { value: TipoEscalera; label: string }[] = [
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
+function nextEscaleraName() {
+  const count = useProjectStore.getState().elements.filter((e) => e.module === "escalera").length;
+  return `Escalera ${count + 1}`;
+}
+
 export function EscalerasPage() {
   const addElement = useProjectStore((s) => s.addElement);
   const [saved, setSaved] = useState(false);
-  const [nombre, setNombre] = useState("Escalera principal");
+  const [nombre, setNombre] = useState(nextEscaleraName);
 
   const [input, setInput] = useState<EscaleraInput>({
     tipo: "un_tramo",
@@ -93,6 +99,7 @@ export function EscalerasPage() {
     };
     addElement(el);
     setSaved(true);
+    setNombre(nextEscaleraName());
   }
 
   return (
@@ -107,7 +114,7 @@ export function EscalerasPage() {
             className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700"
           >
             <Save size={16} />
-            {saved ? "Guardado ✓" : "Guardar elemento"}
+            {saved ? "Agregada ✓ (puedes calcular otra)" : "Agregar a la lista"}
           </button>
         }
       />
@@ -279,6 +286,10 @@ export function EscalerasPage() {
 
           <SectionCard title="Cuadro de metrados">
             <ResultTable lines={lines} />
+          </SectionCard>
+
+          <SectionCard title="Escaleras registradas en este proyecto">
+            <ModuleElementsList module="escalera" emptyLabel="Aún no has agregado ninguna escalera. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
