@@ -121,6 +121,7 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
   let tramo2: TramoResultado | undefined;
   let volumenDescanso = 0;
   let encofradoDescanso = 0;
+  let areaDescanso = 0;
 
   if (esMultiTramo) {
     if (!input.tramo2) {
@@ -140,10 +141,11 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
     } else {
       volumenDescanso = input.descanso.ancho * input.descanso.largo * (input.descanso.espesor / 100);
       encofradoDescanso = input.descanso.ancho * input.descanso.largo;
+      areaDescanso = input.descanso.ancho * input.descanso.largo;
     }
   }
 
-  const areaEscaleraTotal = tramo1.areaGarganta + (tramo2?.areaGarganta ?? 0) + (input.descanso?.ancho ?? 0) * (input.descanso?.largo ?? 0);
+  const areaEscaleraTotal = tramo1.areaGarganta + (tramo2?.areaGarganta ?? 0) + areaDescanso;
   const volumenConcretoTotal = tramo1.volumenConcreto + (tramo2?.volumenConcreto ?? 0) + volumenDescanso;
   const encofradoTotal = tramo1.encofradoTotal + (tramo2?.encofradoTotal ?? 0) + encofradoDescanso;
 
