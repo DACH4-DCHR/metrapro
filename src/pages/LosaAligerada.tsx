@@ -7,14 +7,21 @@ import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
-import { calcularLosaAligerada, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
-import { HOLLOW_BRICK_TYPES, REBAR_SIZES } from "../lib/materials";
+import { calcularLosaAligerada, type AceroViguetasMetodo, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
+import { HOLLOW_BLOCK_HEIGHT_OPTIONS, HOLLOW_BLOCK_MATERIALS, REBAR_SIZES, type HollowBlockMaterialId } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
 const tipoLadrilloOptions = [
-  ...HOLLOW_BRICK_TYPES.map((b) => ({ value: b.id, label: `${b.heightCm} cm` })),
+  ...HOLLOW_BLOCK_HEIGHT_OPTIONS.map((b) => ({ value: b.id, label: `${b.heightCm} cm` })),
   { value: "personalizado", label: "Personalizado" },
+];
+
+const materialLadrilloOptions = HOLLOW_BLOCK_MATERIALS.map((m) => ({ value: m.id, label: m.label }));
+
+const aceroViguetasMetodoOptions: { value: AceroViguetasMetodo; label: string }[] = [
+  { value: "barras", label: "N° de barras por vigueta" },
+  { value: "ratio", label: "Ratio (kg/m²)" },
 ];
 
 const rebarOptions = REBAR_SIZES.map((r) => ({ value: r.id, label: r.label }));
@@ -39,18 +46,24 @@ export function LosaAligeradaPage() {
     anchoVigueta: 10,
     tipoLadrillo: "15",
     alturaLadrilloPersonalizado: 15,
+    materialLadrillo: "arcilla",
     temperaturaDiametroId: "6",
     temperaturaSeparacion: 25,
+    aceroViguetasMetodo: "barras",
     ratioAceroViguetasKgM2: 7,
+    numeroVarillasPorVigueta: 2,
+    diametroVarillaViguetaId: "8",
     desperdicioLadrilloPct: 5,
   });
 
   const result = useMemo(() => calcularLosaAligerada(input), [input]);
 
+  const materialLabel = HOLLOW_BLOCK_MATERIALS.find((m) => m.id === input.materialLadrillo)?.label ?? "Ladrillo";
+
   const lines: MetradoLine[] = [
     { partida: "Concreto f'c=210 kg/cm² losa aligerada", unidad: "m³", cantidad: result.volumenConcreto },
     { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.aceroTotalKg },
-    { partida: "Ladrillo hueco de techo", unidad: "und", cantidad: result.numeroLadrillos },
+    { partida: `${materialLabel} para techo`, unidad: "und", cantidad: result.numeroLadrillos },
     { partida: "Encofrado y desencofrado de losa", unidad: "m²", cantidad: result.encofradoM2 },
   ];
 
@@ -72,7 +85,10 @@ export function LosaAligeradaPage() {
       inputsSummary: {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         Espesor: `${input.espesorLosa} cm`,
-        Ladrillo: input.tipoLadrillo === "personalizado" ? `${input.alturaLadrilloPersonalizado} cm (personalizado)` : `${input.tipoLadrillo} cm`,
+        Ladrillo:
+          (input.tipoLadrillo === "personalizado"
+            ? `${input.alturaLadrilloPersonalizado} cm (personalizado)`
+            : `${input.tipoLadrillo} cm`) + ` — ${materialLabel}`,
       },
     };
     addElement(el);
@@ -130,17 +146,25 @@ export function LosaAligeradaPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Ladrillo aligerante">
+          <SectionCard title="Ladrillo / bloque aligerante">
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <SelectField
+                  label="Material"
+                  value={input.materialLadrillo}
+                  onChange={(v) => update("materialLadrillo", v as HollowBlockMaterialId)}
+                  options={materialLadrilloOptions}
+                />
+              </div>
               <SelectField
-                label="Tipo de ladrillo"
+                label="Altura"
                 value={input.tipoLadrillo}
                 onChange={(v) => update("tipoLadrillo", v as LosaAligeradaInput["tipoLadrillo"])}
                 options={tipoLadrilloOptions}
               />
               {input.tipoLadrillo === "personalizado" && (
                 <NumberField
-                  label="Altura de ladrillo"
+                  label="Altura personalizada"
                   unit="cm"
                   value={input.alturaLadrilloPersonalizado ?? 0}
                   onChange={(v) => update("alturaLadrilloPersonalizado", v)}
@@ -155,7 +179,7 @@ export function LosaAligeradaPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Acero de refuerzo (estimado)">
+          <SectionCard title="Acero de refuerzo">
             <div className="grid grid-cols-2 gap-4">
               <SelectField
                 label="Ø temperatura (capa comp.)"
@@ -169,13 +193,44 @@ export function LosaAligeradaPage() {
                 value={input.temperaturaSeparacion}
                 onChange={(v) => update("temperaturaSeparacion", v)}
               />
-              <NumberField
-                label="Ratio acero viguetas"
-                unit="kg/m²"
-                value={input.ratioAceroViguetasKgM2}
-                onChange={(v) => update("ratioAceroViguetasKgM2", v)}
-                helper="Ajustable según diseño estructural real"
+            </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <SelectField
+                label="Acero principal de viguetas — método de cálculo"
+                value={input.aceroViguetasMetodo}
+                onChange={(v) => update("aceroViguetasMetodo", v as AceroViguetasMetodo)}
+                options={aceroViguetasMetodoOptions}
               />
+
+              {input.aceroViguetasMetodo === "barras" ? (
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <NumberField
+                    label="N° de varillas por vigueta"
+                    unit="und"
+                    step={1}
+                    value={input.numeroVarillasPorVigueta}
+                    onChange={(v) => update("numeroVarillasPorVigueta", v)}
+                    helper="Típico: 2 (corridas)"
+                  />
+                  <SelectField
+                    label="Ø de varilla"
+                    value={input.diametroVarillaViguetaId}
+                    onChange={(v) => update("diametroVarillaViguetaId", v)}
+                    options={rebarOptions}
+                  />
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <NumberField
+                    label="Ratio acero viguetas"
+                    unit="kg/m²"
+                    value={input.ratioAceroViguetasKgM2}
+                    onChange={(v) => update("ratioAceroViguetasKgM2", v)}
+                    helper="Estimado, ajustable según diseño estructural real"
+                  />
+                </div>
+              )}
             </div>
           </SectionCard>
         </div>

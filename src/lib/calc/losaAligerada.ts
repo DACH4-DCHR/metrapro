@@ -1,9 +1,12 @@
 import {
   CONCRETE_DENSITY_KG_M3,
   HOLLOW_BRICK_LENGTH_M,
-  HOLLOW_BRICK_TYPES,
+  hollowBlockWeightKg,
   getRebar,
+  type HollowBlockMaterialId,
 } from "../materials";
+
+export type AceroViguetasMetodo = "ratio" | "barras";
 
 export interface LosaAligeradaInput {
   largo: number; // m
@@ -13,9 +16,13 @@ export interface LosaAligeradaInput {
   anchoVigueta: number; // cm (ancho del nervio, típico 10 cm)
   tipoLadrillo: "12" | "15" | "20" | "personalizado";
   alturaLadrilloPersonalizado?: number; // cm, solo si personalizado
+  materialLadrillo: HollowBlockMaterialId;
   temperaturaDiametroId: string; // Ø barra temperatura
   temperaturaSeparacion: number; // cm
-  ratioAceroViguetasKgM2: number; // kg/m2 estimado para acero principal de viguetas
+  aceroViguetasMetodo: AceroViguetasMetodo;
+  ratioAceroViguetasKgM2: number; // kg/m2 estimado (método "ratio")
+  numeroVarillasPorVigueta: number; // método "barras"
+  diametroVarillaViguetaId: string; // método "barras"
   desperdicioLadrilloPct: number; // %
 }
 
@@ -48,10 +55,10 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
 
   const areaLosa = input.largo * input.ancho;
   const espesorLosaM = input.espesorLosa / 100;
-  const alturaLadrilloCm =
-    input.tipoLadrillo === "personalizado"
-      ? input.alturaLadrilloPersonalizado ?? 0
-      : Number(input.tipoLadrillo);
+  const isCustomHeight = input.tipoLadrillo === "personalizado";
+  const alturaLadrilloCm = isCustomHeight
+    ? input.alturaLadrilloPersonalizado ?? 0
+    : Number(input.tipoLadrillo);
   const alturaLadrilloM = alturaLadrilloCm / 100;
   const capaCompresionM = espesorLosaM - alturaLadrilloM;
 
@@ -65,8 +72,15 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
 
   const anchoViguetaM = input.anchoVigueta / 100;
   const separacionViguetasM = input.separacionViguetas / 100;
-  const numeroViguetas = separacionViguetasM > 0 ? Math.ceil(input.ancho / separacionViguetasM) + 1 : 0;
-  const longitudViguetas = numeroViguetas * input.largo;
+
+  // Longitud total de viguetas = Área techada / separación entre ejes (fórmula estándar
+  // de metrado en el Perú). Equivale a considerar (Ancho/separación) viguetas de longitud
+  // "Largo" cada una; con esto el volumen de nervios + capa de compresión reconcilia
+  // exactamente con el volumen total de concreto calculado por m².
+  const longitudViguetas = separacionViguetasM > 0 ? areaLosa / separacionViguetasM : 0;
+  // N° de viguetas: solo referencial (conteo físico redondeado hacia arriba), no se usa
+  // para ningún otro cálculo.
+  const numeroViguetas = separacionViguetasM > 0 ? Math.ceil(input.ancho / separacionViguetasM) : 0;
 
   const capaEfectiva = Math.max(capaCompresionM, 0);
   // Volumen por m2 = [b0*h + (s-b0)*ec] / s  (sección equivalente por franja s)
@@ -85,8 +99,7 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
   const numeroLadrillosNeto = ladrillosPorM2 * areaLosa;
   const numeroLadrillos = Math.ceil(numeroLadrillosNeto * (1 + input.desperdicioLadrilloPct / 100));
 
-  const brickType = HOLLOW_BRICK_TYPES.find((b) => b.id === input.tipoLadrillo);
-  const pesoUnitarioLadrillo = brickType?.weightKg ?? alturaLadrilloCm * 0.37; // estimación lineal si es personalizado
+  const pesoUnitarioLadrillo = hollowBlockWeightKg(input.materialLadrillo, alturaLadrilloCm, isCustomHeight);
   const pesoLadrillos = numeroLadrillos * pesoUnitarioLadrillo;
 
   const pesoConcreto = volumenConcreto * CONCRETE_DENSITY_KG_M3;
@@ -97,7 +110,10 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
   const longitudBarrasTemp = numeroBarrasTemp * input.largo;
   const aceroTemperaturaKg = longitudBarrasTemp * rebarTemp.weightKgPerM;
 
-  const aceroViguetasKg = input.ratioAceroViguetasKgM2 * areaLosa;
+  const aceroViguetasKg =
+    input.aceroViguetasMetodo === "barras"
+      ? input.numeroVarillasPorVigueta * longitudViguetas * getRebar(input.diametroVarillaViguetaId).weightKgPerM
+      : input.ratioAceroViguetasKgM2 * areaLosa;
   const aceroTotalKg = aceroTemperaturaKg + aceroViguetasKg;
 
   const encofradoM2 = areaLosa;

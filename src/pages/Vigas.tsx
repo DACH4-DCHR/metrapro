@@ -7,8 +7,14 @@ import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
-import { calcularViga, type VigaInput, type TipoSeccionViga } from "../lib/calc/viga";
-import { REBAR_SIZES } from "../lib/materials";
+import {
+  calcularViga,
+  sugerirConfinamiento,
+  type VigaInput,
+  type TipoSeccionViga,
+  type SistemaSismorresistente,
+} from "../lib/calc/viga";
+import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
@@ -17,6 +23,10 @@ const tipoSeccionOptions: { value: TipoSeccionViga; label: string }[] = [
   { value: "rectangular", label: "Rectangular" },
   { value: "T", label: "T invertida" },
   { value: "personalizada", label: "Personalizada" },
+];
+const sistemaSismorresistenteOptions: { value: SistemaSismorresistente; label: string }[] = [
+  { value: "muros", label: "Muros estructurales (E.060 Art. 21.4.4)" },
+  { value: "porticos_dual", label: "Pórticos / sistema dual (E.060 Art. 21.5.3)" },
 ];
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
@@ -46,6 +56,10 @@ export function VigasPage() {
     diametroEstribosId: "8",
     separacionEstribos: 20,
     recubrimiento: 4,
+    incluirConfinamiento: false,
+    sistemaSismorresistente: "muros",
+    longitudConfinamiento: 0,
+    separacionConfinamiento: 0,
   });
 
   const result = useMemo(() => calcularViga(input), [input]);
@@ -58,6 +72,43 @@ export function VigasPage() {
 
   function update<K extends keyof VigaInput>(key: K, value: VigaInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function calcularSugerencia(sistema: SistemaSismorresistente, base: VigaInput) {
+    return sugerirConfinamiento(
+      sistema,
+      base.altura,
+      base.recubrimiento,
+      getRebar(base.diametroLongitudinalId).diameterMm,
+      getRebar(base.diametroEstribosId).diameterMm
+    );
+  }
+
+  function handleToggleConfinamiento(checked: boolean) {
+    setInput((prev) => {
+      if (!checked) return { ...prev, incluirConfinamiento: false };
+      const sugerido = calcularSugerencia(prev.sistemaSismorresistente, prev);
+      return {
+        ...prev,
+        incluirConfinamiento: true,
+        longitudConfinamiento: sugerido.longitudConfinamientoCm,
+        separacionConfinamiento: sugerido.separacionConfinamientoCm,
+      };
+    });
+    setSaved(false);
+  }
+
+  function handleSistemaChange(sistema: SistemaSismorresistente) {
+    setInput((prev) => {
+      const sugerido = calcularSugerencia(sistema, prev);
+      return {
+        ...prev,
+        sistemaSismorresistente: sistema,
+        longitudConfinamiento: sugerido.longitudConfinamientoCm,
+        separacionConfinamiento: sugerido.separacionConfinamientoCm,
+      };
+    });
     setSaved(false);
   }
 
@@ -187,7 +238,7 @@ export function VigasPage() {
                 options={rebarOptions}
               />
               <NumberField
-                label="Separación de estribos"
+                label={input.incluirConfinamiento ? "Separación en zona central" : "Separación de estribos"}
                 unit="cm"
                 value={input.separacionEstribos}
                 onChange={(v) => update("separacionEstribos", v)}
@@ -198,6 +249,47 @@ export function VigasPage() {
                 value={input.recubrimiento}
                 onChange={(v) => update("recubrimiento", v)}
               />
+            </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.incluirConfinamiento}
+                  onChange={(e) => handleToggleConfinamiento(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Incluir estribos de confinamiento (viga sismorresistente, NTE E.060)
+                </span>
+              </label>
+
+              {input.incluirConfinamiento && (
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <SelectField
+                      label="Sistema sismorresistente"
+                      value={input.sistemaSismorresistente}
+                      onChange={(v) => handleSistemaChange(v as SistemaSismorresistente)}
+                      options={sistemaSismorresistenteOptions}
+                    />
+                  </div>
+                  <NumberField
+                    label="Longitud de confinamiento (Lo)"
+                    unit="cm"
+                    value={input.longitudConfinamiento}
+                    onChange={(v) => update("longitudConfinamiento", v)}
+                    helper="Sugerido: 2×h, por extremo"
+                  />
+                  <NumberField
+                    label="Separación en zona confinada (S1)"
+                    unit="cm"
+                    value={input.separacionConfinamiento}
+                    onChange={(v) => update("separacionConfinamiento", v)}
+                    helper="Sugerido según norma, verifica tu diseño"
+                  />
+                </div>
+              )}
             </div>
           </SectionCard>
         </div>
@@ -211,7 +303,17 @@ export function VigasPage() {
               <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
               <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
               <Metric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" />
-              <Metric label="N° de estribos" value={result.numeroEstribosTotal} unit="und" />
+              {input.incluirConfinamiento ? (
+                <>
+                  <Metric
+                    label="Estribos confinamiento (x viga)"
+                    value={result.numeroEstribosConfinamientoPorExtremo * 2}
+                    unit="und"
+                  />
+                  <Metric label="Estribos zona central (x viga)" value={result.numeroEstribosCentralPorViga} unit="und" />
+                </>
+              ) : null}
+              <Metric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
               <Metric label="Peso de estribos" value={result.pesoEstribos} unit="kg" />
               <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
               <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />

@@ -1,6 +1,7 @@
 import { getRebar } from "../materials";
 
 export type TipoSeccionViga = "rectangular" | "T" | "personalizada";
+export type SistemaSismorresistente = "muros" | "porticos_dual";
 
 export interface VigaInput {
   numeroVigas: number;
@@ -19,8 +20,14 @@ export interface VigaInput {
   diametroLongitudinalId: string;
   numeroBarrasLongitudinales: number;
   diametroEstribosId: string;
-  separacionEstribos: number; // cm
+  separacionEstribos: number; // cm (zona central, o única si no hay confinamiento)
   recubrimiento: number; // cm
+
+  // Estribos de confinamiento (E.060, vigas sismorresistentes)
+  incluirConfinamiento: boolean;
+  sistemaSismorresistente: SistemaSismorresistente;
+  longitudConfinamiento: number; // cm (Lo), medida desde la cara del apoyo, por extremo
+  separacionConfinamiento: number; // cm (S1), dentro de la zona de confinamiento
 }
 
 export interface VigaResult {
@@ -31,6 +38,8 @@ export interface VigaResult {
   longitudBarraLongitudinal: number; // m (por barra, incluye viga completa)
   longitudTotalBarrasLongitudinales: number; // m
   pesoAceroLongitudinal: number; // kg
+  numeroEstribosConfinamientoPorExtremo: number; // por extremo (multiplicar x2 para ambos extremos)
+  numeroEstribosCentralPorViga: number;
   numeroEstribosPorViga: number;
   numeroEstribosTotal: number;
   longitudPorEstribo: number; // m
@@ -42,6 +51,29 @@ export interface VigaResult {
 }
 
 const GANCHO_ESTRIBO_M = 0.2; // longitud adicional por ganchos a 135°, referencial
+
+// Sugiere Lo (longitud de confinamiento) y S1 (separación) según NTE E.060.
+// Art. 21.4.4 (edificios con muros estructurales): d/4, 8·db_long, 24·db_estribo, 30 cm.
+// Art. 21.5.3 (edificios de pórticos o sistema dual, más exigente): d/4, 6·db_long, 15 cm.
+// Siempre editable: es un punto de partida, no reemplaza el diseño estructural.
+export function sugerirConfinamiento(
+  sistema: SistemaSismorresistente,
+  alturaCm: number,
+  recubrimientoCm: number,
+  diametroLongitudinalMm: number,
+  diametroEstriboMm: number
+): { longitudConfinamientoCm: number; separacionConfinamientoCm: number } {
+  const dCm = Math.max(alturaCm - recubrimientoCm, 0);
+  const longitudConfinamientoCm = 2 * alturaCm;
+  const s1Cm =
+    sistema === "muros"
+      ? Math.min(dCm / 4, (8 * diametroLongitudinalMm) / 10, (24 * diametroEstriboMm) / 10, 30)
+      : Math.min(dCm / 4, (6 * diametroLongitudinalMm) / 10, 15);
+  return {
+    longitudConfinamientoCm: Math.round(longitudConfinamientoCm),
+    separacionConfinamientoCm: Math.max(Math.floor(s1Cm), 5),
+  };
+}
 
 export function calcularViga(input: VigaInput): VigaResult {
   const warnings: string[] = [];
@@ -77,12 +109,33 @@ export function calcularViga(input: VigaInput): VigaResult {
   const pesoAceroLongitudinal = longitudTotalBarrasLongitudinales * rebarLong.weightKgPerM;
 
   const rebarEstribo = getRebar(input.diametroEstribosId);
-  const separacionEstribosM = input.separacionEstribos / 100;
-  const numeroEstribosPorViga =
-    separacionEstribosM > 0 ? Math.floor(input.longitud / separacionEstribosM) + 1 : 0;
+  const separacionCentralM = input.separacionEstribos / 100;
+
+  let numeroEstribosConfinamientoPorExtremo = 0;
+  let numeroEstribosCentralPorViga = 0;
+  let numeroEstribosPorViga: number;
+
+  if (input.incluirConfinamiento) {
+    const loM = input.longitudConfinamiento / 100;
+    const s1M = input.separacionConfinamiento / 100;
+
+    if (2 * loM > input.longitud) {
+      warnings.push(
+        "La longitud de confinamiento en ambos extremos (2×Lo) supera la longitud de la viga; revisa Lo."
+      );
+    }
+
+    numeroEstribosConfinamientoPorExtremo = s1M > 0 ? Math.floor(loM / s1M) + 1 : 0;
+    const longitudCentral = Math.max(input.longitud - 2 * loM, 0);
+    numeroEstribosCentralPorViga =
+      separacionCentralM > 0 ? Math.max(Math.floor(longitudCentral / separacionCentralM) - 1, 0) : 0;
+    numeroEstribosPorViga = 2 * numeroEstribosConfinamientoPorExtremo + numeroEstribosCentralPorViga;
+  } else {
+    numeroEstribosPorViga = separacionCentralM > 0 ? Math.floor(input.longitud / separacionCentralM) + 1 : 0;
+  }
+
   const numeroEstribosTotal = numeroEstribosPorViga * input.numeroVigas;
-  const longitudPorEstribo =
-    2 * (baseM - 2 * recubM) + 2 * (alturaM - 2 * recubM) + GANCHO_ESTRIBO_M;
+  const longitudPorEstribo = 2 * (baseM - 2 * recubM) + 2 * (alturaM - 2 * recubM) + GANCHO_ESTRIBO_M;
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
@@ -101,6 +154,8 @@ export function calcularViga(input: VigaInput): VigaResult {
     longitudBarraLongitudinal,
     longitudTotalBarrasLongitudinales,
     pesoAceroLongitudinal,
+    numeroEstribosConfinamientoPorExtremo,
+    numeroEstribosCentralPorViga,
     numeroEstribosPorViga,
     numeroEstribosTotal,
     longitudPorEstribo,
