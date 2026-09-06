@@ -1,0 +1,69 @@
+// Base de datos de materiales de referencia (editable a futuro desde configuración).
+
+export interface ConcreteGrade {
+  id: string;
+  label: string;
+  fc: number; // kg/cm2
+  cementBagsPerM3: number; // bolsas de cemento por m3 (referencial, mezcla 1:2:2 aprox.)
+  sandM3PerM3: number;
+  gravelM3PerM3: number;
+  waterLPerM3: number;
+}
+
+export const CONCRETE_GRADES: ConcreteGrade[] = [
+  { id: "175", label: "f'c 175 kg/cm²", fc: 175, cementBagsPerM3: 7.0, sandM3PerM3: 0.53, gravelM3PerM3: 0.55, waterLPerM3: 185 },
+  { id: "210", label: "f'c 210 kg/cm²", fc: 210, cementBagsPerM3: 9.0, sandM3PerM3: 0.52, gravelM3PerM3: 0.53, waterLPerM3: 186 },
+  { id: "280", label: "f'c 280 kg/cm²", fc: 280, cementBagsPerM3: 10.5, sandM3PerM3: 0.5, gravelM3PerM3: 0.52, waterLPerM3: 190 },
+];
+
+export const CONCRETE_DENSITY_KG_M3 = 2400;
+
+export interface RebarSize {
+  id: string;
+  diameterMm: number;
+  label: string;
+  weightKgPerM: number; // peso nominal kg/m (norma ASTM/NTP)
+}
+
+// Pesos unitarios nominales de barras corrugadas de acero (kg/m)
+export const REBAR_SIZES: RebarSize[] = [
+  { id: "6", diameterMm: 6, label: 'Ø 6 mm (1/4")', weightKgPerM: 0.222 },
+  { id: "8", diameterMm: 8, label: 'Ø 8 mm (3/8" aprox.)', weightKgPerM: 0.395 },
+  { id: "10", diameterMm: 10, label: 'Ø 10 mm', weightKgPerM: 0.617 },
+  { id: "12", diameterMm: 12, label: 'Ø 12 mm (1/2")', weightKgPerM: 0.888 },
+  { id: "16", diameterMm: 16, label: 'Ø 16 mm (5/8")', weightKgPerM: 1.578 },
+  { id: "20", diameterMm: 20, label: 'Ø 20 mm (3/4")', weightKgPerM: 2.466 },
+  { id: "25", diameterMm: 25, label: "Ø 25 mm (1\")", weightKgPerM: 3.853 },
+];
+
+export function getRebar(id: string): RebarSize {
+  return REBAR_SIZES.find((r) => r.id === id) ?? REBAR_SIZES[3];
+}
+
+export interface HollowBrickType {
+  id: string;
+  heightCm: number;
+  label: string;
+  weightKg: number; // peso aproximado unitario
+}
+
+// Ladrillo aligerante ("pastelero de techo") 0.30 x 0.30 x h m, pesos aproximados de mercado.
+export const HOLLOW_BRICK_LENGTH_M = 0.3;
+export const HOLLOW_BRICK_WIDTH_M = 0.3;
+
+export const HOLLOW_BRICK_TYPES: HollowBrickType[] = [
+  { id: "12", heightCm: 12, label: "Ladrillo hueco 12 cm", weightKg: 4.4 },
+  { id: "15", heightCm: 15, label: "Ladrillo hueco 15 cm", weightKg: 5.4 },
+  { id: "20", heightCm: 20, label: "Ladrillo hueco 20 cm", weightKg: 7.9 },
+];
+
+export const OTHER_MATERIALS = [
+  { id: "cemento", label: "Cemento", unit: "bls" },
+  { id: "arena", label: "Arena gruesa", unit: "m³" },
+  { id: "piedra", label: "Piedra chancada", unit: "m³" },
+  { id: "ladrillo", label: "Ladrillo aligerante", unit: "und" },
+  { id: "madera", label: "Madera para encofrado", unit: "p²" },
+];
+
+// Rendimiento referencial de madera de encofrado por m2 de encofrado (pies tablares).
+export const FORMWORK_TIMBER_BOARD_FEET_PER_M2 = 5.5;

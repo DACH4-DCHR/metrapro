@@ -1,0 +1,246 @@
+import { useMemo, useState } from "react";
+import { RectangleHorizontal, Save } from "lucide-react";
+import { PageHeader } from "../components/PageHeader";
+import { SectionCard } from "../components/ui/SectionCard";
+import { NumberField } from "../components/ui/NumberField";
+import { SelectField } from "../components/ui/SelectField";
+import { ResultTable } from "../components/ui/ResultTable";
+import { WarningsBox } from "../components/ui/WarningsBox";
+import { calcularViga, type VigaInput, type TipoSeccionViga } from "../lib/calc/viga";
+import { REBAR_SIZES } from "../lib/materials";
+import { useProjectStore } from "../store/projectStore";
+import type { CalculatedElement, MetradoLine } from "../lib/types";
+
+const rebarOptions = REBAR_SIZES.map((r) => ({ value: r.id, label: r.label }));
+const tipoSeccionOptions: { value: TipoSeccionViga; label: string }[] = [
+  { value: "rectangular", label: "Rectangular" },
+  { value: "T", label: "T invertida" },
+  { value: "personalizada", label: "Personalizada" },
+];
+
+const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
+
+export function VigasPage() {
+  const addElement = useProjectStore((s) => s.addElement);
+  const [saved, setSaved] = useState(false);
+  const [nombre, setNombre] = useState("Vigas principales - Eje A");
+
+  const [input, setInput] = useState<VigaInput>({
+    numeroVigas: 4,
+    longitud: 6,
+    base: 25,
+    altura: 40,
+    tipoSeccion: "rectangular",
+    alaAncho: 60,
+    alaEspesor: 20,
+    areaSeccionPersonalizada: 0.1,
+    perimetroEncofradoPersonalizado: 1.2,
+    diametroLongitudinalId: "16",
+    numeroBarrasLongitudinales: 4,
+    diametroEstribosId: "8",
+    separacionEstribos: 20,
+    recubrimiento: 4,
+  });
+
+  const result = useMemo(() => calcularViga(input), [input]);
+
+  const lines: MetradoLine[] = [
+    { partida: "Concreto f'c=210 kg/cm² en vigas", unidad: "m³", cantidad: result.volumenConcreto },
+    { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.pesoAceroTotal },
+    { partida: "Encofrado y desencofrado de vigas", unidad: "m²", cantidad: result.areaEncofrado },
+  ];
+
+  function update<K extends keyof VigaInput>(key: K, value: VigaInput[K]) {
+    setInput((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function handleSave() {
+    const el: CalculatedElement = {
+      id: crypto.randomUUID(),
+      module: "viga",
+      name: nombre || "Vigas",
+      createdAt: Date.now(),
+      concreteM3: result.volumenConcreto,
+      steelKg: result.pesoAceroTotal,
+      formworkM2: result.areaEncofrado,
+      lines,
+      inputsSummary: {
+        Cantidad: `${input.numeroVigas} vigas`,
+        Sección: `${input.base} x ${input.altura} cm`,
+        Longitud: `${input.longitud} m`,
+      },
+    };
+    addElement(el);
+    setSaved(true);
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Metrado de Vigas de Concreto Armado"
+        subtitle="Vigas rectangulares, T invertida o sección personalizada"
+        icon={<RectangleHorizontal size={20} />}
+        actions={
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700"
+          >
+            <Save size={16} />
+            {saved ? "Guardado ✓" : "Guardar elemento"}
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
+        <div className="flex flex-col gap-6">
+          <SectionCard title="Identificación">
+            <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
+          </SectionCard>
+
+          <SectionCard title="Geometría">
+            <div className="grid grid-cols-2 gap-4">
+              <NumberField
+                label="N° de vigas"
+                unit="und"
+                step={1}
+                value={input.numeroVigas}
+                onChange={(v) => update("numeroVigas", v)}
+              />
+              <NumberField
+                label="Longitud de viga"
+                unit="m"
+                value={input.longitud}
+                onChange={(v) => update("longitud", v)}
+              />
+              <NumberField label="Base" unit="cm" value={input.base} onChange={(v) => update("base", v)} />
+              <NumberField label="Altura" unit="cm" value={input.altura} onChange={(v) => update("altura", v)} />
+              <div className="col-span-2">
+                <SelectField
+                  label="Tipo de sección"
+                  value={input.tipoSeccion}
+                  onChange={(v) => update("tipoSeccion", v as TipoSeccionViga)}
+                  options={tipoSeccionOptions}
+                />
+              </div>
+              {input.tipoSeccion === "T" && (
+                <>
+                  <NumberField
+                    label="Ancho de ala"
+                    unit="cm"
+                    value={input.alaAncho ?? 0}
+                    onChange={(v) => update("alaAncho", v)}
+                  />
+                  <NumberField
+                    label="Espesor de ala"
+                    unit="cm"
+                    value={input.alaEspesor ?? 0}
+                    onChange={(v) => update("alaEspesor", v)}
+                  />
+                </>
+              )}
+              {input.tipoSeccion === "personalizada" && (
+                <>
+                  <NumberField
+                    label="Área de sección"
+                    unit="m²"
+                    value={input.areaSeccionPersonalizada ?? 0}
+                    onChange={(v) => update("areaSeccionPersonalizada", v)}
+                  />
+                  <NumberField
+                    label="Perímetro encofrado"
+                    unit="m"
+                    value={input.perimetroEncofradoPersonalizado ?? 0}
+                    onChange={(v) => update("perimetroEncofradoPersonalizado", v)}
+                  />
+                </>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Acero de refuerzo">
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField
+                label="Ø barras longitudinales"
+                value={input.diametroLongitudinalId}
+                onChange={(v) => update("diametroLongitudinalId", v)}
+                options={rebarOptions}
+              />
+              <NumberField
+                label="N° de barras"
+                unit="und"
+                step={1}
+                value={input.numeroBarrasLongitudinales}
+                onChange={(v) => update("numeroBarrasLongitudinales", v)}
+              />
+              <SelectField
+                label="Ø de estribos"
+                value={input.diametroEstribosId}
+                onChange={(v) => update("diametroEstribosId", v)}
+                options={rebarOptions}
+              />
+              <NumberField
+                label="Separación de estribos"
+                unit="cm"
+                value={input.separacionEstribos}
+                onChange={(v) => update("separacionEstribos", v)}
+              />
+              <NumberField
+                label="Recubrimiento"
+                unit="cm"
+                value={input.recubrimiento}
+                onChange={(v) => update("recubrimiento", v)}
+              />
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <WarningsBox warnings={result.warnings} />
+
+          <SectionCard title="Resultados de cálculo">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+              <Metric label="Área de sección" value={result.areaSeccion} unit="m²" />
+              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
+              <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
+              <Metric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" />
+              <Metric label="N° de estribos" value={result.numeroEstribosTotal} unit="und" />
+              <Metric label="Peso de estribos" value={result.pesoEstribos} unit="kg" />
+              <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
+              <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Resumen">
+            <ResultTable lines={lines} />
+          </SectionCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
+  return (
+    <div className="rounded-md bg-steel-50 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
+      <p className="text-base font-bold text-navy-900">
+        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function TextField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-sm font-medium text-navy-800">{label}</span>
+      <input
+        type="text"
+        className="w-full rounded-md border border-steel-200 bg-white px-3 py-2 text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
