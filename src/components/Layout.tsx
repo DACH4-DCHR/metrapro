@@ -8,6 +8,7 @@ import {
   Square,
   StretchHorizontal,
   Rows3,
+  GitCommitHorizontal,
   HardHat,
   Building2,
   AlertTriangle,
@@ -20,14 +21,30 @@ import {
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
 
-const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/losa-aligerada", label: "Losa Aligerada", icon: Layers3, end: false },
-  { to: "/vigas", label: "Vigas", icon: RectangleHorizontal, end: false },
-  { to: "/escaleras", label: "Escaleras", icon: MoveUpRight, end: false },
-  { to: "/zapatas", label: "Zapatas", icon: Square, end: false },
-  { to: "/cimiento-corrido", label: "Cimiento Corrido", icon: StretchHorizontal, end: false },
-  { to: "/sobrecimiento", label: "Sobrecimiento", icon: Rows3, end: false },
+// Orden constructivo/normativo: cimentación primero (de abajo hacia arriba: zapatas,
+// cimiento corrido, sobrecimiento, vigas de cimentación), luego la superestructura
+// (vigas, losas) y finalmente escaleras. Los módulos de un mismo grupo comparten
+// sección visual en el menú.
+const dashboardItem = { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true };
+
+const navGroups: { section: string; items: { to: string; label: string; icon: typeof Layers3 }[] }[] = [
+  {
+    section: "Cimentación",
+    items: [
+      { to: "/zapatas", label: "Zapatas", icon: Square },
+      { to: "/cimiento-corrido", label: "Cimiento Corrido", icon: StretchHorizontal },
+      { to: "/sobrecimiento", label: "Sobrecimiento", icon: Rows3 },
+      { to: "/vigas-cimentacion", label: "Vigas de Cimentación", icon: GitCommitHorizontal },
+    ],
+  },
+  {
+    section: "Superestructura",
+    items: [
+      { to: "/vigas", label: "Vigas", icon: RectangleHorizontal },
+      { to: "/losa-aligerada", label: "Losa Aligerada", icon: Layers3 },
+      { to: "/escaleras", label: "Escaleras", icon: MoveUpRight },
+    ],
+  },
 ];
 
 export function Layout() {
@@ -83,23 +100,43 @@ export function Layout() {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-navy-700 text-white"
-                    : "text-steel-300 hover:bg-navy-800 hover:text-white"
-                }`
-              }
-            >
-              <item.icon size={18} />
-              {item.label}
-            </NavLink>
+        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+          <NavLink
+            to={dashboardItem.to}
+            end={dashboardItem.end}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
+              }`
+            }
+          >
+            <dashboardItem.icon size={18} />
+            {dashboardItem.label}
+          </NavLink>
+
+          {navGroups.map((group) => (
+            <div key={group.section}>
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-steel-500">
+                {group.section}
+              </p>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={false}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
+                      }`
+                    }
+                  >
+                    <item.icon size={18} />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

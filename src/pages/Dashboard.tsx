@@ -10,6 +10,7 @@ import {
   Square,
   StretchHorizontal,
   Rows3,
+  GitCommitHorizontal,
   Trash2,
   FileDown,
   FileSpreadsheet,
@@ -39,6 +40,7 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   zapata: { label: "Zapata", icon: Square },
   cimientoCorrido: { label: "Cimiento Corrido", icon: StretchHorizontal },
   sobrecimiento: { label: "Sobrecimiento", icon: Rows3 },
+  vigaCimentacion: { label: "Viga de Cimentación", icon: GitCommitHorizontal },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
