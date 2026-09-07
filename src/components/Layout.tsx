@@ -5,6 +5,7 @@ import {
   Layers3,
   RectangleHorizontal,
   MoveUpRight,
+  Square,
   HardHat,
   Building2,
   AlertTriangle,
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/losa-aligerada", label: "Losa Aligerada", icon: Layers3, end: false },
   { to: "/vigas", label: "Vigas", icon: RectangleHorizontal, end: false },
   { to: "/escaleras", label: "Escaleras", icon: MoveUpRight, end: false },
+  { to: "/zapatas", label: "Zapatas", icon: Square, end: false },
 ];
 
 export function Layout() {

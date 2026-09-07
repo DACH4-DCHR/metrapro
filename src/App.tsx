@@ -6,6 +6,7 @@ import { DashboardPage } from "./pages/Dashboard";
 import { LosaAligeradaPage } from "./pages/LosaAligerada";
 import { VigasPage } from "./pages/Vigas";
 import { EscalerasPage } from "./pages/Escaleras";
+import { ZapatasPage } from "./pages/Zapatas";
 import { LoginPage } from "./pages/Login";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
@@ -55,6 +56,7 @@ function ProjectGate() {
           <Route path="/losa-aligerada" element={<LosaAligeradaPage />} />
           <Route path="/vigas" element={<VigasPage />} />
           <Route path="/escaleras" element={<EscalerasPage />} />
+          <Route path="/zapatas" element={<ZapatasPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

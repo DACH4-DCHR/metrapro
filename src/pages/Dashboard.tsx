@@ -7,6 +7,7 @@ import {
   Layers3,
   RectangleHorizontal,
   MoveUpRight,
+  Square,
   Trash2,
   FileDown,
   FileSpreadsheet,
@@ -33,6 +34,7 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   losa: { label: "Losa Aligerada", icon: Layers3 },
   viga: { label: "Viga", icon: RectangleHorizontal },
   escalera: { label: "Escalera", icon: MoveUpRight },
+  zapata: { label: "Zapata", icon: Square },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
