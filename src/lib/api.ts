@@ -36,11 +36,17 @@ export class ApiError extends Error {
 // alcanzar el backend. Es una falla de conectividad, no un rechazo de la API.
 const GATEWAY_ERROR_STATUSES = new Set([502, 503, 504]);
 
+// En desarrollo, el proxy de Vite reenvía /api a localhost:4000 y no hace falta nada
+// más. En producción, si el frontend y el backend viven en dominios distintos (ej.
+// frontend en Vercel, backend en Railway), VITE_API_URL debe apuntar al backend.
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
 async function doFetch(path: string, options?: RequestInit): Promise<Response> {
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       ...options,
     });
   } catch {

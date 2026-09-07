@@ -18,8 +18,12 @@ import {
   removeElement,
 } from "./db.js";
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+// CORS_ORIGIN: en producción, la URL exacta del frontend (ej. https://mi-app.vercel.app).
+// Sin ella, se refleja cualquier origen (cómodo en desarrollo, pero menos estricto).
+app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 
@@ -30,8 +34,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function setSessionCookie(res, sessionId) {
   res.cookie(SESSION_COOKIE, sessionId, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // "none" es obligatorio para que la cookie viaje cuando el frontend vive en un
+    // dominio distinto al backend (ej. Vercel + Railway); requiere secure:true, que
+    // a su vez requiere HTTPS (ambas plataformas lo dan por defecto). En desarrollo
+    // local (mismo origen vía el proxy de Vite) se usa "lax" sin HTTPS.
+    sameSite: IS_PRODUCTION ? "none" : "lax",
+    secure: IS_PRODUCTION,
     maxAge: SESSION_MAX_AGE_MS,
     path: "/",
   });
@@ -79,7 +87,7 @@ app.post("/api/auth/login", async (req, res) => {
 app.post("/api/auth/logout", async (req, res) => {
   const sid = req.cookies?.[SESSION_COOKIE];
   if (sid) await deleteSession(sid);
-  res.clearCookie(SESSION_COOKIE, { path: "/" });
+  res.clearCookie(SESSION_COOKIE, { path: "/", sameSite: IS_PRODUCTION ? "none" : "lax", secure: IS_PRODUCTION });
   res.json({ ok: true });
 });
 
