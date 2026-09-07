@@ -13,6 +13,7 @@ import {
   PanelLeft,
   BrickWall,
   LayoutPanelTop,
+  Grid2x2,
   HardHat,
   Building2,
   AlertTriangle,
@@ -58,6 +59,10 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
       { to: "/losa-maciza", label: "Losa Maciza", icon: LayoutPanelTop },
       { to: "/escaleras", label: "Escaleras", icon: MoveUpRight },
     ],
+  },
+  {
+    section: "Arquitectura",
+    items: [{ to: "/muros-arquitectura", label: "Muros de Arquitectura", icon: Grid2x2 }],
   },
 ];
 

@@ -9,7 +9,8 @@ export type ModuleType =
   | "columna"
   | "placa"
   | "muroAlbanileria"
-  | "losaMaciza";
+  | "losaMaciza"
+  | "muroArquitectura";
 
 export interface MetradoLine {
   partida: string;

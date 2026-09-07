@@ -14,6 +14,7 @@ import { ColumnasPage } from "./pages/Columnas";
 import { PlacasPage } from "./pages/Placas";
 import { MurosAlbanileriaPage } from "./pages/MurosAlbanileria";
 import { LosaMacizaPage } from "./pages/LosaMaciza";
+import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
 import { LoginPage } from "./pages/Login";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
@@ -71,6 +72,7 @@ function ProjectGate() {
           <Route path="/placas" element={<PlacasPage />} />
           <Route path="/muros-albanileria" element={<MurosAlbanileriaPage />} />
           <Route path="/losa-maciza" element={<LosaMacizaPage />} />
+          <Route path="/muros-arquitectura" element={<MurosArquitecturaPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

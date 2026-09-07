@@ -15,6 +15,7 @@ import {
   PanelLeft,
   BrickWall,
   LayoutPanelTop,
+  Grid2x2,
   Trash2,
   FileDown,
   FileSpreadsheet,
@@ -49,6 +50,7 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   placa: { label: "Placa", icon: PanelLeft },
   muroAlbanileria: { label: "Muro de Albañilería", icon: BrickWall },
   losaMaciza: { label: "Losa Maciza", icon: LayoutPanelTop },
+  muroArquitectura: { label: "Muro de Arquitectura", icon: Grid2x2 },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
