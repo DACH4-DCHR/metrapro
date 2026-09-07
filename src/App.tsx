@@ -10,6 +10,7 @@ import { ZapatasPage } from "./pages/Zapatas";
 import { CimientoCorridoPage } from "./pages/CimientoCorrido";
 import { SobrecimientoPage } from "./pages/Sobrecimiento";
 import { VigasCimentacionPage } from "./pages/VigasCimentacion";
+import { ColumnasPage } from "./pages/Columnas";
 import { LoginPage } from "./pages/Login";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
@@ -63,6 +64,7 @@ function ProjectGate() {
           <Route path="/cimiento-corrido" element={<CimientoCorridoPage />} />
           <Route path="/sobrecimiento" element={<SobrecimientoPage />} />
           <Route path="/vigas-cimentacion" element={<VigasCimentacionPage />} />
+          <Route path="/columnas" element={<ColumnasPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

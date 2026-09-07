@@ -1,0 +1,202 @@
+import { getRebar } from "../materials";
+import type { BarraGrupo } from "./viga";
+
+export type { BarraGrupo };
+export type TipoSeccionColumna = "rectangular" | "circular";
+export type SistemaSismorresistenteColumna = "muros" | "porticos_dual";
+
+export interface ColumnaInput {
+  numeroColumnas: number;
+  alturaLibre: number; // m, altura libre de entrepiso (luz libre de la columna)
+  tipoSeccion: TipoSeccionColumna;
+  base: number; // cm (rectangular)
+  peralte: number; // cm (rectangular)
+  diametro: number; // cm (circular)
+
+  barrasLongitudinales: BarraGrupo[];
+  diametroEstribosId: string;
+  recubrimiento: number; // cm
+
+  sistemaSismorresistente: SistemaSismorresistenteColumna;
+  incluirConfinamiento: boolean;
+  longitudConfinamiento: number; // cm (Lo), por extremo
+  separacionConfinamiento: number; // cm (So), dentro de Lo
+  separacionCentral: number; // cm, fuera de Lo (o única si no hay confinamiento)
+}
+
+export interface ColumnaResult {
+  areaSeccion: number; // m2
+  volumenConcreto: number; // m3
+  perimetroSeccion: number; // m
+  areaEncofrado: number; // m2
+  numeroBarrasLongitudinales: number;
+  pesoAceroLongitudinal: number; // kg
+  cuantiaPct: number; // %
+  numeroEstribosConfinamientoPorExtremo: number;
+  numeroEstribosCentralPorColumna: number;
+  numeroEstribosPorColumna: number;
+  numeroEstribosTotal: number;
+  longitudPorEstribo: number; // m
+  pesoEstribos: number; // kg
+  pesoAceroTotal: number; // kg
+  longitudTotalFierro: number; // m
+  warnings: string[];
+}
+
+const GANCHO_ESTRIBO_M = 0.2;
+
+// Sugiere Lo, So (dentro de Lo) y separación fuera de Lo para columnas, según:
+// Art. 21.4.5 (edificios con muros estructurales): Lo=máx(mayor dim, luz libre/6, 50cm);
+//   So=mín(8·db, menor dim/2, 10cm); fuera de Lo=mín(12·db, menor dim, 30cm).
+// Art. 21.6.4 (edificios de pórticos o sistema dual, más exigente): Lo=máx(mayor dim, luz
+//   libre/6, 50cm); So=mín(6·db, 10cm); fuera de Lo=mín(10·db, menor dim, 25cm).
+export function sugerirConfinamientoColumna(
+  sistema: SistemaSismorresistenteColumna,
+  mayorDimensionCm: number,
+  menorDimensionCm: number,
+  alturaLibreM: number,
+  diametroLongitudinalMm: number
+): { longitudConfinamientoCm: number; separacionConfinamientoCm: number; separacionCentralCm: number } {
+  const dbCm = diametroLongitudinalMm / 10;
+  const loCm = Math.max(mayorDimensionCm, (alturaLibreM * 100) / 6, 50);
+
+  const soCm =
+    sistema === "muros" ? Math.min(8 * dbCm, menorDimensionCm / 2, 10) : Math.min(6 * dbCm, 10);
+  const sCentralCm =
+    sistema === "muros" ? Math.min(12 * dbCm, menorDimensionCm, 30) : Math.min(10 * dbCm, menorDimensionCm, 25);
+
+  return {
+    longitudConfinamientoCm: Math.round(loCm),
+    separacionConfinamientoCm: Math.max(Math.floor(soCm), 5),
+    separacionCentralCm: Math.max(Math.floor(sCentralCm), 5),
+  };
+}
+
+function minDiametroMm(grupos: BarraGrupo[]): number {
+  const dbs = grupos.filter((g) => g.cantidad > 0).map((g) => getRebar(g.diametroId).diameterMm);
+  return dbs.length > 0 ? Math.min(...dbs) : 16;
+}
+
+export function calcularColumna(input: ColumnaInput): ColumnaResult {
+  const warnings: string[] = [];
+  const recubM = input.recubrimiento / 100;
+
+  let areaSeccion: number;
+  let perimetroSeccion: number;
+  let menorDimensionCm: number;
+  let longitudPorEstriboBase: number;
+
+  if (input.tipoSeccion === "rectangular") {
+    const baseM = input.base / 100;
+    const peralteM = input.peralte / 100;
+    areaSeccion = baseM * peralteM;
+    perimetroSeccion = 2 * (baseM + peralteM);
+    menorDimensionCm = Math.min(input.base, input.peralte);
+    longitudPorEstriboBase = 2 * (baseM - 2 * recubM) + 2 * (peralteM - 2 * recubM);
+  } else {
+    const diametroM = input.diametro / 100;
+    areaSeccion = (Math.PI * diametroM * diametroM) / 4;
+    perimetroSeccion = Math.PI * diametroM;
+    menorDimensionCm = input.diametro;
+    longitudPorEstriboBase = Math.PI * (diametroM - 2 * recubM);
+  }
+
+  const volumenConcreto = areaSeccion * input.alturaLibre * input.numeroColumnas;
+  const areaEncofrado = perimetroSeccion * input.alturaLibre * input.numeroColumnas;
+
+  const grupos = input.barrasLongitudinales;
+  if (grupos.length === 0 || grupos.every((g) => g.cantidad <= 0)) {
+    warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
+  }
+  const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const areaAceroLongitudinalCm2 = grupos.reduce((acc, g) => {
+    const db = getRebar(g.diametroId).diameterMm / 10; // cm
+    return acc + Math.max(g.cantidad, 0) * ((Math.PI * db * db) / 4);
+  }, 0);
+  const pesoAceroLongitudinal = grupos.reduce(
+    (acc, g) =>
+      acc + Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas * getRebar(g.diametroId).weightKgPerM,
+    0
+  );
+
+  const areaSeccionCm2 = areaSeccion * 10000;
+  const cuantiaPct = areaSeccionCm2 > 0 ? (areaAceroLongitudinalCm2 / areaSeccionCm2) * 100 : 0;
+
+  if (cuantiaPct < 1) {
+    warnings.push(
+      `La cuantía de acero longitudinal (${cuantiaPct.toFixed(2)}%) es menor al mínimo de 1% exigido por E.060 Art. 21.6.3.1 / 21.4.5.2 para columnas sismorresistentes.`
+    );
+  } else if (cuantiaPct > 6) {
+    warnings.push(
+      `La cuantía de acero longitudinal (${cuantiaPct.toFixed(2)}%) supera el máximo de 6% permitido por E.060 Art. 21.6.3.1 / 21.4.5.2.`
+    );
+  } else if (cuantiaPct > 4) {
+    warnings.push(
+      `La cuantía de acero longitudinal (${cuantiaPct.toFixed(2)}%) supera 4%; los planos deben incluir detalles constructivos de la armadura en la unión viga-columna (E.060 Art. 21.6.3.1).`
+    );
+  }
+
+  if (input.sistemaSismorresistente === "porticos_dual" && menorDimensionCm < 25) {
+    warnings.push(
+      "La menor dimensión de la sección es menor a 25 cm, el mínimo para columnas de edificios con sistema de pórticos o dual (E.060 Art. 21.6.1.2)."
+    );
+  }
+
+  const rebarEstribo = getRebar(input.diametroEstribosId);
+  const separacionCentralM = input.separacionCentral / 100;
+
+  let numeroEstribosConfinamientoPorExtremo = 0;
+  let numeroEstribosCentralPorColumna = 0;
+  let numeroEstribosPorColumna: number;
+
+  if (input.incluirConfinamiento) {
+    const loM = input.longitudConfinamiento / 100;
+    const soM = input.separacionConfinamiento / 100;
+
+    if (2 * loM > input.alturaLibre) {
+      warnings.push("La longitud de confinamiento en ambos extremos (2×Lo) supera la altura libre de la columna; revisa Lo.");
+    }
+
+    numeroEstribosConfinamientoPorExtremo = soM > 0 ? Math.floor(loM / soM) + 1 : 0;
+    const alturaCentral = Math.max(input.alturaLibre - 2 * loM, 0);
+    numeroEstribosCentralPorColumna =
+      separacionCentralM > 0 ? Math.max(Math.floor(alturaCentral / separacionCentralM) - 1, 0) : 0;
+    numeroEstribosPorColumna = 2 * numeroEstribosConfinamientoPorExtremo + numeroEstribosCentralPorColumna;
+  } else {
+    numeroEstribosPorColumna = separacionCentralM > 0 ? Math.floor(input.alturaLibre / separacionCentralM) + 1 : 0;
+  }
+
+  const numeroEstribosTotal = numeroEstribosPorColumna * input.numeroColumnas;
+  const longitudPorEstribo = longitudPorEstriboBase + GANCHO_ESTRIBO_M;
+  const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
+  const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
+
+  const pesoAceroTotal = pesoAceroLongitudinal + pesoEstribos;
+  const longitudTotalFierro =
+    numeroBarrasLongitudinales * input.alturaLibre * input.numeroColumnas + longitudTotalEstribos;
+
+  if (input.recubrimiento * 2 >= menorDimensionCm) {
+    warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la columna.");
+  }
+
+  return {
+    areaSeccion,
+    volumenConcreto,
+    perimetroSeccion,
+    areaEncofrado,
+    numeroBarrasLongitudinales,
+    pesoAceroLongitudinal,
+    cuantiaPct,
+    numeroEstribosConfinamientoPorExtremo,
+    numeroEstribosCentralPorColumna,
+    numeroEstribosPorColumna,
+    numeroEstribosTotal,
+    longitudPorEstribo,
+    pesoEstribos,
+    pesoAceroTotal,
+    longitudTotalFierro,
+    warnings,
+  };
+}
+
+export { minDiametroMm as minDiametroLongitudinalMm };
