@@ -24,6 +24,12 @@ export interface LosaAligeradaInput {
   numeroVarillasPorVigueta: number; // método "barras"
   diametroVarillaViguetaId: string; // método "barras"
   desperdicioLadrilloPct: number; // %
+
+  // Acero negativo de vigueta (bastones sobre apoyos intermedios, para continuidad).
+  incluirAceroNegativo: boolean;
+  diametroNegativoId: string;
+  numeroBastonesPorVigueta: number; // total de bastones por vigueta (ej. 1 por apoyo intermedio)
+  longitudBaston: number; // m, longitud de cada bastón (típico: L/4 de cada tramo adyacente)
 }
 
 export interface LosaAligeradaResult {
@@ -44,6 +50,8 @@ export interface LosaAligeradaResult {
   pesoConcreto: number;
   aceroTemperaturaKg: number;
   aceroViguetasKg: number;
+  longitudTotalAceroNegativo: number;
+  aceroNegativoKg: number;
   aceroTotalKg: number;
   encofradoM2: number;
   pesoTotalMateriales: number;
@@ -117,7 +125,13 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
     input.aceroViguetasMetodo === "barras"
       ? input.numeroVarillasPorVigueta * longitudViguetas * getRebar(input.diametroVarillaViguetaId).weightKgPerM
       : input.ratioAceroViguetasKgM2 * areaLosa;
-  const aceroTotalKg = aceroTemperaturaKg + aceroViguetasKg;
+
+  const longitudTotalAceroNegativo = input.incluirAceroNegativo
+    ? Math.max(input.numeroBastonesPorVigueta, 0) * Math.max(input.longitudBaston, 0) * numeroViguetas
+    : 0;
+  const aceroNegativoKg = longitudTotalAceroNegativo * getRebar(input.diametroNegativoId).weightKgPerM;
+
+  const aceroTotalKg = aceroTemperaturaKg + aceroViguetasKg + aceroNegativoKg;
 
   const encofradoM2 = areaLosa;
 
@@ -141,6 +155,8 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
     pesoConcreto,
     aceroTemperaturaKg,
     aceroViguetasKg,
+    longitudTotalAceroNegativo,
+    aceroNegativoKg,
     aceroTotalKg,
     encofradoM2,
     pesoTotalMateriales,

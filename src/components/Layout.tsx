@@ -17,6 +17,7 @@ import {
   CloudOff,
   RefreshCw,
   Menu,
+  ChevronDown,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -58,6 +59,20 @@ export function Layout() {
   const logout = useAuthStore((s) => s.logout);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of navGroups) {
+      initial[group.section] = group.items.some((item) => location.pathname.startsWith(item.to));
+    }
+    // Si ninguna sección contiene la ruta activa (ej. Dashboard), abre la primera por defecto.
+    if (!Object.values(initial).some(Boolean)) initial[navGroups[0].section] = true;
+    return initial;
+  });
+
+  function toggleSection(section: string) {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
 
   useEffect(() => {
     setMenuOpen(false);
@@ -114,30 +129,47 @@ export function Layout() {
             {dashboardItem.label}
           </NavLink>
 
-          {navGroups.map((group) => (
-            <div key={group.section}>
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-steel-500">
-                {group.section}
-              </p>
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={false}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                        isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
-                      }`
-                    }
-                  >
-                    <item.icon size={18} />
-                    {item.label}
-                  </NavLink>
-                ))}
+          {navGroups.map((group) => {
+            const isOpen = openSections[group.section] ?? false;
+            return (
+              <div key={group.section}>
+                <button
+                  onClick={() => toggleSection(group.section)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-steel-500 transition-colors hover:bg-navy-800 hover:text-steel-200"
+                >
+                  {group.section}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
+                  />
+                </button>
+                <div
+                  className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ease-in-out ${
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="min-h-0 space-y-1 overflow-hidden pt-1">
+                    {group.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={false}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                            isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        <item.icon size={18} />
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="border-t border-white/10 px-4 py-4 text-xs text-steel-400">

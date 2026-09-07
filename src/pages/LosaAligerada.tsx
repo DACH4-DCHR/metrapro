@@ -55,6 +55,10 @@ export function LosaAligeradaPage() {
     numeroVarillasPorVigueta: 2,
     diametroVarillaViguetaId: "8",
     desperdicioLadrilloPct: 5,
+    incluirAceroNegativo: false,
+    diametroNegativoId: "8",
+    numeroBastonesPorVigueta: 1,
+    longitudBaston: 1,
   });
 
   const result = useMemo(() => calcularLosaAligerada(input), [input]);
@@ -233,6 +237,48 @@ export function LosaAligeradaPage() {
                 </div>
               )}
             </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.incluirAceroNegativo}
+                  onChange={(e) => update("incluirAceroNegativo", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Incluir acero negativo de vigueta (bastones sobre apoyos)
+                </span>
+              </label>
+
+              {input.incluirAceroNegativo && (
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <NumberField
+                    label="N° de bastones por vigueta"
+                    unit="und"
+                    step={1}
+                    value={input.numeroBastonesPorVigueta}
+                    onChange={(v) => update("numeroBastonesPorVigueta", v)}
+                    helper="Típico: 1 por apoyo intermedio"
+                  />
+                  <SelectField
+                    label="Ø de bastón"
+                    value={input.diametroNegativoId}
+                    onChange={(v) => update("diametroNegativoId", v)}
+                    options={rebarOptions}
+                  />
+                  <div className="col-span-2">
+                    <NumberField
+                      label="Longitud por bastón"
+                      unit="m"
+                      value={input.longitudBaston}
+                      onChange={(v) => update("longitudBaston", v)}
+                      helper="Típico: L/4 de cada tramo adyacente al apoyo"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </SectionCard>
         </div>
 
@@ -256,6 +302,9 @@ export function LosaAligeradaPage() {
               <Metric label="N° total de ladrillos" value={result.numeroLadrillos} unit="und" />
               <Metric label="Peso de ladrillos" value={result.pesoLadrillos} unit="kg" />
               <Metric label="Peso de concreto" value={result.pesoConcreto} unit="kg" />
+              {input.incluirAceroNegativo && (
+                <Metric label="Peso acero negativo" value={result.aceroNegativoKg} unit="kg" />
+              )}
               <Metric label="Acero total" value={result.aceroTotalKg} unit="kg" />
               <Metric label="Peso total materiales" value={result.pesoTotalMateriales} unit="kg" />
               <Metric label="Encofrado" value={result.encofradoM2} unit="m²" />
