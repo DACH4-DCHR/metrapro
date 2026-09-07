@@ -96,6 +96,8 @@ const moduleLabel: Record<CalculatedElement["module"], string> = {
   viga: "Viga",
   escalera: "Escalera",
   zapata: "Zapata",
+  cimientoCorrido: "Cimiento Corrido",
+  sobrecimiento: "Sobrecimiento",
 };
 
 export function generateExcelReport(

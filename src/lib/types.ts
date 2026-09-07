@@ -1,4 +1,4 @@
-export type ModuleType = "losa" | "viga" | "escalera" | "zapata";
+export type ModuleType = "losa" | "viga" | "escalera" | "zapata" | "cimientoCorrido" | "sobrecimiento";
 
 export interface MetradoLine {
   partida: string;

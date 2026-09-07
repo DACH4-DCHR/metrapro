@@ -8,6 +8,8 @@ import {
   RectangleHorizontal,
   MoveUpRight,
   Square,
+  StretchHorizontal,
+  Rows3,
   Trash2,
   FileDown,
   FileSpreadsheet,
@@ -35,6 +37,8 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   viga: { label: "Viga", icon: RectangleHorizontal },
   escalera: { label: "Escalera", icon: MoveUpRight },
   zapata: { label: "Zapata", icon: Square },
+  cimientoCorrido: { label: "Cimiento Corrido", icon: StretchHorizontal },
+  sobrecimiento: { label: "Sobrecimiento", icon: Rows3 },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {

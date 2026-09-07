@@ -6,6 +6,8 @@ import {
   RectangleHorizontal,
   MoveUpRight,
   Square,
+  StretchHorizontal,
+  Rows3,
   HardHat,
   Building2,
   AlertTriangle,
@@ -24,6 +26,8 @@ const navItems = [
   { to: "/vigas", label: "Vigas", icon: RectangleHorizontal, end: false },
   { to: "/escaleras", label: "Escaleras", icon: MoveUpRight, end: false },
   { to: "/zapatas", label: "Zapatas", icon: Square, end: false },
+  { to: "/cimiento-corrido", label: "Cimiento Corrido", icon: StretchHorizontal, end: false },
+  { to: "/sobrecimiento", label: "Sobrecimiento", icon: Rows3, end: false },
 ];
 
 export function Layout() {
