@@ -11,6 +11,7 @@ import {
   GitCommitHorizontal,
   RectangleVertical,
   PanelLeft,
+  BrickWall,
   HardHat,
   Building2,
   AlertTriangle,
@@ -45,6 +46,7 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
     items: [
       { to: "/columnas", label: "Columnas", icon: RectangleVertical },
       { to: "/placas", label: "Placas", icon: PanelLeft },
+      { to: "/muros-albanileria", label: "Muros de Albañilería", icon: BrickWall },
     ],
   },
   {

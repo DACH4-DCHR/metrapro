@@ -12,6 +12,7 @@ import { SobrecimientoPage } from "./pages/Sobrecimiento";
 import { VigasCimentacionPage } from "./pages/VigasCimentacion";
 import { ColumnasPage } from "./pages/Columnas";
 import { PlacasPage } from "./pages/Placas";
+import { MurosAlbanileriaPage } from "./pages/MurosAlbanileria";
 import { LoginPage } from "./pages/Login";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
@@ -67,6 +68,7 @@ function ProjectGate() {
           <Route path="/vigas-cimentacion" element={<VigasCimentacionPage />} />
           <Route path="/columnas" element={<ColumnasPage />} />
           <Route path="/placas" element={<PlacasPage />} />
+          <Route path="/muros-albanileria" element={<MurosAlbanileriaPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

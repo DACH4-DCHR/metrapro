@@ -7,7 +7,8 @@ export type ModuleType =
   | "sobrecimiento"
   | "vigaCimentacion"
   | "columna"
-  | "placa";
+  | "placa"
+  | "muroAlbanileria";
 
 export interface MetradoLine {
   partida: string;
