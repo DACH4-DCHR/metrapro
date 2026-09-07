@@ -1,6 +1,6 @@
 import {
   CONCRETE_DENSITY_KG_M3,
-  HOLLOW_BRICK_LENGTH_M,
+  getHollowBlockMaterial,
   hollowBlockWeightKg,
   getRebar,
   type HollowBlockMaterialId,
@@ -94,8 +94,11 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
   const volumenNervios = anchoViguetaM * espesorLosaM * longitudViguetas;
   const volumenCapaCompresion = Math.max(volumenConcreto - volumenNervios, 0);
 
-  const ladrillosPorM2 =
-    separacionViguetasM > 0 ? 1 / (separacionViguetasM * HOLLOW_BRICK_LENGTH_M) : 0;
+  // El largo del bloque depende del material: el ladrillo de arcilla es de 0.30 m,
+  // pero el casetón de tecnopor comercial es de 1.20 m (4 veces más largo), por lo
+  // que se necesitan ~4 veces menos unidades por m² con tecnopor.
+  const largoBloqueM = getHollowBlockMaterial(input.materialLadrillo).lengthM;
+  const ladrillosPorM2 = separacionViguetasM > 0 ? 1 / (separacionViguetasM * largoBloqueM) : 0;
   const numeroLadrillosNeto = ladrillosPorM2 * areaLosa;
   const numeroLadrillos = Math.ceil(numeroLadrillosNeto * (1 + input.desperdicioLadrilloPct / 100));
 

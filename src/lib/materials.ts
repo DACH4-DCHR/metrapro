@@ -40,23 +40,31 @@ export function getRebar(id: string): RebarSize {
   return REBAR_SIZES.find((r) => r.id === id) ?? REBAR_SIZES[3];
 }
 
-// Bloque aligerante de techo ("pastelero"), 0.30 x 0.30 x h m en ambos materiales.
-export const HOLLOW_BRICK_LENGTH_M = 0.3;
-export const HOLLOW_BRICK_WIDTH_M = 0.3;
-
 export type HollowBlockMaterialId = "arcilla" | "tecnopor";
 
 export interface HollowBlockMaterial {
   id: HollowBlockMaterialId;
   label: string;
+  // Dimensiones comerciales típicas del bloque/casetón (m). El ancho debe calzar
+  // en el vano entre viguetas; el largo determina cuántas unidades entran por m².
+  lengthM: number;
+  widthM: number;
   // Densidad usada solo para estimar el peso de una altura personalizada (kg/m3).
   densityKgM3: number;
 }
 
+// Ladrillo de arcilla ("pastelero"): 0.30 x 0.30 x h m, el estándar en el Perú.
+// Bloque de tecnopor (EPS): casetón comercial de 1.20 x 0.30 x h m — mismo ancho
+// (para calzar entre viguetas) pero 4 veces más largo, por lo que se necesitan
+// ~4 veces menos unidades por m² que con ladrillo de arcilla.
 export const HOLLOW_BLOCK_MATERIALS: HollowBlockMaterial[] = [
-  { id: "arcilla", label: "Ladrillo de arcilla", densityKgM3: 420 },
-  { id: "tecnopor", label: "Bloque de tecnopor (EPS)", densityKgM3: 15 },
+  { id: "arcilla", label: "Ladrillo de arcilla", lengthM: 0.3, widthM: 0.3, densityKgM3: 420 },
+  { id: "tecnopor", label: "Bloque de tecnopor (EPS)", lengthM: 1.2, widthM: 0.3, densityKgM3: 15 },
 ];
+
+export function getHollowBlockMaterial(id: HollowBlockMaterialId): HollowBlockMaterial {
+  return HOLLOW_BLOCK_MATERIALS.find((m) => m.id === id) ?? HOLLOW_BLOCK_MATERIALS[0];
+}
 
 export const HOLLOW_BLOCK_HEIGHT_OPTIONS = [
   { id: "12", heightCm: 12 },
@@ -79,9 +87,9 @@ export function hollowBlockWeightKg(
     const known = HOLLOW_BLOCK_WEIGHTS[material]?.[String(heightCm)];
     if (known != null) return known;
   }
-  const density = HOLLOW_BLOCK_MATERIALS.find((m) => m.id === material)?.densityKgM3 ?? 420;
-  const volumeM3 = HOLLOW_BRICK_LENGTH_M * HOLLOW_BRICK_WIDTH_M * (heightCm / 100);
-  return volumeM3 * density;
+  const dims = getHollowBlockMaterial(material);
+  const volumeM3 = dims.lengthM * dims.widthM * (heightCm / 100);
+  return volumeM3 * dims.densityKgM3;
 }
 
 export const OTHER_MATERIALS = [
