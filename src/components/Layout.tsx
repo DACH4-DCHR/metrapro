@@ -10,6 +10,7 @@ import {
   Rows3,
   GitCommitHorizontal,
   RectangleVertical,
+  PanelLeft,
   HardHat,
   Building2,
   AlertTriangle,
@@ -41,7 +42,10 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
   },
   {
     section: "Elementos Verticales",
-    items: [{ to: "/columnas", label: "Columnas", icon: RectangleVertical }],
+    items: [
+      { to: "/columnas", label: "Columnas", icon: RectangleVertical },
+      { to: "/placas", label: "Placas", icon: PanelLeft },
+    ],
   },
   {
     section: "Superestructura",

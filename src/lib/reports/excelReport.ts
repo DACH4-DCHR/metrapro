@@ -100,6 +100,7 @@ const moduleLabel: Record<CalculatedElement["module"], string> = {
   sobrecimiento: "Sobrecimiento",
   vigaCimentacion: "Viga de Cimentación",
   columna: "Columna",
+  placa: "Placa",
 };
 
 export function generateExcelReport(

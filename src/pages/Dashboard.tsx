@@ -12,6 +12,7 @@ import {
   Rows3,
   GitCommitHorizontal,
   RectangleVertical,
+  PanelLeft,
   Trash2,
   FileDown,
   FileSpreadsheet,
@@ -43,6 +44,7 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   sobrecimiento: { label: "Sobrecimiento", icon: Rows3 },
   vigaCimentacion: { label: "Viga de Cimentación", icon: GitCommitHorizontal },
   columna: { label: "Columna", icon: RectangleVertical },
+  placa: { label: "Placa", icon: PanelLeft },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
