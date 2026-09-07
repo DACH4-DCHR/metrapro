@@ -12,6 +12,7 @@ import {
   RectangleVertical,
   PanelLeft,
   BrickWall,
+  LayoutPanelTop,
   HardHat,
   Building2,
   AlertTriangle,
@@ -54,6 +55,7 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
     items: [
       { to: "/vigas", label: "Vigas", icon: RectangleHorizontal },
       { to: "/losa-aligerada", label: "Losa Aligerada", icon: Layers3 },
+      { to: "/losa-maciza", label: "Losa Maciza", icon: LayoutPanelTop },
       { to: "/escaleras", label: "Escaleras", icon: MoveUpRight },
     ],
   },
