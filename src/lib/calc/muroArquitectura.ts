@@ -1,5 +1,6 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
+import type { AceroItem } from "./aceroResumen";
 
 export type { BarraGrupo };
 
@@ -35,6 +36,7 @@ export interface MuroArquitecturaResult {
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
   espaciamientoMaximoArriostresM: number; // mín(2h, 5m), E.070 Art. 67
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -67,6 +69,7 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
   let pesoEstribosColumnetas = 0;
   let longitudBarras = 0;
   let longitudEstribos = 0;
+  let desgloseAcero: AceroItem[] = [];
 
   if (input.incluirArriostres) {
     const peralteM = input.peralteColumneta / 100;
@@ -104,6 +107,14 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
     const longitudPorEstribo = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteM - 2 * recubM) + GANCHO_ESTRIBO_M;
     longitudEstribos = longitudPorEstribo * numeroEstribosTotal;
     pesoEstribosColumnetas = longitudEstribos * rebarEstribo.weightKgPerM;
+
+    desgloseAcero = [
+      ...input.barrasColumneta.map((g) => ({
+        diametroId: g.diametroId,
+        longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnetas,
+      })),
+      { diametroId: input.diametroEstribosColumnetaId, longitudM: longitudEstribos },
+    ];
   }
 
   const pesoAceroTotal = pesoAceroColumnetas + pesoEstribosColumnetas;
@@ -125,6 +136,7 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
     pesoAceroTotal,
     longitudTotalFierro,
     espaciamientoMaximoArriostresM,
+    desgloseAcero,
     warnings,
   };
 }

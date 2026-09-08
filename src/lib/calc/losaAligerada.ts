@@ -5,6 +5,7 @@ import {
   getRebar,
   type HollowBlockMaterialId,
 } from "../materials";
+import type { AceroItem } from "./aceroResumen";
 
 export type AceroViguetasMetodo = "ratio" | "barras";
 
@@ -55,6 +56,7 @@ export interface LosaAligeradaResult {
   aceroTotalKg: number;
   encofradoM2: number;
   pesoTotalMateriales: number;
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -137,6 +139,16 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
 
   const pesoTotalMateriales = pesoConcreto + pesoLadrillos + aceroTotalKg;
 
+  const desgloseAcero: AceroItem[] = [
+    { diametroId: input.temperaturaDiametroId, longitudM: longitudBarrasTemp },
+    ...(input.aceroViguetasMetodo === "barras"
+      ? [{ diametroId: input.diametroVarillaViguetaId, longitudM: input.numeroVarillasPorVigueta * longitudViguetas }]
+      : []),
+    ...(input.incluirAceroNegativo
+      ? [{ diametroId: input.diametroNegativoId, longitudM: longitudTotalAceroNegativo }]
+      : []),
+  ];
+
   return {
     areaLosa,
     espesorLosaM,
@@ -160,6 +172,7 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
     aceroTotalKg,
     encofradoM2,
     pesoTotalMateriales,
+    desgloseAcero,
     warnings,
   };
 }

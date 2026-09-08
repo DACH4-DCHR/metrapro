@@ -10,6 +10,7 @@ import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaCrossSection } from "../components/diagrams/LosaCrossSection";
 import { calcularLosaAligerada, type AceroViguetasMetodo, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { HOLLOW_BLOCK_HEIGHT_OPTIONS, HOLLOW_BLOCK_MATERIALS, REBAR_SIZES, type HollowBlockMaterialId } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -66,7 +67,10 @@ export function LosaAligeradaPage() {
 
   const lines: MetradoLine[] = [
     { partida: "Concreto f'c=210 kg/cm² losa aligerada", unidad: "m³", cantidad: result.volumenConcreto },
-    { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.aceroTotalKg },
+    ...lineasAceroPorDiametro(result.desgloseAcero),
+    ...(input.aceroViguetasMetodo === "ratio"
+      ? [{ partida: "Acero de viguetas (estimado por ratio kg/m², sin diámetro asignado)", unidad: "kg", cantidad: result.aceroViguetasKg }]
+      : []),
     { partida: `${materialLabel} para techo`, unidad: "und", cantidad: result.numeroLadrillos },
     { partida: "Encofrado y desencofrado de losa", unidad: "m²", cantidad: result.encofradoM2 },
   ];

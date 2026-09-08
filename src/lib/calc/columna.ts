@@ -1,5 +1,6 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
+import type { AceroItem } from "./aceroResumen";
 
 export type { BarraGrupo };
 export type TipoSeccionColumna = "rectangular" | "circular";
@@ -40,6 +41,7 @@ export interface ColumnaResult {
   pesoEstribos: number; // kg
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -179,6 +181,14 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la columna.");
   }
 
+  const desgloseAcero: AceroItem[] = [
+    ...grupos.map((g) => ({
+      diametroId: g.diametroId,
+      longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas,
+    })),
+    { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
+  ];
+
   return {
     areaSeccion,
     volumenConcreto,
@@ -195,6 +205,7 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
     pesoEstribos,
     pesoAceroTotal,
     longitudTotalFierro,
+    desgloseAcero,
     warnings,
   };
 }

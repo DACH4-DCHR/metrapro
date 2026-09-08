@@ -15,6 +15,7 @@ import {
   type VigaCimentacionInput,
   type BarraGrupo,
 } from "../lib/calc/vigaCimentacion";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -54,7 +55,7 @@ export function VigasCimentacionPage() {
 
   const lines: MetradoLine[] = [
     { partida: "Concreto f'c=210 kg/cm² en vigas de cimentación", unidad: "m³", cantidad: result.volumenConcreto },
-    { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.pesoAceroTotal },
+    ...lineasAceroPorDiametro(result.desgloseAcero),
     { partida: "Encofrado y desencofrado de vigas de cimentación", unidad: "m²", cantidad: result.areaEncofrado },
   ];
 

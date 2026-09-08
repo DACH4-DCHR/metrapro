@@ -1,4 +1,5 @@
 import { getRebar } from "../materials";
+import type { AceroItem } from "./aceroResumen";
 
 export type TipoEscalera = "un_tramo" | "dos_tramos" | "L" | "U";
 
@@ -53,6 +54,7 @@ export interface EscaleraResult {
   aceroPrincipalKg: number;
   aceroDistribucionKg: number;
   aceroTotalKg: number;
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -164,6 +166,11 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
 
   const aceroTotalKg = aceroPrincipalKg + aceroDistribucionKg;
 
+  const desgloseAcero: AceroItem[] = [
+    { diametroId: input.aceroPrincipalDiametroId, longitudM: numeroBarrasPrincipal * longitudInclinadaTotal },
+    { diametroId: input.aceroDistribucionDiametroId, longitudM: numeroBarrasDistribucion * input.anchoEscalera },
+  ];
+
   return {
     tramo1,
     tramo2,
@@ -175,6 +182,7 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
     aceroPrincipalKg,
     aceroDistribucionKg,
     aceroTotalKg,
+    desgloseAcero,
     warnings,
   };
 }

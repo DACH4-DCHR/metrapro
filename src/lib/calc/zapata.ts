@@ -1,4 +1,5 @@
 import { CONCRETE_DENSITY_KG_M3, getRebar } from "../materials";
+import type { AceroItem } from "./aceroResumen";
 
 export interface ZapataInput {
   numeroZapatas: number;
@@ -34,6 +35,7 @@ export interface ZapataResult {
   pesoMallaSuperior: number; // kg
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -52,16 +54,18 @@ function pesoMalla(
   // Barras "X": corren paralelas al largo (longitud = largo), repetidas cada
   // "separacionX" a lo largo del ancho.
   const numeroBarrasX = separacionXM > 0 ? Math.ceil(ancho / separacionXM) : 0;
-  const pesoX = numeroBarrasX * largo * numeroZapatas * getRebar(diametroXId).weightKgPerM;
+  const longitudX = numeroBarrasX * largo * numeroZapatas;
+  const pesoX = longitudX * getRebar(diametroXId).weightKgPerM;
 
   // Barras "Y": corren paralelas al ancho (longitud = ancho), repetidas cada
   // "separacionY" a lo largo del largo.
   const numeroBarrasY = separacionYM > 0 ? Math.ceil(largo / separacionYM) : 0;
-  const pesoY = numeroBarrasY * ancho * numeroZapatas * getRebar(diametroYId).weightKgPerM;
+  const longitudY = numeroBarrasY * ancho * numeroZapatas;
+  const pesoY = longitudY * getRebar(diametroYId).weightKgPerM;
 
-  const longitudTotal = numeroBarrasX * largo * numeroZapatas + numeroBarrasY * ancho * numeroZapatas;
+  const longitudTotal = longitudX + longitudY;
 
-  return { numeroBarrasX, numeroBarrasY, peso: pesoX + pesoY, longitudTotal };
+  return { numeroBarrasX, numeroBarrasY, longitudX, longitudY, peso: pesoX + pesoY, longitudTotal };
 }
 
 export function calcularZapata(input: ZapataInput): ZapataResult {
@@ -94,7 +98,7 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
     input.separacionInferiorY
   );
 
-  let superior = { numeroBarrasX: 0, numeroBarrasY: 0, peso: 0, longitudTotal: 0 };
+  let superior = { numeroBarrasX: 0, numeroBarrasY: 0, longitudX: 0, longitudY: 0, peso: 0, longitudTotal: 0 };
   if (input.incluirMallaSuperior) {
     superior = pesoMalla(
       input.largo,
@@ -110,6 +114,17 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
   const pesoAceroTotal = inferior.peso + superior.peso;
   const longitudTotalFierro = inferior.longitudTotal + superior.longitudTotal;
 
+  const desgloseAcero: AceroItem[] = [
+    { diametroId: input.diametroInferiorXId, longitudM: inferior.longitudX },
+    { diametroId: input.diametroInferiorYId, longitudM: inferior.longitudY },
+    ...(input.incluirMallaSuperior
+      ? [
+          { diametroId: input.diametroSuperiorXId, longitudM: superior.longitudX },
+          { diametroId: input.diametroSuperiorYId, longitudM: superior.longitudY },
+        ]
+      : []),
+  ];
+
   return {
     areaPlanta,
     volumenConcreto,
@@ -123,6 +138,7 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
     pesoMallaSuperior: superior.peso,
     pesoAceroTotal,
     longitudTotalFierro,
+    desgloseAcero,
     warnings,
   };
 }

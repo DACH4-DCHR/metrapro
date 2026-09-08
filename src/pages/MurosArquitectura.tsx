@@ -10,6 +10,7 @@ import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { MuroArquitecturaElevation } from "../components/diagrams/MuroArquitecturaElevation";
 import { calcularMuroArquitectura, type MuroArquitecturaInput, type BarraGrupo } from "../lib/calc/muroArquitectura";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -64,7 +65,7 @@ export function MurosArquitecturaPage() {
             unidad: "m³",
             cantidad: result.volumenConcretoColumnetas,
           },
-          { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.pesoAceroTotal },
+          ...lineasAceroPorDiametro(result.desgloseAcero),
           { partida: "Encofrado de columnetas de arriostre", unidad: "m²", cantidad: result.encofradoColumnetas },
         ]
       : []),

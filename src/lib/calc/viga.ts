@@ -1,4 +1,5 @@
 import { getRebar } from "../materials";
+import type { AceroItem } from "./aceroResumen";
 
 export type TipoSeccionViga = "rectangular" | "T" | "personalizada";
 export type SistemaSismorresistente = "muros" | "porticos_dual";
@@ -59,6 +60,7 @@ export interface VigaResult {
   pesoAceroPiel: number; // kg
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -203,6 +205,15 @@ export function calcularViga(input: VigaInput): VigaResult {
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la viga.");
   }
 
+  const desgloseAcero: AceroItem[] = [
+    ...grupos.map((g) => ({
+      diametroId: g.diametroId,
+      longitudM: Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas,
+    })),
+    { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
+    ...(input.incluirAceroPiel ? [{ diametroId: input.pielDiametroId, longitudM: longitudTotalAceroPiel }] : []),
+  ];
+
   return {
     areaSeccion,
     volumenConcreto,
@@ -222,6 +233,7 @@ export function calcularViga(input: VigaInput): VigaResult {
     pesoAceroPiel,
     pesoAceroTotal,
     longitudTotalFierro,
+    desgloseAcero,
     warnings,
   };
 }

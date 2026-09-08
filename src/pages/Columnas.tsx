@@ -18,6 +18,7 @@ import {
   type SistemaSismorresistenteColumna,
   type BarraGrupo,
 } from "../lib/calc/columna";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -72,7 +73,7 @@ export function ColumnasPage() {
 
   const lines: MetradoLine[] = [
     { partida: "Concreto f'c=210 kg/cm² en columnas", unidad: "m³", cantidad: result.volumenConcreto },
-    { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.pesoAceroTotal },
+    ...lineasAceroPorDiametro(result.desgloseAcero),
     { partida: "Encofrado y desencofrado de columnas", unidad: "m²", cantidad: result.areaEncofrado },
   ];
 

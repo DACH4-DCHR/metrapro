@@ -1,5 +1,6 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
+import type { AceroItem } from "./aceroResumen";
 
 export type { BarraGrupo };
 
@@ -46,6 +47,7 @@ export interface MuroAlbanileriaResult {
   longitudTotalFierro: number; // m
   espesorMinimoCm: number; // h/20, Art. 19
   espaciamientoMaximoColumnasM: number; // mín(2h, 5m), Art. 44.3
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -90,6 +92,7 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
   let pesoEstribosSoleras = 0;
   let longitudBarrasConfinamiento = 0;
   let longitudEstribosConfinamiento = 0;
+  let desgloseAcero: AceroItem[] = [];
 
   if (input.incluirConfinamiento) {
     if (input.numeroColumnas < 2) {
@@ -170,6 +173,19 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
     pesoEstribosSoleras = longitudTotalEstribosSolera * rebarEstriboSolera.weightKgPerM;
 
     longitudEstribosConfinamiento = longitudTotalEstribosColumna + longitudTotalEstribosSolera;
+
+    desgloseAcero = [
+      ...input.barrasColumna.map((g) => ({
+        diametroId: g.diametroId,
+        longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas,
+      })),
+      { diametroId: input.diametroEstribosColumnaId, longitudM: longitudTotalEstribosColumna },
+      ...input.barrasSolera.map((g) => ({
+        diametroId: g.diametroId,
+        longitudM: Math.max(g.cantidad, 0) * input.longitud,
+      })),
+      { diametroId: input.diametroEstribosSoleraId, longitudM: longitudTotalEstribosSolera },
+    ];
   }
 
   const pesoAceroTotal = pesoAceroColumnas + pesoAceroSoleras + pesoEstribosColumnas + pesoEstribosSoleras;
@@ -197,6 +213,7 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
     longitudTotalFierro,
     espesorMinimoCm,
     espaciamientoMaximoColumnasM: Math.min(2 * input.alturaLibre, 5),
+    desgloseAcero,
     warnings,
   };
 }

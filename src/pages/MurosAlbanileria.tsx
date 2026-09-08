@@ -10,6 +10,7 @@ import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { MuroAlbanileriaElevation } from "../components/diagrams/MuroAlbanileriaElevation";
 import { calcularMuroAlbanileria, type MuroAlbanileriaInput, type BarraGrupo } from "../lib/calc/muroAlbanileria";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -67,7 +68,7 @@ export function MurosAlbanileriaPage() {
             unidad: "m³",
             cantidad: result.volumenConcretoConfinamiento,
           },
-          { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.pesoAceroTotal },
+          ...lineasAceroPorDiametro(result.desgloseAcero),
           {
             partida: "Encofrado de columnas y soleras de confinamiento",
             unidad: "m²",

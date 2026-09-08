@@ -1,5 +1,6 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
+import type { AceroItem } from "./aceroResumen";
 
 export type { BarraGrupo };
 export type TipoPlaca = "estructural" | "ductilidad_limitada";
@@ -44,6 +45,7 @@ export interface PlacaResult {
   longitudTotalFierro: number; // m
   separacionMaximaSugeridaCm: number; // 3×espesor, máx. 40 cm (Art. 21.9.4.3 / 11.10.7)
   separacionMaximaEstribosBordeCm: number; // mín(6·db, 10 cm) — Art. 21.9.7.6 / 21.6.4.5
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -181,6 +183,26 @@ export function calcularPlaca(input: PlacaInput): PlacaResult {
     warnings.push("El recubrimiento indicado es demasiado grande respecto al espesor del muro.");
   }
 
+  const desgloseAcero: AceroItem[] = [
+    {
+      diametroId: input.diametroHorizontalId,
+      longitudM: numeroBarrasHorizontales * input.longitud * input.numeroMuros * input.numeroCapas,
+    },
+    {
+      diametroId: input.diametroVerticalId,
+      longitudM: numeroBarrasVerticales * input.alturaLibre * input.numeroMuros * input.numeroCapas,
+    },
+    ...(input.incluirElementoBorde
+      ? [
+          ...gruposBorde.map((g) => ({
+            diametroId: g.diametroId,
+            longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * 2 * input.numeroMuros,
+          })),
+          { diametroId: input.diametroEstribosBordeId, longitudM: longitudTotalEstribosBorde },
+        ]
+      : []),
+  ];
+
   return {
     areaMuro,
     volumenConcreto,
@@ -200,6 +222,7 @@ export function calcularPlaca(input: PlacaInput): PlacaResult {
     longitudTotalFierro,
     separacionMaximaSugeridaCm,
     separacionMaximaEstribosBordeCm,
+    desgloseAcero,
     warnings,
   };
 }

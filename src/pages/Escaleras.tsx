@@ -10,6 +10,7 @@ import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { EscaleraProfile } from "../components/diagrams/EscaleraProfile";
 import { calcularEscalera, type EscaleraInput, type TipoEscalera } from "../lib/calc/escalera";
+import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -51,7 +52,7 @@ export function EscalerasPage() {
 
   const lines: MetradoLine[] = [
     { partida: "Concreto f'c=210 kg/cm² en escalera", unidad: "m³", cantidad: result.volumenConcretoTotal },
-    { partida: "Acero de refuerzo fy=4200 kg/cm²", unidad: "kg", cantidad: result.aceroTotalKg },
+    ...lineasAceroPorDiametro(result.desgloseAcero),
     { partida: "Encofrado de escalera (fondo y contrahuellas)", unidad: "m²", cantidad: result.encofradoTotal },
   ];
 

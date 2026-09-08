@@ -1,5 +1,6 @@
 import { getRebar, type RebarSize } from "../materials";
 import type { BarraGrupo } from "./viga";
+import type { AceroItem } from "./aceroResumen";
 
 export type { BarraGrupo };
 
@@ -30,6 +31,7 @@ export interface VigaCimentacionResult {
   longitudTotalFierro: number; // m
   dimensionMinimaSugeridaCm: number; // E.060 Art. 21.12.3.2: luz libre/20, máx. 45 cm
   separacionMaximaSugeridaCm: number; // E.060 Art. 21.12.3.2: mín(menor dimensión, 30 cm, 16·db)
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -111,6 +113,14 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la viga.");
   }
 
+  const desgloseAcero: AceroItem[] = [
+    ...grupos.map((g) => ({
+      diametroId: g.diametroId,
+      longitudM: Math.max(g.cantidad, 0) * input.luzLibre * input.numeroVigas,
+    })),
+    { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
+  ];
+
   return {
     areaSeccion,
     volumenConcreto,
@@ -127,6 +137,7 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     longitudTotalFierro,
     dimensionMinimaSugeridaCm,
     separacionMaximaSugeridaCm,
+    desgloseAcero,
     warnings,
   };
 }

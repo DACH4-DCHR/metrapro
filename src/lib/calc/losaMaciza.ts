@@ -1,4 +1,5 @@
 import { CONCRETE_DENSITY_KG_M3, getRebar } from "../materials";
+import type { AceroItem } from "./aceroResumen";
 
 export type TipoApoyoLosaMaciza = "simple" | "un_extremo_continuo" | "ambos_continuos" | "voladizo";
 
@@ -36,6 +37,7 @@ export interface LosaMacizaResult {
   longitudTotalFierro: number; // m
   cuantiaTemperatura: number;
   separacionMaximaCm: number; // mín(3×espesor, 40 cm)
+  desgloseAcero: AceroItem[];
   warnings: string[];
 }
 
@@ -67,15 +69,17 @@ function pesoMalla(
 
   // Barras "X": corren paralelas al largo, repetidas cada "separacionX" a lo largo del ancho.
   const numeroBarrasX = separacionXM > 0 ? Math.ceil(ancho / separacionXM) : 0;
-  const pesoX = numeroBarrasX * largo * getRebar(diametroXId).weightKgPerM;
+  const longitudX = numeroBarrasX * largo;
+  const pesoX = longitudX * getRebar(diametroXId).weightKgPerM;
 
   // Barras "Y": corren paralelas al ancho, repetidas cada "separacionY" a lo largo del largo.
   const numeroBarrasY = separacionYM > 0 ? Math.ceil(largo / separacionYM) : 0;
-  const pesoY = numeroBarrasY * ancho * getRebar(diametroYId).weightKgPerM;
+  const longitudY = numeroBarrasY * ancho;
+  const pesoY = longitudY * getRebar(diametroYId).weightKgPerM;
 
-  const longitudTotal = numeroBarrasX * largo + numeroBarrasY * ancho;
+  const longitudTotal = longitudX + longitudY;
 
-  return { numeroBarrasX, numeroBarrasY, peso: pesoX + pesoY, longitudTotal };
+  return { numeroBarrasX, numeroBarrasY, longitudX, longitudY, peso: pesoX + pesoY, longitudTotal };
 }
 
 export function calcularLosaMaciza(input: LosaMacizaInput): LosaMacizaResult {
@@ -120,7 +124,7 @@ export function calcularLosaMaciza(input: LosaMacizaInput): LosaMacizaResult {
     input.separacionTemperatura
   );
 
-  let superior = { numeroBarrasX: 0, numeroBarrasY: 0, peso: 0, longitudTotal: 0 };
+  let superior = { numeroBarrasX: 0, numeroBarrasY: 0, longitudX: 0, longitudY: 0, peso: 0, longitudTotal: 0 };
   if (input.incluirMallaSuperior) {
     superior = pesoMalla(
       input.largo,
@@ -134,6 +138,17 @@ export function calcularLosaMaciza(input: LosaMacizaInput): LosaMacizaResult {
 
   const pesoAceroTotal = inferior.peso + superior.peso;
   const longitudTotalFierro = inferior.longitudTotal + superior.longitudTotal;
+
+  const desgloseAcero: AceroItem[] = [
+    { diametroId: input.diametroPrincipalId, longitudM: inferior.longitudX },
+    { diametroId: input.diametroTemperaturaId, longitudM: inferior.longitudY },
+    ...(input.incluirMallaSuperior
+      ? [
+          { diametroId: input.diametroPrincipalSupId, longitudM: superior.longitudX },
+          { diametroId: input.diametroTemperaturaSupId, longitudM: superior.longitudY },
+        ]
+      : []),
+  ];
 
   return {
     areaLosa,
@@ -151,6 +166,7 @@ export function calcularLosaMaciza(input: LosaMacizaInput): LosaMacizaResult {
     longitudTotalFierro,
     cuantiaTemperatura,
     separacionMaximaCm,
+    desgloseAcero,
     warnings,
   };
 }
