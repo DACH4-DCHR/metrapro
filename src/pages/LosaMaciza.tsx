@@ -74,6 +74,7 @@ export function LosaMacizaPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.encofradoM2,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         Espesor: `${input.espesor} cm`,

@@ -110,6 +110,7 @@ export function PlacasPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.areaEncofrado,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Cantidad: `${input.numeroMuros} muros`,
         Dimensiones: `${input.longitud} m x ${input.alturaLibre} m x ${input.espesor} cm`,

@@ -159,6 +159,7 @@ export function ColumnasPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.areaEncofrado,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Cantidad: `${input.numeroColumnas} columnas`,
         Sección: seccionLabel,

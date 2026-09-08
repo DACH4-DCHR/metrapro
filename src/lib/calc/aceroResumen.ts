@@ -1,15 +1,12 @@
 import { getRebar } from "../materials";
-import type { MetradoLine } from "../types";
+import type { MetradoLine, AceroItem } from "../types";
+
+export type { AceroItem };
 
 // Longitud comercial estándar de varilla de acero corrugado en el mercado peruano
 // (Aceros Arequipa y distribuidores: disponible en 9 m para todos los diámetros de
 // 6 mm a 5/8", algunos diámetros mayores también en 12 m bajo pedido).
 export const LONGITUD_VARILLA_COMERCIAL_M = 9;
-
-export interface AceroItem {
-  diametroId: string;
-  longitudM: number; // longitud total de este diámetro para un rol específico (puede repetirse el mismo diámetro en varios roles; se agrupan)
-}
 
 export interface AceroResumenItem {
   diametroId: string;

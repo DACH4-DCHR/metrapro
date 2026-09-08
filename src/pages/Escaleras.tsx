@@ -92,6 +92,7 @@ export function EscalerasPage() {
       steelKg: result.aceroTotalKg,
       formworkM2: result.encofradoTotal,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Tipo: tipoOptions.find((t) => t.value === input.tipo)?.label ?? input.tipo,
         "Altura entre pisos": `${input.alturaEntrePisos} m`,

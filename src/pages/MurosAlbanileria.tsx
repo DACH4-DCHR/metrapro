@@ -125,6 +125,7 @@ export function MurosAlbanileriaPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.encofradoConfinamiento,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Dimensiones: `${input.longitud} m x ${input.alturaLibre} m x ${input.espesor} cm`,
         Unidades: `${result.numeroUnidades} und`,

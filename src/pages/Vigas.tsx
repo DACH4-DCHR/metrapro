@@ -163,6 +163,7 @@ export function VigasPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.areaEncofrado,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Cantidad: `${input.numeroVigas} vigas`,
         Sección: `${input.base} x ${input.altura} cm`,

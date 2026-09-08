@@ -90,6 +90,7 @@ export function LosaAligeradaPage() {
       steelKg: result.aceroTotalKg,
       formworkM2: result.encofradoM2,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         Espesor: `${input.espesorLosa} cm`,

@@ -49,6 +49,7 @@ function rowToElement(row) {
     formworkM2: row.formwork_m2,
     lines: row.lines_json,
     inputsSummary: row.inputs_summary_json,
+    steelByDiameter: row.steel_by_diameter_json ?? [],
   };
 }
 
@@ -192,8 +193,8 @@ export async function addElement(projectId, element) {
   // tras recuperar la conexión sin saber si la petición original ya había llegado al
   // servidor, así que el mismo id debe poder reenviarse sin producir un error.
   await pool.query(
-    `INSERT INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)
+    `INSERT INTO elements (id, project_id, module, name, created_at, concrete_m3, steel_kg, formwork_m2, lines_json, inputs_summary_json, steel_by_diameter_json)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)
      ON CONFLICT (id) DO UPDATE SET
        project_id = EXCLUDED.project_id,
        module = EXCLUDED.module,
@@ -203,7 +204,8 @@ export async function addElement(projectId, element) {
        steel_kg = EXCLUDED.steel_kg,
        formwork_m2 = EXCLUDED.formwork_m2,
        lines_json = EXCLUDED.lines_json,
-       inputs_summary_json = EXCLUDED.inputs_summary_json`,
+       inputs_summary_json = EXCLUDED.inputs_summary_json,
+       steel_by_diameter_json = EXCLUDED.steel_by_diameter_json`,
     [
       element.id,
       projectId,
@@ -215,6 +217,7 @@ export async function addElement(projectId, element) {
       element.formworkM2,
       JSON.stringify(element.lines),
       JSON.stringify(element.inputsSummary),
+      JSON.stringify(element.steelByDiameter ?? []),
     ]
   );
   return element;

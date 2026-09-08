@@ -36,8 +36,11 @@ CREATE TABLE IF NOT EXISTS elements (
   steel_kg DOUBLE PRECISION NOT NULL,
   formwork_m2 DOUBLE PRECISION NOT NULL,
   lines_json JSONB NOT NULL,
-  inputs_summary_json JSONB NOT NULL
+  inputs_summary_json JSONB NOT NULL,
+  steel_by_diameter_json JSONB NOT NULL DEFAULT '[]'::jsonb
 );
+
+ALTER TABLE elements ADD COLUMN IF NOT EXISTS steel_by_diameter_json JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);

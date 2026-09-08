@@ -67,6 +67,7 @@ export function ZapatasPage() {
       steelKg: result.pesoAceroTotal,
       formworkM2: result.encofradoM2,
       lines,
+      steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Cantidad: `${input.numeroZapatas} zapatas`,
         Dimensiones: `${input.largo} x ${input.ancho} x ${input.peralte / 100} m`,

@@ -33,7 +33,8 @@ import { ResultTable } from "../components/ui/ResultTable";
 import { useProjectStore } from "../store/projectStore";
 import { defaultUnitPrice, priceKey } from "../lib/pricing";
 import { generateExcelReport } from "../lib/reports/excelReport";
-import type { MetradoLine, ModuleType } from "../lib/types";
+import { resumirAceroPorDiametro, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
+import type { MetradoLine, ModuleType, AceroItem } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("es-PE", {
@@ -98,6 +99,17 @@ export function DashboardPage() {
   }, [elements]);
 
   const consolidated = useMemo(() => consolidateLines(elements.map((e) => e.lines)), [elements]);
+
+  const aceroPorModulo = useMemo(() => {
+    const map = new Map<ModuleType, AceroItem[]>();
+    for (const el of elements) {
+      if (!el.steelByDiameter || el.steelByDiameter.length === 0) continue;
+      map.set(el.module, [...(map.get(el.module) ?? []), ...el.steelByDiameter]);
+    }
+    return Array.from(map.entries())
+      .map(([module, items]) => ({ module, resumen: resumirAceroPorDiametro(items) }))
+      .filter((g) => g.resumen.length > 0);
+  }, [elements]);
 
   const presupuesto = useMemo(() => {
     let total = 0;
@@ -290,13 +302,80 @@ export function DashboardPage() {
         </SectionCard>
 
         {consolidated.length > 0 && (
-          <SectionCard title="Cuadro de metrados consolidado" icon={<ClipboardList size={16} className="text-navy-700" />}>
+          <SectionCard
+            title="Cuadro de metrados consolidado"
+            icon={<ClipboardList size={16} className="text-navy-700" />}
+            collapsible
+          >
             <ResultTable lines={consolidated} />
           </SectionCard>
         )}
 
+        {aceroPorModulo.length > 0 && (
+          <SectionCard
+            title="Acero de refuerzo por diámetro y elemento"
+            icon={<Weight size={16} className="text-navy-700" />}
+            collapsible
+          >
+            <div className="mb-3 text-xs text-steel-500">
+              Habilitación de acero agrupada por diámetro dentro de cada tipo de elemento (vigas, columnas, losas,
+              etc.), en varillas comerciales de {LONGITUD_VARILLA_COMERCIAL_M} m.
+            </div>
+            <div className="flex flex-col gap-5">
+              {aceroPorModulo.map(({ module, resumen }) => {
+                const Meta = moduleMeta[module];
+                const subtotalKg = resumen.reduce((acc, r) => acc + r.pesoKg, 0);
+                const subtotalVarillas = resumen.reduce((acc, r) => acc + r.numeroVarillas, 0);
+                return (
+                  <div key={module}>
+                    <div className="mb-2 flex items-center gap-2 text-sm font-bold text-navy-900">
+                      <Meta.icon size={16} className="text-navy-700" />
+                      {Meta.label}
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border border-steel-200">
+                      <table className="w-full min-w-[420px] border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-navy-900 text-left text-white">
+                            <th className="px-4 py-2 font-semibold">Diámetro</th>
+                            <th className="px-4 py-2 text-right font-semibold">Peso (kg)</th>
+                            <th className="px-4 py-2 text-right font-semibold">
+                              Varillas x {LONGITUD_VARILLA_COMERCIAL_M}m (und)
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumen.map((r, idx) => (
+                            <tr key={r.diametroId} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+                              <td className="px-4 py-2 text-navy-900">
+                                Ø{r.diametroMm}mm <span className="text-xs text-steel-500">({r.weightKgPerM.toFixed(3)} kg/m)</span>
+                              </td>
+                              <td className="px-4 py-2 text-right font-mono text-navy-900">{numberFormatter.format(r.pesoKg)}</td>
+                              <td className="px-4 py-2 text-right font-mono text-navy-900">{r.numeroVarillas}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
+                            <td className="px-4 py-2">Subtotal {Meta.label}</td>
+                            <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(subtotalKg)}</td>
+                            <td className="px-4 py-2 text-right font-mono">{subtotalVarillas}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+        )}
+
         {presupuesto.rows.length > 0 && (
-          <SectionCard title="Presupuesto referencial" icon={<Wallet size={16} className="text-navy-700" />}>
+          <SectionCard
+            title="Presupuesto referencial"
+            icon={<Wallet size={16} className="text-navy-700" />}
+            collapsible
+          >
             <div className="mb-3 text-xs text-steel-500">
               Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu
               zona y proveedor.
