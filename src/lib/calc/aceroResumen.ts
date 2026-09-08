@@ -1,5 +1,5 @@
 import { getRebar } from "../materials";
-import type { MetradoLine, AceroItem } from "../types";
+import type { MetradoLine, AceroItem, ModuleType } from "../types";
 
 export type { AceroItem };
 
@@ -62,4 +62,25 @@ export function lineasAceroPorDiametro(items: AceroItem[]): MetradoLine[] {
     });
   }
   return lines;
+}
+
+export interface AceroPorModuloGroup {
+  module: ModuleType;
+  resumen: AceroResumenItem[];
+}
+
+// Agrupa el desglose de acero de varios elementos guardados por módulo (vigas,
+// columnas, losas, etc.), sumando la longitud por diámetro ANTES de calcular el
+// número de varillas, para no arrastrar el redondeo de cada elemento por separado.
+export function agruparAceroPorModulo(
+  elements: { module: ModuleType; steelByDiameter?: AceroItem[] }[]
+): AceroPorModuloGroup[] {
+  const map = new Map<ModuleType, AceroItem[]>();
+  for (const el of elements) {
+    if (!el.steelByDiameter || el.steelByDiameter.length === 0) continue;
+    map.set(el.module, [...(map.get(el.module) ?? []), ...el.steelByDiameter]);
+  }
+  return Array.from(map.entries())
+    .map(([module, items]) => ({ module, resumen: resumirAceroPorDiametro(items) }))
+    .filter((g) => g.resumen.length > 0);
 }

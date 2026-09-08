@@ -2,6 +2,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CalculatedElement, MetradoLine } from "../types";
 import { defaultUnitPrice, priceKey } from "../pricing";
+import { agruparAceroPorModulo } from "../calc/aceroResumen";
+import { MODULE_LABELS } from "../moduleLabels";
 
 interface ProjectInfoLike {
   nombreObra: string;
@@ -98,6 +100,50 @@ export function generatePdfReport(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cursorY = (doc as any).lastAutoTable.finalY + 10;
 
+  const aceroPorModulo = agruparAceroPorModulo(elements);
+  if (aceroPorModulo.length > 0) {
+    if (cursorY > 240) {
+      doc.addPage();
+      cursorY = 16;
+    }
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text("Acero de Refuerzo por Diámetro y Elemento", marginX, cursorY);
+    cursorY += 3;
+
+    for (const { module, resumen } of aceroPorModulo) {
+      if (cursorY > 260) {
+        doc.addPage();
+        cursorY = 16;
+      }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...STEEL);
+      doc.text(MODULE_LABELS[module], marginX, cursorY + 3);
+      cursorY += 5;
+
+      autoTable(doc, {
+        startY: cursorY,
+        margin: { left: marginX, right: marginX },
+        head: [["Diámetro", "Peso (kg/m)", "Peso total (kg)", "Varillas (9 m)"]],
+        body: resumen.map((r) => [
+          `Ø${r.diametroMm}mm`,
+          r.weightKgPerM.toFixed(3),
+          numberFormatter.format(r.pesoKg),
+          String(r.numeroVarillas),
+        ]),
+        headStyles: { fillColor: STEEL, textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 8.5, cellPadding: 1.8 },
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      cursorY = (doc as any).lastAutoTable.finalY + 6;
+    }
+    cursorY += 4;
+  }
+
   let totalPresupuesto = 0;
   const presupuestoRows = consolidated.map((l) => {
     const key = priceKey(l.partida, l.unidad);
@@ -148,7 +194,7 @@ export function generatePdfReport(
       head: [["Elemento", "Módulo", "Concreto (m³)", "Acero (kg)", "Encofrado (m²)"]],
       body: elements.map((el) => [
         el.name,
-        el.module === "losa" ? "Losa Aligerada" : el.module === "viga" ? "Viga" : "Escalera",
+        MODULE_LABELS[el.module],
         numberFormatter.format(el.concreteM3),
         numberFormatter.format(el.steelKg),
         numberFormatter.format(el.formworkM2),

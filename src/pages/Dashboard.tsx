@@ -33,8 +33,9 @@ import { ResultTable } from "../components/ui/ResultTable";
 import { useProjectStore } from "../store/projectStore";
 import { defaultUnitPrice, priceKey } from "../lib/pricing";
 import { generateExcelReport } from "../lib/reports/excelReport";
-import { resumirAceroPorDiametro, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
-import type { MetradoLine, ModuleType, AceroItem } from "../lib/types";
+import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
+import { MODULE_LABELS } from "../lib/moduleLabels";
+import type { MetradoLine, ModuleType } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("es-PE", {
@@ -44,18 +45,18 @@ const currencyFormatter = new Intl.NumberFormat("es-PE", {
 });
 
 const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = {
-  losa: { label: "Losa Aligerada", icon: Layers3 },
-  viga: { label: "Viga", icon: RectangleHorizontal },
-  escalera: { label: "Escalera", icon: MoveUpRight },
-  zapata: { label: "Zapata", icon: Square },
-  cimientoCorrido: { label: "Cimiento Corrido", icon: StretchHorizontal },
-  sobrecimiento: { label: "Sobrecimiento", icon: Rows3 },
-  vigaCimentacion: { label: "Viga de Cimentación", icon: GitCommitHorizontal },
-  columna: { label: "Columna", icon: RectangleVertical },
-  placa: { label: "Placa", icon: PanelLeft },
-  muroAlbanileria: { label: "Muro de Albañilería", icon: BrickWall },
-  losaMaciza: { label: "Losa Maciza", icon: LayoutPanelTop },
-  muroArquitectura: { label: "Muro de Arquitectura", icon: Grid2x2 },
+  losa: { label: MODULE_LABELS.losa, icon: Layers3 },
+  viga: { label: MODULE_LABELS.viga, icon: RectangleHorizontal },
+  escalera: { label: MODULE_LABELS.escalera, icon: MoveUpRight },
+  zapata: { label: MODULE_LABELS.zapata, icon: Square },
+  cimientoCorrido: { label: MODULE_LABELS.cimientoCorrido, icon: StretchHorizontal },
+  sobrecimiento: { label: MODULE_LABELS.sobrecimiento, icon: Rows3 },
+  vigaCimentacion: { label: MODULE_LABELS.vigaCimentacion, icon: GitCommitHorizontal },
+  columna: { label: MODULE_LABELS.columna, icon: RectangleVertical },
+  placa: { label: MODULE_LABELS.placa, icon: PanelLeft },
+  muroAlbanileria: { label: MODULE_LABELS.muroAlbanileria, icon: BrickWall },
+  losaMaciza: { label: MODULE_LABELS.losaMaciza, icon: LayoutPanelTop },
+  muroArquitectura: { label: MODULE_LABELS.muroArquitectura, icon: Grid2x2 },
 };
 
 function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
@@ -100,16 +101,7 @@ export function DashboardPage() {
 
   const consolidated = useMemo(() => consolidateLines(elements.map((e) => e.lines)), [elements]);
 
-  const aceroPorModulo = useMemo(() => {
-    const map = new Map<ModuleType, AceroItem[]>();
-    for (const el of elements) {
-      if (!el.steelByDiameter || el.steelByDiameter.length === 0) continue;
-      map.set(el.module, [...(map.get(el.module) ?? []), ...el.steelByDiameter]);
-    }
-    return Array.from(map.entries())
-      .map(([module, items]) => ({ module, resumen: resumirAceroPorDiametro(items) }))
-      .filter((g) => g.resumen.length > 0);
-  }, [elements]);
+  const aceroPorModulo = useMemo(() => agruparAceroPorModulo(elements), [elements]);
 
   const presupuesto = useMemo(() => {
     let total = 0;

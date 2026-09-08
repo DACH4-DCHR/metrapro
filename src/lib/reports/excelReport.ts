@@ -4,6 +4,8 @@
 // este formato XML simple es seguro, no requiere dependencias y Excel lo abre nativamente.
 import type { CalculatedElement, MetradoLine } from "../types";
 import { defaultUnitPrice, priceKey } from "../pricing";
+import { agruparAceroPorModulo } from "../calc/aceroResumen";
+import { MODULE_LABELS } from "../moduleLabels";
 
 export interface ExcelSheet {
   name: string;
@@ -91,21 +93,6 @@ interface ProjectInfoLike {
   fecha: string;
 }
 
-const moduleLabel: Record<CalculatedElement["module"], string> = {
-  losa: "Losa Aligerada",
-  viga: "Viga",
-  escalera: "Escalera",
-  zapata: "Zapata",
-  cimientoCorrido: "Cimiento Corrido",
-  sobrecimiento: "Sobrecimiento",
-  vigaCimentacion: "Viga de Cimentación",
-  columna: "Columna",
-  placa: "Placa",
-  muroAlbanileria: "Muro de Albañilería",
-  losaMaciza: "Losa Maciza",
-  muroArquitectura: "Muro de Arquitectura",
-};
-
 export function generateExcelReport(
   projectInfo: ProjectInfoLike,
   elements: CalculatedElement[],
@@ -136,6 +123,26 @@ export function generateExcelReport(
     numericCols: [2],
   };
 
+  const aceroPorModulo = agruparAceroPorModulo(elements);
+  const aceroRows: (string | number)[][] = [];
+  for (const { module, resumen } of aceroPorModulo) {
+    for (const r of resumen) {
+      aceroRows.push([
+        MODULE_LABELS[module],
+        `Ø${r.diametroMm}mm`,
+        Number(r.weightKgPerM.toFixed(3)),
+        Number(r.pesoKg.toFixed(2)),
+        r.numeroVarillas,
+      ]);
+    }
+  }
+  const aceroSheet: ExcelSheet = {
+    name: "Acero por Diámetro",
+    headers: ["Elemento", "Diámetro", "Peso (kg/m)", "Peso total (kg)", "Varillas (9 m)"],
+    rows: aceroRows,
+    numericCols: [2, 3, 4],
+  };
+
   let totalPresupuesto = 0;
   const presupuestoRows = consolidated.map((l) => {
     const key = priceKey(l.partida, l.unidad);
@@ -158,7 +165,7 @@ export function generateExcelReport(
     headers: ["Elemento", "Módulo", "Concreto (m³)", "Acero (kg)", "Encofrado (m²)"],
     rows: elements.map((el) => [
       el.name,
-      moduleLabel[el.module],
+      MODULE_LABELS[el.module],
       Number(el.concreteM3.toFixed(3)),
       Number(el.steelKg.toFixed(3)),
       Number(el.formworkM2.toFixed(3)),
@@ -167,5 +174,11 @@ export function generateExcelReport(
   };
 
   const safeName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
-  downloadExcelWorkbook(`metrado_${safeName}`, [resumenSheet, metradosSheet, presupuestoSheet, elementosSheet]);
+  downloadExcelWorkbook(`metrado_${safeName}`, [
+    resumenSheet,
+    metradosSheet,
+    aceroSheet,
+    presupuestoSheet,
+    elementosSheet,
+  ]);
 }
