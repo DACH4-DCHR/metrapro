@@ -1,5 +1,5 @@
 import type { LosaMacizaInput } from "../../lib/calc/losaMaciza";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface LosaMacizaPlanViewProps {
   input: LosaMacizaInput;
@@ -43,6 +43,8 @@ export function LosaMacizaPlanView({ input }: LosaMacizaPlanViewProps) {
         role="img"
         aria-label="Vista en planta de losa maciza con malla de acero"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-losamaciza" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.5} />
 
         {barrasX.map((y, i) => (

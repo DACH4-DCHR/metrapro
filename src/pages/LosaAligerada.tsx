@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Layers3, Save } from "lucide-react";
+import { Layers3, Save, Tag, Package, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaCrossSection } from "../components/diagrams/LosaCrossSection";
@@ -26,8 +27,6 @@ const aceroViguetasMetodoOptions: { value: AceroViguetasMetodo; label: string }[
 ];
 
 const rebarOptions = REBAR_SIZES.map((r) => ({ value: r.id, label: r.label }));
-
-const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
 function nextLosaName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "losa").length;
@@ -120,7 +119,7 @@ export function LosaAligeradaPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <NumberFieldLikeText label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
@@ -151,7 +150,7 @@ export function LosaAligeradaPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Ladrillo / bloque aligerante">
+          <SectionCard title="Ladrillo / bloque aligerante" icon={<Package size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <SelectField
@@ -184,7 +183,7 @@ export function LosaAligeradaPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Acero de refuerzo">
+          <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <SelectField
                 label="Ø temperatura (capa comp.)"
@@ -285,52 +284,41 @@ export function LosaAligeradaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Corte transversal (vista en vivo)">
+          <SectionCard title="Corte transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <LosaCrossSection input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Área de losa" value={result.areaLosa} unit="m²" />
-              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
-              <Metric label="Capa de compresión" value={result.capaCompresionM * 100} unit="cm" />
-              <Metric label="Volumen de nervios" value={result.volumenNervios} unit="m³" />
-              <Metric label="Vol. capa de compresión" value={result.volumenCapaCompresion} unit="m³" />
-              <Metric label="N° de viguetas" value={result.numeroViguetas} unit="und" />
-              <Metric label="Longitud de viguetas" value={result.longitudViguetas} unit="m" />
-              <Metric label="Ladrillos por m²" value={result.ladrillosPorM2} unit="und/m²" />
-              <Metric label="N° total de ladrillos" value={result.numeroLadrillos} unit="und" />
-              <Metric label="Peso de ladrillos" value={result.pesoLadrillos} unit="kg" />
-              <Metric label="Peso de concreto" value={result.pesoConcreto} unit="kg" />
+              <ResultMetric label="Área de losa" value={result.areaLosa} unit="m²" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
+              <ResultMetric label="Capa de compresión" value={result.capaCompresionM * 100} unit="cm" />
+              <ResultMetric label="Volumen de nervios" value={result.volumenNervios} unit="m³" accent="navy" />
+              <ResultMetric label="Vol. capa de compresión" value={result.volumenCapaCompresion} unit="m³" accent="navy" />
+              <ResultMetric label="N° de viguetas" value={result.numeroViguetas} unit="und" />
+              <ResultMetric label="Longitud de viguetas" value={result.longitudViguetas} unit="m" />
+              <ResultMetric label="Ladrillos por m²" value={result.ladrillosPorM2} unit="und/m²" />
+              <ResultMetric label="N° total de ladrillos" value={result.numeroLadrillos} unit="und" />
+              <ResultMetric label="Peso de ladrillos" value={result.pesoLadrillos} unit="kg" />
+              <ResultMetric label="Peso de concreto" value={result.pesoConcreto} unit="kg" accent="navy" />
               {input.incluirAceroNegativo && (
-                <Metric label="Peso acero negativo" value={result.aceroNegativoKg} unit="kg" />
+                <ResultMetric label="Peso acero negativo" value={result.aceroNegativoKg} unit="kg" accent="steel" />
               )}
-              <Metric label="Acero total" value={result.aceroTotalKg} unit="kg" />
-              <Metric label="Peso total materiales" value={result.pesoTotalMateriales} unit="kg" />
-              <Metric label="Encofrado" value={result.encofradoM2} unit="m²" />
+              <ResultMetric label="Acero total" value={result.aceroTotalKg} unit="kg" accent="steel" />
+              <ResultMetric label="Peso total materiales" value={result.pesoTotalMateriales} unit="kg" />
+              <ResultMetric label="Encofrado" value={result.encofradoM2} unit="m²" accent="amber" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Cuadro de metrados">
+          <SectionCard title="Cuadro de metrados" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Losas registradas en este proyecto">
+          <SectionCard title="Losas registradas en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="losa" emptyLabel="Aún no has agregado ninguna losa. Calcula arriba y presiona 'Guardar elemento'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

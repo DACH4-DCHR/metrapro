@@ -138,8 +138,10 @@ export function Layout() {
             to={dashboardItem.to}
             end={dashboardItem.end}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
+              `flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-[10px] pr-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? "border-amber-500 bg-navy-800 text-white"
+                  : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
               }`
             }
           >
@@ -174,8 +176,10 @@ export function Layout() {
                         to={item.to}
                         end={false}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                            isActive ? "bg-navy-700 text-white" : "text-steel-300 hover:bg-navy-800 hover:text-white"
+                          `flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-[10px] pr-3 text-sm font-medium transition-colors ${
+                            isActive
+                              ? "border-amber-500 bg-navy-800 text-white"
+                              : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
                           }`
                         }
                       >

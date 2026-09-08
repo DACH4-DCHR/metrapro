@@ -83,3 +83,20 @@ export const DIAGRAM_COLORS = {
 export function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals).replace(/\.0+$/, "");
 }
+
+// Fondo tipo "papel cuadriculado de plano" para reforzar la estética de dibujo técnico
+// en los diagramas SVG. Se coloca como primer hijo del <svg>, antes de las figuras. El
+// "id" debe ser único por componente de diagrama (no por instancia) para evitar colisión
+// de <defs> cuando conviven varios SVG en la misma página.
+export function BlueprintGrid({ width, height, id }: { width: number; height: number; id: string }) {
+  return (
+    <>
+      <defs>
+        <pattern id={id} width={20} height={20} patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e4d80" strokeWidth={0.6} opacity={0.12} />
+        </pattern>
+      </defs>
+      <rect x={0} y={0} width={width} height={height} fill={`url(#${id})`} />
+    </>
+  );
+}

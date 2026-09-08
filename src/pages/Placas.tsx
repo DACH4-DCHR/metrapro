@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { PanelLeft, Save, Plus, Trash2 } from "lucide-react";
+import { PanelLeft, Save, Plus, Trash2, Tag, Ruler, Grid3x3, ShieldCheck, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { PlacaElevation } from "../components/diagrams/PlacaElevation";
@@ -141,11 +142,11 @@ export function PlacasPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Geometría">
+          <SectionCard title="Geometría" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="N° de muros"
@@ -181,7 +182,7 @@ export function PlacasPage() {
             </p>
           </SectionCard>
 
-          <SectionCard title="Refuerzo distribuido (alma)">
+          <SectionCard title="Refuerzo distribuido (alma)" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <SelectField
@@ -224,7 +225,7 @@ export function PlacasPage() {
             </p>
           </SectionCard>
 
-          <SectionCard title="Elementos de borde">
+          <SectionCard title="Elementos de borde" icon={<ShieldCheck size={16} className="text-navy-700" />}>
             <label className="flex items-start gap-2">
               <input
                 type="checkbox"
@@ -251,7 +252,7 @@ export function PlacasPage() {
                   <span className="text-sm font-medium text-navy-800">Acero longitudinal (por extremo)</span>
                   {input.barrasElementoBorde.map((grupo, i) => (
                     <div key={i} className="flex items-end gap-2">
-                      <div className="w-24">
+                      <div className="w-28">
                         <NumberField
                           label={i === 0 ? "Cantidad" : ""}
                           unit="und"
@@ -316,52 +317,41 @@ export function PlacasPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Elevación (vista en vivo)">
+          <SectionCard title="Elevación (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <PlacaElevation input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Área de muro (1 cara)" value={result.areaMuro} unit="m²" />
-              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
-              <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
-              <Metric label="Barras horizontales" value={result.numeroBarrasHorizontales} unit="und" />
-              <Metric label="Peso acero horizontal" value={result.pesoAceroHorizontal} unit="kg" />
-              <Metric label="Barras verticales" value={result.numeroBarrasVerticales} unit="und" />
-              <Metric label="Peso acero vertical" value={result.pesoAceroVertical} unit="kg" />
+              <ResultMetric label="Área de muro (1 cara)" value={result.areaMuro} unit="m²" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
+              <ResultMetric label="Área de encofrado" value={result.areaEncofrado} unit="m²" accent="amber" />
+              <ResultMetric label="Barras horizontales" value={result.numeroBarrasHorizontales} unit="und" />
+              <ResultMetric label="Peso acero horizontal" value={result.pesoAceroHorizontal} unit="kg" accent="steel" />
+              <ResultMetric label="Barras verticales" value={result.numeroBarrasVerticales} unit="und" />
+              <ResultMetric label="Peso acero vertical" value={result.pesoAceroVertical} unit="kg" accent="steel" />
               {input.incluirElementoBorde && (
                 <>
-                  <Metric label="Barras elemento de borde (x extremo)" value={result.numeroBarrasElementoBorde} unit="und" />
-                  <Metric label="Peso acero elemento de borde" value={result.pesoAceroElementoBorde} unit="kg" />
-                  <Metric label="Estribos borde (x extremo)" value={result.numeroEstribosElementoBorde} unit="und" />
-                  <Metric label="Peso estribos de borde" value={result.pesoEstribosElementoBorde} unit="kg" />
+                  <ResultMetric label="Barras elemento de borde (x extremo)" value={result.numeroBarrasElementoBorde} unit="und" />
+                  <ResultMetric label="Peso acero elemento de borde" value={result.pesoAceroElementoBorde} unit="kg" accent="steel" />
+                  <ResultMetric label="Estribos borde (x extremo)" value={result.numeroEstribosElementoBorde} unit="und" />
+                  <ResultMetric label="Peso estribos de borde" value={result.pesoEstribosElementoBorde} unit="kg" accent="steel" />
                 </>
               )}
-              <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
-              <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
+              <ResultMetric label="Acero total" value={result.pesoAceroTotal} unit="kg" accent="steel" />
+              <ResultMetric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" accent="steel" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Grupos de placas registrados en este proyecto">
+          <SectionCard title="Grupos de placas registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="placa" emptyLabel="Aún no has agregado ningún grupo de placas. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

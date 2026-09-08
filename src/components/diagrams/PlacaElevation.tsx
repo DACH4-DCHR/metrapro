@@ -1,6 +1,6 @@
 import { getRebar } from "../../lib/materials";
 import type { PlacaInput } from "../../lib/calc/placa";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface PlacaElevationProps {
   input: PlacaInput;
@@ -46,6 +46,8 @@ export function PlacaElevation({ input }: PlacaElevationProps) {
         role="img"
         aria-label="Elevación de placa con refuerzo distribuido"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-placa" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.5} />
 
         {input.incluirElementoBorde && anchoBordeM > 0 && (

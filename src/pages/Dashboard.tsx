@@ -21,6 +21,10 @@ import {
   FileSpreadsheet,
   Upload,
   ImageOff,
+  Building2,
+  ClipboardList,
+  Wallet,
+  ListChecks,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -159,7 +163,7 @@ export function DashboardPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
-        <SectionCard title="Datos del proyecto">
+        <SectionCard title="Datos del proyecto" icon={<Building2 size={16} className="text-navy-700" />}>
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-steel-300 bg-steel-50">
@@ -233,7 +237,7 @@ export function DashboardPage() {
           />
         </div>
 
-        <SectionCard title="Elementos guardados">
+        <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />}>
           {elements.length === 0 ? (
             <p className="py-6 text-center text-sm text-steel-500">
               Aún no has guardado ningún elemento. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y
@@ -286,13 +290,13 @@ export function DashboardPage() {
         </SectionCard>
 
         {consolidated.length > 0 && (
-          <SectionCard title="Cuadro de metrados consolidado">
+          <SectionCard title="Cuadro de metrados consolidado" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={consolidated} />
           </SectionCard>
         )}
 
         {presupuesto.rows.length > 0 && (
-          <SectionCard title="Presupuesto referencial">
+          <SectionCard title="Presupuesto referencial" icon={<Wallet size={16} className="text-navy-700" />}>
             <div className="mb-3 text-xs text-steel-500">
               Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu
               zona y proveedor.

@@ -1,5 +1,5 @@
 import type { LosaAligeradaInput } from "../../lib/calc/losaAligerada";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface LosaCrossSectionProps {
   input: LosaAligeradaInput;
@@ -55,6 +55,8 @@ export function LosaCrossSection({ input }: LosaCrossSectionProps) {
         role="img"
         aria-label="Corte transversal de losa aligerada"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-losa-cross" />
+
         {/* Concreto continuo (capa + nervios) de fondo */}
         <rect
           x={x0}

@@ -1,5 +1,5 @@
 import type { ConcretoCiclopeoInput } from "../../lib/calc/concretoCiclopeo";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface ConcretoCiclopeoSectionProps {
   input: ConcretoCiclopeoInput;
@@ -58,6 +58,8 @@ export function ConcretoCiclopeoSection({ input, stoneLabel }: ConcretoCiclopeoS
         role="img"
         aria-label="Sección transversal de concreto ciclópeo"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-ciclopeo" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.5} />
 
         {stonePositions(stoneCount).map((p, i) => (

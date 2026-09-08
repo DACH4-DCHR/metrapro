@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { RectangleHorizontal, Save, Plus, Trash2 } from "lucide-react";
+import { RectangleHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { VigaCrossSection } from "../components/diagrams/VigaCrossSection";
@@ -31,8 +32,6 @@ const sistemaSismorresistenteOptions: { value: SistemaSismorresistente; label: s
   { value: "muros", label: "Muros estructurales (E.060 Art. 21.4.4)" },
   { value: "porticos_dual", label: "Pórticos / sistema dual (E.060 Art. 21.5.3)" },
 ];
-
-const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
 function nextVigaName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "viga").length;
@@ -195,11 +194,11 @@ export function VigasPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Geometría">
+          <SectionCard title="Geometría" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="N° de vigas"
@@ -259,14 +258,14 @@ export function VigasPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Acero de refuerzo">
+          <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <div className="flex flex-col gap-3">
               <span className="text-sm font-medium text-navy-800">
                 Barras longitudinales (varios grupos, para diámetro variable / bastones)
               </span>
               {input.barrasLongitudinales.map((grupo, i) => (
                 <div key={i} className="flex items-end gap-2">
-                  <div className="w-24">
+                  <div className="w-28">
                     <NumberField
                       label={i === 0 ? "Cantidad" : ""}
                       unit="und"
@@ -402,59 +401,48 @@ export function VigasPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)">
+          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <VigaCrossSection input={input} />
           </SectionCard>
 
-          <SectionCard title="Distribución de estribos en elevación">
+          <SectionCard title="Distribución de estribos en elevación" icon={<Eye size={16} className="text-navy-700" />}>
             <VigaElevation input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Área de sección" value={result.areaSeccion} unit="m²" />
-              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
-              <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
-              <Metric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
-              <Metric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" />
+              <ResultMetric label="Área de sección" value={result.areaSeccion} unit="m²" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
+              <ResultMetric label="Área de encofrado" value={result.areaEncofrado} unit="m²" accent="amber" />
+              <ResultMetric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
+              <ResultMetric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" accent="steel" />
               {input.incluirConfinamiento ? (
                 <>
-                  <Metric
+                  <ResultMetric
                     label="Estribos confinamiento (x viga)"
                     value={result.numeroEstribosConfinamientoPorExtremo * 2}
                     unit="und"
                   />
-                  <Metric label="Estribos zona central (x viga)" value={result.numeroEstribosCentralPorViga} unit="und" />
+                  <ResultMetric label="Estribos zona central (x viga)" value={result.numeroEstribosCentralPorViga} unit="und" />
                 </>
               ) : null}
-              <Metric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
-              <Metric label="Peso de estribos" value={result.pesoEstribos} unit="kg" />
-              {input.incluirAceroPiel && <Metric label="Peso acero de piel" value={result.pesoAceroPiel} unit="kg" />}
-              <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
-              <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
+              <ResultMetric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
+              <ResultMetric label="Peso de estribos" value={result.pesoEstribos} unit="kg" accent="steel" />
+              {input.incluirAceroPiel && <ResultMetric label="Peso acero de piel" value={result.pesoAceroPiel} unit="kg" accent="steel" />}
+              <ResultMetric label="Acero total" value={result.pesoAceroTotal} unit="kg" accent="steel" />
+              <ResultMetric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" accent="steel" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Grupos de vigas registrados en este proyecto">
+          <SectionCard title="Grupos de vigas registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="viga" emptyLabel="Aún no has agregado ningún grupo de vigas. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

@@ -35,9 +35,11 @@ export function ModuleElementsList({ module, emptyLabel }: ModuleElementsListPro
 
   if (moduleElements.length === 0) {
     return (
-      <div className="flex items-center gap-2 rounded-md bg-steel-50 p-4 text-sm text-steel-500">
-        <Layers size={16} />
-        {emptyLabel}
+      <div className="flex flex-col items-center gap-3 rounded-md bg-steel-50 px-4 py-8 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-steel-200/70 text-steel-400">
+          <Layers size={22} />
+        </div>
+        <p className="max-w-xs text-sm text-steel-500">{emptyLabel}</p>
       </div>
     );
   }

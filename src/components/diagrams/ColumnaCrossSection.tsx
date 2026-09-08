@@ -1,6 +1,6 @@
 import { getRebar } from "../../lib/materials";
 import type { ColumnaInput } from "../../lib/calc/columna";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface ColumnaCrossSectionProps {
   input: ColumnaInput;
@@ -78,6 +78,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
     return (
       <div className="overflow-x-auto">
         <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[220px]" role="img" aria-label="Sección transversal de columna circular">
+          <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-columna-circ" />
           <circle cx={cx} cy={cy} r={rOuter} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} />
           <circle cx={cx} cy={cy} r={rOuter - recubPx} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={2} />
           {barPositions.map((p, i) => (
@@ -108,6 +109,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
   return (
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[220px]" role="img" aria-label="Sección transversal de columna">
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-columna-rect" />
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} />
         <rect x={x0 + recubPx} y={y0 + recubPx} width={w - 2 * recubPx} height={h - 2 * recubPx} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={2} />
         {barPositions.map((p, i) => (

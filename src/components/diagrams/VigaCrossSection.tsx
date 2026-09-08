@@ -1,6 +1,6 @@
 import { getRebar } from "../../lib/materials";
 import type { VigaInput } from "../../lib/calc/viga";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface VigaCrossSectionProps {
   input: VigaInput;
@@ -107,6 +107,8 @@ export function VigaCrossSection({ input }: VigaCrossSectionProps) {
         role="img"
         aria-label="Sección transversal de viga"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-viga-cross" />
+
         {input.tipoSeccion === "T" && alaEspesor > 0 && (
           <rect
             x={alaX}

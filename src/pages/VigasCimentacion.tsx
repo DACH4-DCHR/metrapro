@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { GitCommitHorizontal, Save, Plus, Trash2 } from "lucide-react";
+import { GitCommitHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { VigaCimentacionCrossSection } from "../components/diagrams/VigaCimentacionCrossSection";
@@ -132,11 +133,11 @@ export function VigasCimentacionPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Geometría">
+          <SectionCard title="Geometría" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="N° de vigas"
@@ -161,14 +162,14 @@ export function VigasCimentacionPage() {
             </p>
           </SectionCard>
 
-          <SectionCard title="Acero de refuerzo">
+          <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <div className="flex flex-col gap-3">
               <span className="text-sm font-medium text-navy-800">
                 Barras longitudinales (refuerzo continuo, superior e inferior)
               </span>
               {input.barrasLongitudinales.map((grupo, i) => (
                 <div key={i} className="flex items-end gap-2">
-                  <div className="w-24">
+                  <div className="w-28">
                     <NumberField
                       label={i === 0 ? "Cantidad" : ""}
                       unit="und"
@@ -239,44 +240,33 @@ export function VigasCimentacionPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)">
+          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <VigaCimentacionCrossSection input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Área de sección" value={result.areaSeccion} unit="m²" />
-              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
-              <Metric label="Área de encofrado" value={result.areaEncofrado} unit="m²" />
-              <Metric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
-              <Metric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" />
-              <Metric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
-              <Metric label="Peso de estribos" value={result.pesoEstribos} unit="kg" />
-              <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
-              <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
+              <ResultMetric label="Área de sección" value={result.areaSeccion} unit="m²" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
+              <ResultMetric label="Área de encofrado" value={result.areaEncofrado} unit="m²" accent="amber" />
+              <ResultMetric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
+              <ResultMetric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" accent="steel" />
+              <ResultMetric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
+              <ResultMetric label="Peso de estribos" value={result.pesoEstribos} unit="kg" accent="steel" />
+              <ResultMetric label="Acero total" value={result.pesoAceroTotal} unit="kg" accent="steel" />
+              <ResultMetric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" accent="steel" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Grupos de vigas de cimentación registrados en este proyecto">
+          <SectionCard title="Grupos de vigas de cimentación registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="vigaCimentacion" emptyLabel="Aún no has agregado ningún grupo. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

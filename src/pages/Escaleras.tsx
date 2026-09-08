@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { MoveUpRight, Save } from "lucide-react";
+import { MoveUpRight, Save, Tag, Ruler, Footprints, LandPlot, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { EscaleraProfile } from "../components/diagrams/EscaleraProfile";
@@ -20,8 +21,6 @@ const tipoOptions: { value: TipoEscalera; label: string }[] = [
   { value: "L", label: "En L" },
   { value: "U", label: "En U" },
 ];
-
-const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
 function nextEscaleraName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "escalera").length;
@@ -122,11 +121,11 @@ export function EscalerasPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Datos generales">
+          <SectionCard title="Datos generales" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <SelectField
@@ -158,7 +157,7 @@ export function EscalerasPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title={esMultiTramo ? "Tramo 1" : "Peldaños"}>
+          <SectionCard title={esMultiTramo ? "Tramo 1" : "Peldaños"} icon={<Footprints size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="N° de peldaños"
@@ -184,7 +183,7 @@ export function EscalerasPage() {
 
           {esMultiTramo && (
             <>
-              <SectionCard title="Tramo 2">
+              <SectionCard title="Tramo 2" icon={<Footprints size={16} className="text-navy-700" />}>
                 <div className="grid grid-cols-2 gap-4">
                   <NumberField
                     label="N° de peldaños"
@@ -208,7 +207,7 @@ export function EscalerasPage() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Descanso (landing)">
+              <SectionCard title="Descanso (landing)" icon={<LandPlot size={16} className="text-navy-700" />}>
                 <div className="grid grid-cols-2 gap-4">
                   <NumberField
                     label="Ancho"
@@ -233,7 +232,7 @@ export function EscalerasPage() {
             </>
           )}
 
-          <SectionCard title="Acero de refuerzo">
+          <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <SelectField
                 label="Ø acero principal"
@@ -266,49 +265,38 @@ export function EscalerasPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Perfil de escalera (vista en vivo)">
+          <SectionCard title="Perfil de escalera (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <EscaleraProfile input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Desarrollo horizontal T1" value={result.tramo1.desarrolloHorizontal} unit="m" />
-              <Metric label="Long. inclinada T1" value={result.tramo1.longitudInclinada} unit="m" />
-              <Metric label="Área de escalera" value={result.areaEscaleraTotal} unit="m²" />
+              <ResultMetric label="Desarrollo horizontal T1" value={result.tramo1.desarrolloHorizontal} unit="m" />
+              <ResultMetric label="Long. inclinada T1" value={result.tramo1.longitudInclinada} unit="m" />
+              <ResultMetric label="Área de escalera" value={result.areaEscaleraTotal} unit="m²" />
               {result.tramo2 && (
                 <>
-                  <Metric label="Desarrollo horizontal T2" value={result.tramo2.desarrolloHorizontal} unit="m" />
-                  <Metric label="Long. inclinada T2" value={result.tramo2.longitudInclinada} unit="m" />
+                  <ResultMetric label="Desarrollo horizontal T2" value={result.tramo2.desarrolloHorizontal} unit="m" />
+                  <ResultMetric label="Long. inclinada T2" value={result.tramo2.longitudInclinada} unit="m" />
                 </>
               )}
-              <Metric label="Volumen de concreto" value={result.volumenConcretoTotal} unit="m³" />
-              <Metric label="Encofrado total" value={result.encofradoTotal} unit="m²" />
-              <Metric label="Acero principal" value={result.aceroPrincipalKg} unit="kg" />
-              <Metric label="Acero distribución" value={result.aceroDistribucionKg} unit="kg" />
-              <Metric label="Acero total" value={result.aceroTotalKg} unit="kg" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcretoTotal} unit="m³" accent="navy" />
+              <ResultMetric label="Encofrado total" value={result.encofradoTotal} unit="m²" accent="amber" />
+              <ResultMetric label="Acero principal" value={result.aceroPrincipalKg} unit="kg" accent="steel" />
+              <ResultMetric label="Acero distribución" value={result.aceroDistribucionKg} unit="kg" accent="steel" />
+              <ResultMetric label="Acero total" value={result.aceroTotalKg} unit="kg" accent="steel" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Cuadro de metrados">
+          <SectionCard title="Cuadro de metrados" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Escaleras registradas en este proyecto">
+          <SectionCard title="Escaleras registradas en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="escalera" emptyLabel="Aún no has agregado ninguna escalera. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

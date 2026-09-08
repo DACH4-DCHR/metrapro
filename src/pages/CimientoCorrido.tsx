@@ -1,17 +1,16 @@
 import { useMemo, useState } from "react";
-import { StretchHorizontal, Save } from "lucide-react";
+import { StretchHorizontal, Save, Tag, Ruler, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { ConcretoCiclopeoSection } from "../components/diagrams/ConcretoCiclopeoSection";
 import { calcularCimientoCorrido, type CimientoCorridoInput } from "../lib/calc/cimientoCorrido";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
-
-const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
 function nextName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "cimientoCorrido").length;
@@ -85,11 +84,11 @@ export function CimientoCorridoPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Geometría">
+          <SectionCard title="Geometría" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <NumberField
@@ -129,38 +128,27 @@ export function CimientoCorridoPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)">
+          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <ConcretoCiclopeoSection input={input} stoneLabel="P.G." />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Volumen total" value={result.volumenTotal} unit="m³" />
-              <Metric label="Volumen de piedra grande" value={result.volumenPiedra} unit="m³" />
-              <Metric label="Volumen de concreto simple" value={result.volumenConcretoSimple} unit="m³" />
+              <ResultMetric label="Volumen total" value={result.volumenTotal} unit="m³" accent="navy" />
+              <ResultMetric label="Volumen de piedra grande" value={result.volumenPiedra} unit="m³" />
+              <ResultMetric label="Volumen de concreto simple" value={result.volumenConcretoSimple} unit="m³" accent="navy" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Tramos registrados en este proyecto">
+          <SectionCard title="Tramos registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="cimientoCorrido" emptyLabel="Aún no has agregado ningún tramo de cimiento corrido. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

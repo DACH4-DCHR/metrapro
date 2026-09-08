@@ -1,5 +1,5 @@
 import type { EscaleraInput, TramoInput } from "../../lib/calc/escalera";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface EscaleraProfileProps {
   input: EscaleraInput;
@@ -83,6 +83,8 @@ export function EscaleraProfile({ input }: EscaleraProfileProps) {
         role="img"
         aria-label="Perfil de escalera"
       >
+        <BlueprintGrid width={viewW} height={VIEW_H} id="grid-escalera" />
+
         <polygon fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} points={fillPath} />
         <polyline
           fill="none"

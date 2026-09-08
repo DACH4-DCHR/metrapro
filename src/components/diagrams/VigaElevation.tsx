@@ -1,5 +1,5 @@
 import { estribosPositionsM, type VigaInput } from "../../lib/calc/viga";
-import { HDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface VigaElevationProps {
   input: VigaInput;
@@ -32,6 +32,8 @@ export function VigaElevation({ input }: VigaElevationProps) {
         role="img"
         aria-label="Elevación de viga con distribución de estribos"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-viga-elev" />
+
         {input.incluirConfinamiento && (
           <>
             <rect x={x0} y={yTop} width={Math.min(loM, longitud) * scale} height={BEAM_H} fill="#fef3e2" />

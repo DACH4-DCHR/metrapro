@@ -1,6 +1,6 @@
 import { getRebar } from "../../lib/materials";
 import type { VigaCimentacionInput } from "../../lib/calc/vigaCimentacion";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface VigaCimentacionCrossSectionProps {
   input: VigaCimentacionInput;
@@ -74,6 +74,8 @@ export function VigaCimentacionCrossSection({ input }: VigaCimentacionCrossSecti
         role="img"
         aria-label="Sección transversal de viga de cimentación"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-vigacim" />
+
         <rect x={xLeft} y={yTop} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} />
 
         <rect

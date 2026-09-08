@@ -46,9 +46,13 @@ body {
   border-radius: 8px;
 }
 
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
+.number-field-input::-webkit-inner-spin-button,
+.number-field-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.number-field-input {
+  -moz-appearance: textfield;
 }
 
 @media print {

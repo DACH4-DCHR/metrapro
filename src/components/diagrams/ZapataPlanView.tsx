@@ -1,5 +1,5 @@
 import type { ZapataInput } from "../../lib/calc/zapata";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface ZapataPlanViewProps {
   input: ZapataInput;
@@ -43,6 +43,8 @@ export function ZapataPlanView({ input }: ZapataPlanViewProps) {
         role="img"
         aria-label="Vista en planta de zapata con malla de acero"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-zapata" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.5} />
 
         {/* Barras "X": paralelas al largo, horizontales */}

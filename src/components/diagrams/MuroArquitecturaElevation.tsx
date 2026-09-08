@@ -1,5 +1,5 @@
 import type { MuroArquitecturaInput } from "../../lib/calc/muroArquitectura";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface MuroArquitecturaElevationProps {
   input: MuroArquitecturaInput;
@@ -48,6 +48,8 @@ export function MuroArquitecturaElevation({ input }: MuroArquitecturaElevationPr
         role="img"
         aria-label="Elevación de muro de arquitectura (tabique)"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-muroarq" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.tecnopor} stroke={DIAGRAM_COLORS.tecnoporStroke} strokeWidth={1} />
 
         {Array.from({ length: filas }).map((_, row) => {

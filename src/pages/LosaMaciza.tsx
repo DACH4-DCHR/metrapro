@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { LayoutPanelTop, Save } from "lucide-react";
+import { LayoutPanelTop, Save, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
+import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaMacizaPlanView } from "../components/diagrams/LosaMacizaPlanView";
@@ -103,11 +104,11 @@ export function LosaMacizaPage() {
 
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
-          <SectionCard title="Identificación">
+          <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
           </SectionCard>
 
-          <SectionCard title="Geometría">
+          <SectionCard title="Geometría" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <NumberField label="Largo (luz principal)" unit="m" value={input.largo} onChange={(v) => update("largo", v)} />
               <NumberField label="Ancho" unit="m" value={input.ancho} onChange={(v) => update("ancho", v)} />
@@ -126,7 +127,7 @@ export function LosaMacizaPage() {
             </p>
           </SectionCard>
 
-          <SectionCard title="Acero de refuerzo">
+          <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
             <span className="text-sm font-medium text-navy-800">Malla inferior</span>
             <div className="mt-3 grid grid-cols-2 gap-4">
               <SelectField
@@ -207,51 +208,40 @@ export function LosaMacizaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Vista en planta (vista en vivo)">
+          <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <LosaMacizaPlanView input={input} />
           </SectionCard>
 
-          <SectionCard title="Resultados de cálculo">
+          <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-              <Metric label="Área de losa" value={result.areaLosa} unit="m²" />
-              <Metric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" />
-              <Metric label="Peso de concreto" value={result.pesoConcreto} unit="kg" />
-              <Metric label="Área de encofrado" value={result.encofradoM2} unit="m²" />
-              <Metric label="Barras principales (inf.)" value={result.numeroBarrasPrincipalInf} unit="und" />
-              <Metric label="Barras temperatura (inf.)" value={result.numeroBarrasTemperaturaInf} unit="und" />
-              <Metric label="Peso malla inferior" value={result.pesoMallaInferior} unit="kg" />
+              <ResultMetric label="Área de losa" value={result.areaLosa} unit="m²" />
+              <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
+              <ResultMetric label="Peso de concreto" value={result.pesoConcreto} unit="kg" accent="navy" />
+              <ResultMetric label="Área de encofrado" value={result.encofradoM2} unit="m²" accent="amber" />
+              <ResultMetric label="Barras principales (inf.)" value={result.numeroBarrasPrincipalInf} unit="und" />
+              <ResultMetric label="Barras temperatura (inf.)" value={result.numeroBarrasTemperaturaInf} unit="und" />
+              <ResultMetric label="Peso malla inferior" value={result.pesoMallaInferior} unit="kg" accent="steel" />
               {input.incluirMallaSuperior && (
                 <>
-                  <Metric label="Barras principales (sup.)" value={result.numeroBarrasPrincipalSup} unit="und" />
-                  <Metric label="Barras temperatura (sup.)" value={result.numeroBarrasTemperaturaSup} unit="und" />
-                  <Metric label="Peso malla superior" value={result.pesoMallaSuperior} unit="kg" />
+                  <ResultMetric label="Barras principales (sup.)" value={result.numeroBarrasPrincipalSup} unit="und" />
+                  <ResultMetric label="Barras temperatura (sup.)" value={result.numeroBarrasTemperaturaSup} unit="und" />
+                  <ResultMetric label="Peso malla superior" value={result.pesoMallaSuperior} unit="kg" accent="steel" />
                 </>
               )}
-              <Metric label="Acero total" value={result.pesoAceroTotal} unit="kg" />
-              <Metric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" />
+              <ResultMetric label="Acero total" value={result.pesoAceroTotal} unit="kg" accent="steel" />
+              <ResultMetric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" accent="steel" />
             </div>
           </SectionCard>
 
-          <SectionCard title="Resumen">
+          <SectionCard title="Resumen" icon={<ClipboardList size={16} className="text-navy-700" />}>
             <ResultTable lines={lines} />
           </SectionCard>
 
-          <SectionCard title="Losas macizas registradas en este proyecto">
+          <SectionCard title="Losas macizas registradas en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="losaMaciza" emptyLabel="Aún no has agregado ninguna losa maciza. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="rounded-md bg-steel-50 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</p>
-      <p className="text-base font-bold text-navy-900">
-        {numberFormatter.format(value)} <span className="text-xs font-medium text-steel-500">{unit}</span>
-      </p>
     </div>
   );
 }

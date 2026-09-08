@@ -1,5 +1,5 @@
 import type { MuroAlbanileriaInput } from "../../lib/calc/muroAlbanileria";
-import { HDim, VDim, DIAGRAM_COLORS, fmt } from "./svgHelpers";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface MuroAlbanileriaElevationProps {
   input: MuroAlbanileriaInput;
@@ -49,6 +49,8 @@ export function MuroAlbanileriaElevation({ input }: MuroAlbanileriaElevationProp
         role="img"
         aria-label="Elevación de muro de albañilería confinada"
       >
+        <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-muroalb" />
+
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.arcilla} opacity={0.5} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} />
 
         {Array.from({ length: filas }).map((_, row) => {
