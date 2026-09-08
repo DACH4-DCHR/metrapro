@@ -153,7 +153,7 @@ export function DashboardPage() {
             <button
               onClick={handleDownloadPdf}
               disabled={consolidated.length === 0 || generatingPdf}
-              className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileDown size={16} />
               {generatingPdf ? "Generando..." : "Descargar PDF"}

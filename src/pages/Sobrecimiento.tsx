@@ -75,7 +75,7 @@ export function SobrecimientoPage() {
         actions={
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-navy-700"
+            className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-amber-400"
           >
             <Save size={16} />
             {saved ? "Agregado ✓ (puedes calcular otro)" : "Agregar a la lista"}
