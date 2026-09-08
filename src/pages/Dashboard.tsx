@@ -103,6 +103,11 @@ export function DashboardPage() {
 
   const aceroPorModulo = useMemo(() => agruparAceroPorModulo(elements), [elements]);
 
+  const elementosSinDesglose = useMemo(
+    () => elements.filter((el) => el.steelKg > 0 && (!el.steelByDiameter || el.steelByDiameter.length === 0)),
+    [elements]
+  );
+
   const presupuesto = useMemo(() => {
     let total = 0;
     const rows = consolidated.map((line) => {
@@ -303,7 +308,7 @@ export function DashboardPage() {
           </SectionCard>
         )}
 
-        {aceroPorModulo.length > 0 && (
+        {(aceroPorModulo.length > 0 || elementosSinDesglose.length > 0) && (
           <SectionCard
             title="Acero de refuerzo por diámetro y elemento"
             icon={<Weight size={16} className="text-navy-700" />}
@@ -313,6 +318,22 @@ export function DashboardPage() {
               Habilitación de acero agrupada por diámetro dentro de cada tipo de elemento (vigas, columnas, losas,
               etc.), en varillas comerciales de {LONGITUD_VARILLA_COMERCIAL_M} m.
             </div>
+            {elementosSinDesglose.length > 0 && (
+              <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {elementosSinDesglose.length === 1 ? (
+                  <>
+                    El elemento <strong>{elementosSinDesglose[0].name}</strong> fue calculado antes de esta función y
+                    no tiene desglose por diámetro.
+                  </>
+                ) : (
+                  <>
+                    {elementosSinDesglose.length} elementos ({elementosSinDesglose.map((e) => e.name).join(", ")})
+                    fueron calculados antes de esta función y no tienen desglose por diámetro.
+                  </>
+                )}{" "}
+                Vuelve a calcularlos y presiona "Agregar a la lista" de nuevo para incluirlos aquí.
+              </div>
+            )}
             <div className="flex flex-col gap-5">
               {aceroPorModulo.map(({ module, resumen }) => {
                 const Meta = moduleMeta[module];
