@@ -67,6 +67,7 @@ export function ColumnasPage() {
     longitudConfinamiento: 50,
     separacionConfinamiento: 10,
     separacionCentral: 25,
+    considerarGanchoEstribo: true,
   });
 
   const result = useMemo(() => calcularColumna(input), [input]);
@@ -301,6 +302,15 @@ export function ColumnasPage() {
                 value={input.recubrimiento}
                 onChange={(v) => update("recubrimiento", v)}
               />
+              <label className="col-span-2 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarGanchoEstribo}
+                  onChange={(e) => update("considerarGanchoEstribo", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-xs font-medium text-navy-800">Gancho a 135° en estribos (según Ø)</span>
+              </label>
             </div>
 
             <div className="mt-4 border-t border-steel-100 pt-4">

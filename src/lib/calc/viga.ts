@@ -1,5 +1,6 @@
 import { getRebar } from "../materials";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoBarra90, longitudGanchoEstribo135 } from "./ganchos";
 
 export type TipoSeccionViga = "rectangular" | "T" | "personalizada";
 export type SistemaSismorresistente = "muros" | "porticos_dual";
@@ -28,6 +29,13 @@ export interface VigaInput {
   diametroEstribosId: string;
   separacionEstribos: number; // cm (zona central, o única si no hay confinamiento)
   recubrimiento: number; // cm
+
+  // Ganchos estándar en los extremos: opcionales, ya que dependen del detallado de cada
+  // proyecto (barras que anclan en el apoyo vs. barras que continúan rectas al elemento
+  // adyacente). Estribos: gancho sísmico a 135°, calculado según diámetro (E.060 21.2.5).
+  considerarGanchoEstribo: boolean;
+  considerarGanchoLongitudinal: boolean;
+  extremosConGancho: number; // 0, 1 ó 2 extremos por barra longitudinal, si se considera
 
   // Estribos de confinamiento (E.060, vigas sismorresistentes)
   incluirConfinamiento: boolean;
@@ -63,8 +71,6 @@ export interface VigaResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2; // longitud adicional por ganchos a 135°, referencial
 
 // Sugiere Lo (longitud de confinamiento) y S1 (separación) según NTE E.060.
 // Art. 21.4.4 (edificios con muros estructurales): d/4, 8·db_long, 24·db_estribo, 30 cm.
@@ -153,12 +159,18 @@ export function calcularViga(input: VigaInput): VigaResult {
     warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
   }
   const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
+  function longitudBarraLongitudinal(diametroId: string): number {
+    return input.longitud + extremosConGancho * longitudGanchoBarra90(diametroId);
+  }
   const longitudTotalBarrasLongitudinales = grupos.reduce(
-    (acc, g) => acc + Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas,
+    (acc, g) => acc + Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas,
     0
   );
   const pesoAceroLongitudinal = grupos.reduce(
-    (acc, g) => acc + Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas * getRebar(g.diametroId).weightKgPerM,
+    (acc, g) =>
+      acc +
+      Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas * getRebar(g.diametroId).weightKgPerM,
     0
   );
 
@@ -189,7 +201,8 @@ export function calcularViga(input: VigaInput): VigaResult {
   }
 
   const numeroEstribosTotal = numeroEstribosPorViga * input.numeroVigas;
-  const longitudPorEstribo = 2 * (baseM - 2 * recubM) + 2 * (alturaM - 2 * recubM) + GANCHO_ESTRIBO_M;
+  const longitudGanchoEstribo = input.considerarGanchoEstribo ? longitudGanchoEstribo135(input.diametroEstribosId) : 0;
+  const longitudPorEstribo = 2 * (baseM - 2 * recubM) + 2 * (alturaM - 2 * recubM) + longitudGanchoEstribo;
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
@@ -208,7 +221,7 @@ export function calcularViga(input: VigaInput): VigaResult {
   const desgloseAcero: AceroItem[] = [
     ...grupos.map((g) => ({
       diametroId: g.diametroId,
-      longitudM: Math.max(g.cantidad, 0) * input.longitud * input.numeroVigas,
+      longitudM: Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas,
     })),
     { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
     ...(input.incluirAceroPiel ? [{ diametroId: input.pielDiametroId, longitudM: longitudTotalAceroPiel }] : []),

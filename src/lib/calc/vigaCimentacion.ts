@@ -1,6 +1,7 @@
 import { getRebar, type RebarSize } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoBarra90, longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 
@@ -13,6 +14,10 @@ export interface VigaCimentacionInput {
   diametroEstribosId: string;
   separacionEstribos: number; // cm, estribos cerrados uniformes en toda la longitud
   recubrimiento: number; // cm
+
+  considerarGanchoEstribo: boolean;
+  considerarGanchoLongitudinal: boolean;
+  extremosConGancho: number; // 0, 1 ó 2 extremos por barra longitudinal, si se considera
 }
 
 export interface VigaCimentacionResult {
@@ -34,8 +39,6 @@ export interface VigaCimentacionResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2;
 
 function minDiametroMm(grupos: BarraGrupo[]): number {
   const dbs = grupos.filter((g) => g.cantidad > 0).map((g) => getRebar(g.diametroId).diameterMm);
@@ -69,13 +72,18 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
   }
   const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
+  function longitudBarraLongitudinal(diametroId: string): number {
+    return input.luzLibre + extremosConGancho * longitudGanchoBarra90(diametroId);
+  }
   const longitudTotalBarrasLongitudinales = grupos.reduce(
-    (acc, g) => acc + Math.max(g.cantidad, 0) * input.luzLibre * input.numeroVigas,
+    (acc, g) => acc + Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas,
     0
   );
   const pesoAceroLongitudinal = grupos.reduce(
     (acc, g) =>
-      acc + Math.max(g.cantidad, 0) * input.luzLibre * input.numeroVigas * getRebar(g.diametroId).weightKgPerM,
+      acc +
+      Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas * getRebar(g.diametroId).weightKgPerM,
     0
   );
 
@@ -83,7 +91,8 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   const separacionM = input.separacionEstribos / 100;
   const numeroEstribosPorViga = separacionM > 0 ? Math.floor(input.luzLibre / separacionM) + 1 : 0;
   const numeroEstribosTotal = numeroEstribosPorViga * input.numeroVigas;
-  const longitudPorEstribo = 2 * (input.base / 100 - 2 * recubM) + 2 * (input.altura / 100 - 2 * recubM) + GANCHO_ESTRIBO_M;
+  const longitudGanchoEstribo = input.considerarGanchoEstribo ? longitudGanchoEstribo135(input.diametroEstribosId) : 0;
+  const longitudPorEstribo = 2 * (input.base / 100 - 2 * recubM) + 2 * (input.altura / 100 - 2 * recubM) + longitudGanchoEstribo;
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
@@ -116,7 +125,7 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   const desgloseAcero: AceroItem[] = [
     ...grupos.map((g) => ({
       diametroId: g.diametroId,
-      longitudM: Math.max(g.cantidad, 0) * input.luzLibre * input.numeroVigas,
+      longitudM: Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas,
     })),
     { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
   ];

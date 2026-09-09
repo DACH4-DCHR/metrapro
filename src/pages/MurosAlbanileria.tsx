@@ -53,6 +53,7 @@ export function MurosAlbanileriaPage() {
     barrasSolera: [{ diametroId: "8", cantidad: 4 }],
     diametroEstribosSoleraId: "6",
     recubrimiento: 2,
+    considerarGanchoEstribo: true,
   });
 
   const result = useMemo(() => calcularMuroAlbanileria(input), [input]);
@@ -366,6 +367,18 @@ export function MurosAlbanileriaPage() {
                   onChange={(v) => update("diametroEstribosSoleraId", v)}
                   options={rebarOptions}
                 />
+
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={input.considerarGanchoEstribo}
+                    onChange={(e) => update("considerarGanchoEstribo", e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                  />
+                  <span className="text-xs font-medium text-navy-800">
+                    Gancho a 135° en estribos de columnas y soleras (según Ø)
+                  </span>
+                </label>
               </div>
             )}
           </SectionCard>

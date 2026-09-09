@@ -1,6 +1,7 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 export type TipoPlaca = "estructural" | "ductilidad_limitada";
@@ -24,6 +25,8 @@ export interface PlacaInput {
   diametroEstribosBordeId: string;
   separacionEstribosBorde: number; // cm
   recubrimiento: number; // cm
+
+  considerarGanchoEstribo: boolean;
 }
 
 export interface PlacaResult {
@@ -48,8 +51,6 @@ export interface PlacaResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2;
 
 function barAreaCm2(diametroMm: number): number {
   const dCm = diametroMm / 10;
@@ -165,8 +166,11 @@ export function calcularPlaca(input: PlacaInput): PlacaResult {
     const separacionEstriboBordeM = input.separacionEstribosBorde / 100;
     const numeroEstribosPorExtremo = separacionEstriboBordeM > 0 ? Math.floor(input.alturaLibre / separacionEstriboBordeM) + 1 : 0;
     numeroEstribosElementoBorde = numeroEstribosPorExtremo;
+    const longitudGanchoEstribo = input.considerarGanchoEstribo
+      ? longitudGanchoEstribo135(input.diametroEstribosBordeId)
+      : 0;
     const longitudPorEstribo =
-      2 * (input.anchoElementoBorde / 100 - 2 * recubM) + 2 * (espesorM - 2 * recubM) + GANCHO_ESTRIBO_M;
+      2 * (input.anchoElementoBorde / 100 - 2 * recubM) + 2 * (espesorM - 2 * recubM) + longitudGanchoEstribo;
     const numeroEstribosTotal = numeroEstribosPorExtremo * 2 * input.numeroMuros;
     longitudTotalEstribosBorde = longitudPorEstribo * numeroEstribosTotal;
     pesoEstribosElementoBorde = longitudTotalEstribosBorde * rebarEstriboBorde.weightKgPerM;

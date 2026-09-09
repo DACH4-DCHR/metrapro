@@ -49,6 +49,8 @@ export function LosaMacizaPage() {
     separacionPrincipalSup: 20,
     diametroTemperaturaSupId: "10",
     separacionTemperaturaSup: 20,
+    considerarGanchoLongitudinal: false,
+    extremosConGancho: 2,
   });
 
   const result = useMemo(() => calcularLosaMaciza(input), [input]);
@@ -200,6 +202,34 @@ export function LosaMacizaPage() {
                     unit="cm"
                     value={input.separacionTemperaturaSup}
                     onChange={(v) => update("separacionTemperaturaSup", v)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarGanchoLongitudinal}
+                  onChange={(e) => update("considerarGanchoLongitudinal", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Considerar gancho estándar en extremos discontinuos (+12·db por extremo, malla inf. y sup.)
+                </span>
+              </label>
+              {input.considerarGanchoLongitudinal && (
+                <div className="mt-3 w-40">
+                  <NumberField
+                    label="Extremos con gancho"
+                    unit="und"
+                    step={1}
+                    min={0}
+                    max={2}
+                    value={input.extremosConGancho}
+                    onChange={(v) => update("extremosConGancho", Math.max(0, Math.min(2, v)))}
+                    helper="Por barra: 0, 1 ó 2"
                   />
                 </div>
               )}

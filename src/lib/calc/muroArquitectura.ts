@@ -1,6 +1,7 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 
@@ -22,6 +23,8 @@ export interface MuroArquitecturaInput {
   diametroEstribosColumnetaId: string;
   separacionEstribosColumneta: number; // cm
   recubrimiento: number; // cm
+
+  considerarGanchoEstribo: boolean;
 }
 
 export interface MuroArquitecturaResult {
@@ -39,8 +42,6 @@ export interface MuroArquitecturaResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2;
 
 export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArquitecturaResult {
   const warnings: string[] = [];
@@ -104,7 +105,10 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
     const separacionM = input.separacionEstribosColumneta / 100;
     const numeroEstribosPorColumneta = separacionM > 0 ? Math.floor(input.alturaLibre / separacionM) + 1 : 0;
     const numeroEstribosTotal = numeroEstribosPorColumneta * input.numeroColumnetas;
-    const longitudPorEstribo = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteM - 2 * recubM) + GANCHO_ESTRIBO_M;
+    const longitudGanchoEstribo = input.considerarGanchoEstribo
+      ? longitudGanchoEstribo135(input.diametroEstribosColumnetaId)
+      : 0;
+    const longitudPorEstribo = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteM - 2 * recubM) + longitudGanchoEstribo;
     longitudEstribos = longitudPorEstribo * numeroEstribosTotal;
     pesoEstribosColumnetas = longitudEstribos * rebarEstribo.weightKgPerM;
 

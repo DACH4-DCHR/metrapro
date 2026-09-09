@@ -1,6 +1,7 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 
@@ -27,6 +28,8 @@ export interface MuroAlbanileriaInput {
   diametroEstribosSoleraId: string;
 
   recubrimiento: number; // cm
+
+  considerarGanchoEstribo: boolean;
 }
 
 export interface MuroAlbanileriaResult {
@@ -50,8 +53,6 @@ export interface MuroAlbanileriaResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2;
 
 export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbanileriaResult {
   const warnings: string[] = [];
@@ -162,13 +163,19 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
     const numeroEstribosCentral = separacionCentralM > 0 ? Math.max(Math.floor(alturaCentralM / separacionCentralM) - 1, 0) : 0;
     const numeroEstribosPorColumna = 2 * numeroEstribosConfPorExtremo + numeroEstribosCentral;
     const numeroEstribosColumnaTotal = numeroEstribosPorColumna * input.numeroColumnas;
-    const longitudPorEstriboColumna = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteColumnaM - 2 * recubM) + GANCHO_ESTRIBO_M;
+    const longitudGanchoColumna = input.considerarGanchoEstribo
+      ? longitudGanchoEstribo135(input.diametroEstribosColumnaId)
+      : 0;
+    const longitudPorEstriboColumna = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteColumnaM - 2 * recubM) + longitudGanchoColumna;
     const longitudTotalEstribosColumna = longitudPorEstriboColumna * numeroEstribosColumnaTotal;
     pesoEstribosColumnas = longitudTotalEstribosColumna * rebarEstriboColumna.weightKgPerM;
 
     const rebarEstriboSolera = getRebar(input.diametroEstribosSoleraId);
     const numeroEstribosSolera = separacionCentralM > 0 ? Math.floor(input.longitud / separacionCentralM) + 1 : 0;
-    const longitudPorEstriboSolera = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteSoleraM - 2 * recubM) + GANCHO_ESTRIBO_M;
+    const longitudGanchoSolera = input.considerarGanchoEstribo
+      ? longitudGanchoEstribo135(input.diametroEstribosSoleraId)
+      : 0;
+    const longitudPorEstriboSolera = 2 * (input.espesor / 100 - 2 * recubM) + 2 * (peralteSoleraM - 2 * recubM) + longitudGanchoSolera;
     const longitudTotalEstribosSolera = longitudPorEstriboSolera * numeroEstribosSolera;
     pesoEstribosSoleras = longitudTotalEstribosSolera * rebarEstriboSolera.weightKgPerM;
 

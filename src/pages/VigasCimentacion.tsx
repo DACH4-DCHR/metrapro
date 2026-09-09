@@ -49,6 +49,9 @@ export function VigasCimentacionPage() {
     diametroEstribosId: "8",
     separacionEstribos: 20,
     recubrimiento: 4,
+    considerarGanchoEstribo: true,
+    considerarGanchoLongitudinal: false,
+    extremosConGancho: 2,
   });
 
   const result = useMemo(() => calcularVigaCimentacion(input), [input]);
@@ -205,6 +208,32 @@ export function VigasCimentacionPage() {
                 <Plus size={14} />
                 Agregar grupo
               </button>
+
+              <label className="mt-1 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarGanchoLongitudinal}
+                  onChange={(e) => update("considerarGanchoLongitudinal", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Considerar gancho estándar en extremos discontinuos (+12·db por extremo)
+                </span>
+              </label>
+              {input.considerarGanchoLongitudinal && (
+                <div className="w-40">
+                  <NumberField
+                    label="Extremos con gancho"
+                    unit="und"
+                    step={1}
+                    min={0}
+                    max={2}
+                    value={input.extremosConGancho}
+                    onChange={(v) => update("extremosConGancho", Math.max(0, Math.min(2, v)))}
+                    helper="Por barra: 0, 1 ó 2"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-4 border-t border-steel-100 pt-4">
@@ -235,6 +264,15 @@ export function VigasCimentacionPage() {
                   Usar separación máxima permitida
                 </button>
               </div>
+              <label className="col-span-2 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarGanchoEstribo}
+                  onChange={(e) => update("considerarGanchoEstribo", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-xs font-medium text-navy-800">Gancho a 135° en estribos (según Ø)</span>
+              </label>
             </div>
           </SectionCard>
         </div>

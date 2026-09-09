@@ -6,6 +6,7 @@ import {
   type HollowBlockMaterialId,
 } from "../materials";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoBarra90 } from "./ganchos";
 
 export type AceroViguetasMetodo = "ratio" | "barras";
 
@@ -31,6 +32,11 @@ export interface LosaAligeradaInput {
   diametroNegativoId: string;
   numeroBastonesPorVigueta: number; // total de bastones por vigueta (ej. 1 por apoyo intermedio)
   longitudBaston: number; // m, longitud de cada bastón (típico: L/4 de cada tramo adyacente)
+
+  // Gancho estándar a 90° en los extremos discontinuos (barras de temperatura y viguetas
+  // que anclan en la viga perimetral). Opcional: depende del detallado de cada proyecto.
+  considerarGanchoLongitudinal: boolean;
+  extremosConGancho: number; // 0, 1 ó 2 extremos por barra, si se considera
 }
 
 export interface LosaAligeradaResult {
@@ -117,15 +123,23 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
 
   const pesoConcreto = volumenConcreto * CONCRETE_DENSITY_KG_M3;
 
+  const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
+
   const rebarTemp = getRebar(input.temperaturaDiametroId);
   const separacionTempM = input.temperaturaSeparacion / 100;
   const numeroBarrasTemp = separacionTempM > 0 ? Math.ceil(input.ancho / separacionTempM) : 0;
-  const longitudBarrasTemp = numeroBarrasTemp * input.largo;
+  const longitudBarrasTemp =
+    numeroBarrasTemp * (input.largo + extremosConGancho * longitudGanchoBarra90(input.temperaturaDiametroId));
   const aceroTemperaturaKg = longitudBarrasTemp * rebarTemp.weightKgPerM;
 
+  const longitudBarrasVigueta =
+    input.aceroViguetasMetodo === "barras"
+      ? input.numeroVarillasPorVigueta *
+        (longitudViguetas + numeroViguetas * extremosConGancho * longitudGanchoBarra90(input.diametroVarillaViguetaId))
+      : 0;
   const aceroViguetasKg =
     input.aceroViguetasMetodo === "barras"
-      ? input.numeroVarillasPorVigueta * longitudViguetas * getRebar(input.diametroVarillaViguetaId).weightKgPerM
+      ? longitudBarrasVigueta * getRebar(input.diametroVarillaViguetaId).weightKgPerM
       : input.ratioAceroViguetasKgM2 * areaLosa;
 
   const longitudTotalAceroNegativo = input.incluirAceroNegativo
@@ -142,7 +156,7 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
   const desgloseAcero: AceroItem[] = [
     { diametroId: input.temperaturaDiametroId, longitudM: longitudBarrasTemp },
     ...(input.aceroViguetasMetodo === "barras"
-      ? [{ diametroId: input.diametroVarillaViguetaId, longitudM: input.numeroVarillasPorVigueta * longitudViguetas }]
+      ? [{ diametroId: input.diametroVarillaViguetaId, longitudM: longitudBarrasVigueta }]
       : []),
     ...(input.incluirAceroNegativo
       ? [{ diametroId: input.diametroNegativoId, longitudM: longitudTotalAceroNegativo }]

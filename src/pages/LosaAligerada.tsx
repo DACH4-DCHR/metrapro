@@ -59,6 +59,8 @@ export function LosaAligeradaPage() {
     diametroNegativoId: "8",
     numeroBastonesPorVigueta: 1,
     longitudBaston: 1,
+    considerarGanchoLongitudinal: false,
+    extremosConGancho: 2,
   });
 
   const result = useMemo(() => calcularLosaAligerada(input), [input]);
@@ -237,6 +239,34 @@ export function LosaAligeradaPage() {
                     value={input.ratioAceroViguetasKgM2}
                     onChange={(v) => update("ratioAceroViguetasKgM2", v)}
                     helper="Estimado, ajustable según diseño estructural real"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarGanchoLongitudinal}
+                  onChange={(e) => update("considerarGanchoLongitudinal", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Considerar gancho estándar en extremos discontinuos (temperatura y viguetas, +12·db por extremo)
+                </span>
+              </label>
+              {input.considerarGanchoLongitudinal && (
+                <div className="mt-3 w-40">
+                  <NumberField
+                    label="Extremos con gancho"
+                    unit="und"
+                    step={1}
+                    min={0}
+                    max={2}
+                    value={input.extremosConGancho}
+                    onChange={(v) => update("extremosConGancho", Math.max(0, Math.min(2, v)))}
+                    helper="Por barra: 0, 1 ó 2"
                   />
                 </div>
               )}

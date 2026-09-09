@@ -1,6 +1,7 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 export type TipoSeccionColumna = "rectangular" | "circular";
@@ -23,6 +24,8 @@ export interface ColumnaInput {
   longitudConfinamiento: number; // cm (Lo), por extremo
   separacionConfinamiento: number; // cm (So), dentro de Lo
   separacionCentral: number; // cm, fuera de Lo (o única si no hay confinamiento)
+
+  considerarGanchoEstribo: boolean;
 }
 
 export interface ColumnaResult {
@@ -44,8 +47,6 @@ export interface ColumnaResult {
   desgloseAcero: AceroItem[];
   warnings: string[];
 }
-
-const GANCHO_ESTRIBO_M = 0.2;
 
 // Sugiere Lo, So (dentro de Lo) y separación fuera de Lo para columnas, según:
 // Art. 21.4.5 (edificios con muros estructurales): Lo=máx(mayor dim, luz libre/6, 50cm);
@@ -169,7 +170,8 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   }
 
   const numeroEstribosTotal = numeroEstribosPorColumna * input.numeroColumnas;
-  const longitudPorEstribo = longitudPorEstriboBase + GANCHO_ESTRIBO_M;
+  const longitudGanchoEstribo = input.considerarGanchoEstribo ? longitudGanchoEstribo135(input.diametroEstribosId) : 0;
+  const longitudPorEstribo = longitudPorEstriboBase + longitudGanchoEstribo;
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
