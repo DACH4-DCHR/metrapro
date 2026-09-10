@@ -1,12 +1,6 @@
 import { getRebar } from "../../lib/materials";
-import { estribosPositionsColumnaM, type ColumnaInput } from "../../lib/calc/columna";
-import {
-  DIAGRAM_COLORS,
-  isoProject,
-  rectPerimeterPoints,
-  circlePerimeterPoints,
-  assignDiametersToPositions,
-} from "./svgHelpers";
+import { estribosPositionsColumnaM, posicionesBarrasLongitudinales, type ColumnaInput } from "../../lib/calc/columna";
+import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
 
 interface ColumnaIsometricProps {
   input: ColumnaInput;
@@ -16,10 +10,6 @@ const VIEW_W = 280;
 const VIEW_H = 280;
 const MARGIN = 22;
 
-function totalBarras(input: ColumnaInput): number {
-  return input.barrasLongitudinales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
-}
-
 function ellipsePathCm(r: number, segments = 48): { x: number; z: number }[] {
   return Array.from({ length: segments }, (_, i) => {
     const angle = (2 * Math.PI * i) / segments;
@@ -28,7 +18,8 @@ function ellipsePathCm(r: number, segments = 48): { x: number; z: number }[] {
 }
 
 export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
-  const n = totalBarras(input);
+  const barPositions = posicionesBarrasLongitudinales(input);
+  const n = barPositions.length;
   const recub = input.recubrimiento;
 
   if (input.tipoSeccion === "rectangular" && (input.base <= 0 || input.peralte <= 0)) {
@@ -38,7 +29,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
     return <p className="text-sm text-steel-500">Ingresa un diámetro válido para ver la vista isométrica.</p>;
   }
   if (n <= 0) {
-    return <p className="text-sm text-steel-500">Ingresa al menos un grupo de acero longitudinal para ver la vista isométrica.</p>;
+    return <p className="text-sm text-steel-500">Ingresa al menos una barra longitudinal para ver la vista isométrica.</p>;
   }
 
   const isRect = input.tipoSeccion === "rectangular";
@@ -47,13 +38,6 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
   const maxDim = Math.max(w, d);
   const hSeg = Math.min(Math.max(2.6 * maxDim, 70), 320); // altura del segmento esquemático, no a escala real
 
-  const barGroups = input.barrasLongitudinales.filter((g) => g.cantidad > 0);
-  const rawPositions = isRect ? rectPerimeterPoints(n, w, d) : circlePerimeterPoints(n, w / 2);
-  const barPositions = assignDiametersToPositions(rawPositions, barGroups).map((p) => ({
-    x: p.x,
-    z: p.y,
-    diametroId: p.diametroId,
-  }));
   const ringOutlineCm = isRect
     ? [
         { x: recub, z: recub },
@@ -121,10 +105,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
         }))
       : [];
 
-  const rebarLabel = input.barrasLongitudinales
-    .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
-    .join(" + ");
+  const rebarLabel = `${n} barras`;
 
   return (
     <div className="overflow-x-auto">

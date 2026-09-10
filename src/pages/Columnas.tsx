@@ -17,6 +17,7 @@ import {
   type ColumnaInput,
   type TipoSeccionColumna,
   type SistemaSismorresistenteColumna,
+  type CaraColumna,
   type BarraGrupo,
   type EstriboSuplementario,
 } from "../lib/calc/columna";
@@ -34,6 +35,10 @@ const sistemaSismorresistenteOptions: { value: SistemaSismorresistenteColumna; l
   { value: "muros", label: "Muros estructurales (E.060 Art. 21.4.5)" },
   { value: "porticos_dual", label: "Pórticos / sistema dual (E.060 Art. 21.6.4)" },
 ];
+const caraOptions: { value: CaraColumna; label: string }[] = [
+  { value: "peralte", label: "Caras de peralte" },
+  { value: "base", label: "Caras de base" },
+];
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
 
@@ -42,11 +47,25 @@ function nextName() {
   return `Grupo de Columnas ${count + 1}`;
 }
 
-function grupoLabel(grupos: BarraGrupo[]): string {
+function grupoLabelSimple(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
     .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
     .join(" + ");
+}
+
+function resumenAceroLongitudinal(input: ColumnaInput): string {
+  if (input.tipoSeccion === "circular") {
+    return grupoLabelSimple(input.barrasLongitudinalesCirculares) || "-";
+  }
+  const partes = [`4Ø${getRebar(input.diametroEsquinaId).diameterMm}mm esq.`];
+  input.barrasCarasPeralteGrupos
+    .filter((g) => g.cantidad > 0)
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara peralte`));
+  input.barrasCarasBaseGrupos
+    .filter((g) => g.cantidad > 0)
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara base`));
+  return partes.join(" + ");
 }
 
 export function ColumnasPage() {
@@ -61,7 +80,10 @@ export function ColumnasPage() {
     base: 30,
     peralte: 30,
     diametro: 35,
-    barrasLongitudinales: [{ diametroId: "16", cantidad: 6 }],
+    diametroEsquinaId: "16",
+    barrasCarasPeralteGrupos: [{ diametroId: "16", cantidad: 1 }],
+    barrasCarasBaseGrupos: [],
+    barrasLongitudinalesCirculares: [{ diametroId: "16", cantidad: 6 }],
     diametroEstribosId: "8",
     estribosSuplementarios: [],
     recubrimiento: 4,
@@ -86,29 +108,29 @@ export function ColumnasPage() {
     setSaved(false);
   }
 
-  function updateGrupo(index: number, patch: Partial<BarraGrupo>) {
-    setInput((prev) => ({
-      ...prev,
-      barrasLongitudinales: prev.barrasLongitudinales.map((g, i) => (i === index ? { ...g, ...patch } : g)),
-    }));
-    setSaved(false);
+  function makeGrupoHandlers(key: "barrasCarasPeralteGrupos" | "barrasCarasBaseGrupos" | "barrasLongitudinalesCirculares") {
+    return {
+      update: (index: number, patch: Partial<BarraGrupo>) => {
+        setInput((prev) => ({
+          ...prev,
+          [key]: prev[key].map((g, i) => (i === index ? { ...g, ...patch } : g)),
+        }));
+        setSaved(false);
+      },
+      add: () => {
+        setInput((prev) => ({ ...prev, [key]: [...prev[key], { diametroId: "12", cantidad: 1 }] }));
+        setSaved(false);
+      },
+      remove: (index: number) => {
+        setInput((prev) => ({ ...prev, [key]: prev[key].filter((_, i) => i !== index) }));
+        setSaved(false);
+      },
+    };
   }
 
-  function addGrupo() {
-    setInput((prev) => ({
-      ...prev,
-      barrasLongitudinales: [...prev.barrasLongitudinales, { diametroId: "16", cantidad: 2 }],
-    }));
-    setSaved(false);
-  }
-
-  function removeGrupo(index: number) {
-    setInput((prev) => ({
-      ...prev,
-      barrasLongitudinales: prev.barrasLongitudinales.filter((_, i) => i !== index),
-    }));
-    setSaved(false);
-  }
+  const peralteHandlers = makeGrupoHandlers("barrasCarasPeralteGrupos");
+  const baseHandlers = makeGrupoHandlers("barrasCarasBaseGrupos");
+  const circularHandlers = makeGrupoHandlers("barrasLongitudinalesCirculares");
 
   function updateEstriboSuplementario(index: number, patch: Partial<EstriboSuplementario>) {
     setInput((prev) => ({
@@ -121,7 +143,7 @@ export function ColumnasPage() {
   function addEstriboSuplementario() {
     setInput((prev) => ({
       ...prev,
-      estribosSuplementarios: [...prev.estribosSuplementarios, { diametroId: prev.diametroEstribosId, numeroRamas: 1 }],
+      estribosSuplementarios: [...prev.estribosSuplementarios, { diametroId: prev.diametroEstribosId, numeroRamas: 1, cara: "peralte" }],
     }));
     setSaved(false);
   }
@@ -137,13 +159,7 @@ export function ColumnasPage() {
   function calcularSugerencia(sistema: SistemaSismorresistenteColumna, base: ColumnaInput) {
     const mayorDim = base.tipoSeccion === "rectangular" ? Math.max(base.base, base.peralte) : base.diametro;
     const menorDim = base.tipoSeccion === "rectangular" ? Math.min(base.base, base.peralte) : base.diametro;
-    return sugerirConfinamientoColumna(
-      sistema,
-      mayorDim,
-      menorDim,
-      base.alturaLibre,
-      minDiametroLongitudinalMm(base.barrasLongitudinales)
-    );
+    return sugerirConfinamientoColumna(sistema, mayorDim, menorDim, base.alturaLibre, minDiametroLongitudinalMm(base));
   }
 
   function handleToggleConfinamiento(checked: boolean) {
@@ -192,10 +208,14 @@ export function ColumnasPage() {
         Cantidad: `${input.numeroColumnas} columnas`,
         Sección: seccionLabel,
         "Altura libre": `${input.alturaLibre} m`,
-        "Acero longitudinal": grupoLabel(input.barrasLongitudinales) || "-",
+        "Acero longitudinal": resumenAceroLongitudinal(input),
         "Cuantía": `${result.cuantiaPct.toFixed(2)}%`,
         ...(input.estribosSuplementarios.length > 0
-          ? { "Estribos suplementarios": grupoLabel(input.estribosSuplementarios.map((s) => ({ diametroId: s.diametroId, cantidad: s.numeroRamas }))) }
+          ? {
+              "Estribos suplementarios": input.estribosSuplementarios
+                .map((s) => `${s.numeroRamas}Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`)
+                .join(" + "),
+            }
           : {}),
       },
     };
@@ -267,51 +287,148 @@ export function ColumnasPage() {
           </SectionCard>
 
           <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
-            <div className="flex flex-col gap-3">
-              <span className="text-sm font-medium text-navy-800">
-                Barras longitudinales (distribuidas en el perímetro)
-              </span>
-              {input.barrasLongitudinales.map((grupo, i) => (
-                <div key={i} className="flex items-end gap-2">
-                  <div className="w-28">
-                    <NumberField
-                      label={i === 0 ? "Cantidad" : ""}
-                      unit="und"
-                      step={1}
-                      value={grupo.cantidad}
-                      onChange={(v) => updateGrupo(i, { cantidad: v })}
-                    />
+            {input.tipoSeccion === "circular" ? (
+              <div className="flex flex-col gap-3">
+                <span className="text-sm font-medium text-navy-800">
+                  Barras longitudinales (distribuidas en el perímetro)
+                </span>
+                {input.barrasLongitudinalesCirculares.map((grupo, i) => (
+                  <div key={i} className="flex items-end gap-2">
+                    <div className="w-28">
+                      <NumberField
+                        label={i === 0 ? "Cantidad" : ""}
+                        unit="und"
+                        step={1}
+                        value={grupo.cantidad}
+                        onChange={(v) => circularHandlers.update(i, { cantidad: v })}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <SelectField
+                        label={i === 0 ? "Diámetro" : ""}
+                        value={grupo.diametroId}
+                        onChange={(v) => circularHandlers.update(i, { diametroId: v })}
+                        options={rebarOptions}
+                      />
+                    </div>
+                    <button
+                      onClick={() => circularHandlers.remove(i)}
+                      disabled={input.barrasLongitudinalesCirculares.length <= 1}
+                      aria-label="Quitar grupo"
+                      className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <SelectField
-                      label={i === 0 ? "Diámetro" : ""}
-                      value={grupo.diametroId}
-                      onChange={(v) => updateGrupo(i, { diametroId: v })}
-                      options={rebarOptions}
-                    />
-                  </div>
+                ))}
+                <button
+                  onClick={circularHandlers.add}
+                  className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
+                >
+                  <Plus size={14} />
+                  Agregar grupo
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <SelectField
+                    label="Barra de esquina (siempre 4, una por esquina)"
+                    value={input.diametroEsquinaId}
+                    onChange={(v) => update("diametroEsquinaId", v)}
+                    options={rebarOptions}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-steel-100 pt-4">
+                  <span className="text-sm font-medium text-navy-800">
+                    Barras adicionales en caras de peralte (cantidad por cada cara)
+                  </span>
+                  {input.barrasCarasPeralteGrupos.map((grupo, i) => (
+                    <div key={i} className="flex items-end gap-2">
+                      <div className="w-28">
+                        <NumberField
+                          label={i === 0 ? "Cantidad/cara" : ""}
+                          unit="und"
+                          step={1}
+                          min={0}
+                          value={grupo.cantidad}
+                          onChange={(v) => peralteHandlers.update(i, { cantidad: v })}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <SelectField
+                          label={i === 0 ? "Diámetro" : ""}
+                          value={grupo.diametroId}
+                          onChange={(v) => peralteHandlers.update(i, { diametroId: v })}
+                          options={rebarOptions}
+                        />
+                      </div>
+                      <button
+                        onClick={() => peralteHandlers.remove(i)}
+                        aria-label="Quitar grupo"
+                        className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
                   <button
-                    onClick={() => removeGrupo(i)}
-                    disabled={input.barrasLongitudinales.length <= 1}
-                    aria-label="Quitar grupo"
-                    className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                    onClick={peralteHandlers.add}
+                    className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
                   >
-                    <Trash2 size={16} />
+                    <Plus size={14} />
+                    Agregar grupo (cara de peralte)
                   </button>
                 </div>
-              ))}
-              <button
-                onClick={addGrupo}
-                className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
-              >
-                <Plus size={14} />
-                Agregar grupo
-              </button>
-              <p className="text-xs text-steel-500">
-                Cuantía: {numberFormatter.format(result.cuantiaPct)}% (mín. 1%, máx. 6% — E.060 Art. 21.6.3.1 /
-                21.4.5.2)
-              </p>
-            </div>
+
+                <div className="flex flex-col gap-3 border-t border-steel-100 pt-4">
+                  <span className="text-sm font-medium text-navy-800">
+                    Barras adicionales en caras de base (cantidad por cada cara)
+                  </span>
+                  {input.barrasCarasBaseGrupos.map((grupo, i) => (
+                    <div key={i} className="flex items-end gap-2">
+                      <div className="w-28">
+                        <NumberField
+                          label={i === 0 ? "Cantidad/cara" : ""}
+                          unit="und"
+                          step={1}
+                          min={0}
+                          value={grupo.cantidad}
+                          onChange={(v) => baseHandlers.update(i, { cantidad: v })}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <SelectField
+                          label={i === 0 ? "Diámetro" : ""}
+                          value={grupo.diametroId}
+                          onChange={(v) => baseHandlers.update(i, { diametroId: v })}
+                          options={rebarOptions}
+                        />
+                      </div>
+                      <button
+                        onClick={() => baseHandlers.remove(i)}
+                        aria-label="Quitar grupo"
+                        className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={baseHandlers.add}
+                    className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
+                  >
+                    <Plus size={14} />
+                    Agregar grupo (cara de base)
+                  </button>
+                </div>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-steel-500">
+              Cuantía: {numberFormatter.format(result.cuantiaPct)}% (mín. 1%, máx. 6% — E.060 Art. 21.6.3.1 /
+              21.4.5.2)
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-4 border-t border-steel-100 pt-4">
               <SelectField
@@ -349,32 +466,40 @@ export function ColumnasPage() {
                   Estribos suplementarios (grapas/ganchos para barras intermedias, columnas grandes)
                 </span>
                 {input.estribosSuplementarios.map((s, i) => (
-                  <div key={i} className="flex items-end gap-2">
-                    <div className="w-24">
-                      <NumberField
-                        label={i === 0 ? "N° ramas" : ""}
-                        unit="und"
-                        step={1}
-                        min={1}
-                        value={s.numeroRamas}
-                        onChange={(v) => updateEstriboSuplementario(i, { numeroRamas: v })}
-                      />
+                  <div key={i} className="flex flex-col gap-2 rounded-md border border-steel-100 p-2">
+                    <div className="flex items-end gap-2">
+                      <div className="w-20">
+                        <NumberField
+                          label="N° ramas"
+                          unit="und"
+                          step={1}
+                          min={1}
+                          value={s.numeroRamas}
+                          onChange={(v) => updateEstriboSuplementario(i, { numeroRamas: v })}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <SelectField
+                          label="Diámetro"
+                          value={s.diametroId}
+                          onChange={(v) => updateEstriboSuplementario(i, { diametroId: v })}
+                          options={rebarOptions}
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeEstriboSuplementario(i)}
+                        aria-label="Quitar estribo suplementario"
+                        className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <SelectField
-                        label={i === 0 ? "Diámetro" : ""}
-                        value={s.diametroId}
-                        onChange={(v) => updateEstriboSuplementario(i, { diametroId: v })}
-                        options={rebarOptions}
-                      />
-                    </div>
-                    <button
-                      onClick={() => removeEstriboSuplementario(i)}
-                      aria-label="Quitar estribo suplementario"
-                      className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <SelectField
+                      label="Arriostra a la barra intermedia de..."
+                      value={s.cara}
+                      onChange={(v) => updateEstriboSuplementario(i, { cara: v as CaraColumna })}
+                      options={caraOptions}
+                    />
                   </div>
                 ))}
                 {input.estribosSuplementarios.length < 2 && (

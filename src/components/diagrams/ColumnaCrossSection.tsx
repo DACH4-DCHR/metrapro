@@ -1,15 +1,10 @@
 import { getRebar } from "../../lib/materials";
-import type { ColumnaInput } from "../../lib/calc/columna";
 import {
-  HDim,
-  VDim,
-  DIAGRAM_COLORS,
-  fmt,
-  BlueprintGrid,
-  rectPerimeterPoints,
-  circlePerimeterPoints,
-  assignDiametersToPositions,
-} from "./svgHelpers";
+  posicionesBarrasLongitudinales,
+  posicionesIntermediasCara,
+  type ColumnaInput,
+} from "../../lib/calc/columna";
+import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface ColumnaCrossSectionProps {
   input: ColumnaInput;
@@ -26,27 +21,27 @@ const MARGIN_BOTTOM = 50;
 // pero siempre distinguible del estribo perimetral y entre sí).
 const SUPLEMENTARIO_COLORS = ["#c2410c", "#991b1b"];
 
-function totalBarras(input: ColumnaInput): number {
-  return input.barrasLongitudinales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
-}
-
-function maxDiametroMm(input: ColumnaInput): number {
-  const dbs = input.barrasLongitudinales.filter((g) => g.cantidad > 0).map((g) => getRebar(g.diametroId).diameterMm);
-  return dbs.length > 0 ? Math.max(...dbs) : 16;
-}
-
 function grupoLabel(input: ColumnaInput): string {
-  return input.barrasLongitudinales
+  if (input.tipoSeccion === "circular") {
+    return input.barrasLongitudinalesCirculares
+      .filter((g) => g.cantidad > 0)
+      .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+      .join(" + ");
+  }
+  const partes = [`4Ø${getRebar(input.diametroEsquinaId).diameterMm}mm esq.`];
+  input.barrasCarasPeralteGrupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
-    .join(" + ");
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara peralte`));
+  input.barrasCarasBaseGrupos
+    .filter((g) => g.cantidad > 0)
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara base`));
+  return partes.join(" + ");
 }
 
 export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
   const recub = input.recubrimiento;
-  const n = totalBarras(input);
-  const dbMax = maxDiametroMm(input);
-  const barGroups = input.barrasLongitudinales.filter((g) => g.cantidad > 0);
+  const barPositionsRaw = posicionesBarrasLongitudinales(input);
+  const n = barPositionsRaw.length;
 
   if (input.tipoSeccion === "rectangular" && (input.base <= 0 || input.peralte <= 0)) {
     return <p className="text-sm text-steel-500">Ingresa una base y peralte válidos para ver la sección.</p>;
@@ -54,6 +49,11 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
   if (input.tipoSeccion === "circular" && input.diametro <= 0) {
     return <p className="text-sm text-steel-500">Ingresa un diámetro válido para ver la sección.</p>;
   }
+  if (n === 0) {
+    return <p className="text-sm text-steel-500">Ingresa al menos una barra longitudinal para ver la sección.</p>;
+  }
+
+  const dbMaxMm = Math.max(...barPositionsRaw.map((p) => getRebar(p.diametroId).diameterMm));
 
   const drawW = VIEW_W - MARGIN_L - MARGIN_R;
   const drawH = VIEW_H - MARGIN_TOP - MARGIN_BOTTOM;
@@ -65,13 +65,14 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
     const cy = MARGIN_TOP + (diametro * scale) / 2;
     const rOuter = (diametro * scale) / 2;
     const recubPx = recub * scale;
-    const barRMax = Math.max((dbMax / 10) * scale * 0.5, 3);
-    const rBars = rOuter - recubPx - barRMax;
+    const barRMax = Math.max((dbMaxMm / 10) * scale * 0.5, 3);
+    const rFull = diametro / 2;
+    const rInsetRatio = Math.max((rFull - recub - barRMax / scale) / rFull, 0);
 
-    const barPositions = assignDiametersToPositions(circlePerimeterPoints(n, rBars), barGroups).map((p) => ({
+    const barPositions = barPositionsRaw.map((p) => ({
       ...p,
-      x: p.x + (cx - rBars),
-      y: p.y + (cy - rBars),
+      x: cx + (p.x - rFull) * rInsetRatio * scale,
+      y: cy + (p.z - rFull) * rInsetRatio * scale,
     }));
 
     return (
@@ -114,20 +115,16 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
   const w = base * scale;
   const h = peralte * scale;
   const recubPx = recub * scale;
-  const barRMax = Math.max((dbMax / 10) * scale * 0.5, 3);
-  const insetX = x0 + recubPx + barRMax;
-  const insetY = y0 + recubPx + barRMax;
-  const insetW = Math.max(w - 2 * (recubPx + barRMax), 0);
-  const insetH = Math.max(h - 2 * (recubPx + barRMax), 0);
+  const barRMaxCm = Math.max((dbMaxMm / 10) * 0.5, 3 / scale);
+  const insetCm = recub + barRMaxCm;
+  const mapX = (x: number) => insetCm + (x / base) * (base - 2 * insetCm);
+  const mapZ = (z: number) => insetCm + (z / peralte) * (peralte - 2 * insetCm);
 
-  const barPositions = assignDiametersToPositions(rectPerimeterPoints(n, insetW, insetH), barGroups).map((p) => ({
+  const barPositions = barPositionsRaw.map((p) => ({
     ...p,
-    x: p.x + insetX,
-    y: p.y + insetY,
+    x: x0 + mapX(p.x) * scale,
+    y: y0 + mapZ(p.z) * scale,
   }));
-
-  const menorLadoEsBase = base <= peralte;
-  const supRecubPx = recub * scale;
 
   return (
     <div className="overflow-x-auto">
@@ -143,20 +140,26 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
           stroke={DIAGRAM_COLORS.stirrup}
           strokeWidth={Math.max((getRebar(input.diametroEstribosId).diameterMm / 10) * scale * 0.6, 1.5)}
         />
-        {/* Estribos suplementarios: una rama esquemática cruzando la menor dimensión */}
+        {/* Estribos suplementarios: alineados a una barra intermedia real de la cara que
+            indica cada grupo (o al centro, si esa cara no tiene barras intermedias). */}
         {input.estribosSuplementarios.map((s, i) => {
           const strokeW = Math.max((getRebar(s.diametroId).diameterMm / 10) * scale * 0.6, 1.5);
           const color = SUPLEMENTARIO_COLORS[i % SUPLEMENTARIO_COLORS.length];
-          if (menorLadoEsBase) {
-            const y = y0 + h / 2 + (i - (input.estribosSuplementarios.length - 1) / 2) * 10;
+          const disponibles = posicionesIntermediasCara(input, s.cara);
+          const ramas = Math.max(Math.floor(s.numeroRamas), 0);
+          return Array.from({ length: ramas }, (_, r) => {
+            const t = disponibles.length > 0 ? disponibles[r % disponibles.length].t : 0.5;
+            if (s.cara === "peralte") {
+              const y = y0 + mapZ(t * peralte) * scale;
+              return (
+                <line key={`${i}-${r}`} x1={x0 + mapX(0) * scale} y1={y} x2={x0 + mapX(base) * scale} y2={y} stroke={color} strokeWidth={strokeW} strokeDasharray="5 3" />
+              );
+            }
+            const x = x0 + mapX(t * base) * scale;
             return (
-              <line key={i} x1={x0 + supRecubPx} y1={y} x2={x0 + w - supRecubPx} y2={y} stroke={color} strokeWidth={strokeW} strokeDasharray="5 3" />
+              <line key={`${i}-${r}`} x1={x} y1={y0 + mapZ(0) * scale} x2={x} y2={y0 + mapZ(peralte) * scale} stroke={color} strokeWidth={strokeW} strokeDasharray="5 3" />
             );
-          }
-          const x = x0 + w / 2 + (i - (input.estribosSuplementarios.length - 1) / 2) * 10;
-          return (
-            <line key={i} x1={x} y1={y0 + supRecubPx} x2={x} y2={y0 + h - supRecubPx} stroke={color} strokeWidth={strokeW} strokeDasharray="5 3" />
-          );
+          });
         })}
         {barPositions.map((p, i) => (
           <circle
@@ -171,11 +174,10 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
         <VDim y1={y0} y2={y0 + h} x={x0 - 20} label={`t=${fmt(peralte)}cm`} />
       </svg>
       <p className="mt-1 text-xs text-steel-500">
-        {grupoLabel(input) || "sin barras"} ({n} und, distribución perimetral) · estribo Ø
-        {getRebar(input.diametroEstribosId).diameterMm}mm
+        {grupoLabel(input) || "sin barras"} ({n} und total) · estribo Ø{getRebar(input.diametroEstribosId).diameterMm}mm
         {input.estribosSuplementarios.length > 0
           ? ` + ${input.estribosSuplementarios
-              .map((s) => `${s.numeroRamas}Ø${getRebar(s.diametroId).diameterMm}mm supl.`)
+              .map((s) => `${s.numeroRamas}Ø${getRebar(s.diametroId).diameterMm}mm supl. (cara ${s.cara})`)
               .join(" + ")}`
           : ""}
       </p>

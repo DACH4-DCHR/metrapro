@@ -6,15 +6,18 @@ import { longitudGanchoBarra90, longitudGanchoEstribo135 } from "./ganchos";
 export type { BarraGrupo };
 export type TipoSeccionColumna = "rectangular" | "circular";
 export type SistemaSismorresistenteColumna = "muros" | "porticos_dual";
+export type CaraColumna = "peralte" | "base";
 
 // Estribo suplementario ("grapa"/"gancho suplementario"): rama adicional recta que cruza
 // la sección para arriostrar barras longitudinales intermedias, en columnas donde el
 // estribo perimetral por sí solo no alcanza a confinar todas las barras (E.060 Art.
 // 21.6.4.3 / 21.4.5.4). Ocurre en el mismo nivel y con la misma cantidad que el estribo
 // perimetral, pero puede tener su propio diámetro. Solo aplica a columnas rectangulares.
+// "cara" indica a qué par de caras (y por lo tanto a qué barra intermedia) arriostra.
 export interface EstriboSuplementario {
   diametroId: string;
   numeroRamas: number; // ramas adicionales por cada nivel de estribo
+  cara: CaraColumna;
 }
 
 export interface ColumnaInput {
@@ -25,7 +28,14 @@ export interface ColumnaInput {
   peralte: number; // cm (rectangular)
   diametro: number; // cm (circular)
 
-  barrasLongitudinales: BarraGrupo[];
+  // Columnas rectangulares: 3 roles explícitos, igual que en un plano de detalle real.
+  diametroEsquinaId: string; // barra de esquina — siempre 4, una por esquina
+  barrasCarasPeralteGrupos: BarraGrupo[]; // adicionales; "cantidad" es POR CADA cara de peralte (hay 2)
+  barrasCarasBaseGrupos: BarraGrupo[]; // adicionales; "cantidad" es POR CADA cara de base (hay 2)
+
+  // Columnas circulares: distribución uniforme en el perímetro (no aplican esquinas/caras).
+  barrasLongitudinalesCirculares: BarraGrupo[];
+
   diametroEstribosId: string;
   estribosSuplementarios: EstriboSuplementario[]; // hasta 2 grupos adicionales
   recubrimiento: number; // cm
@@ -92,6 +102,82 @@ function minDiametroMm(grupos: BarraGrupo[]): number {
   return dbs.length > 0 ? Math.min(...dbs) : 16;
 }
 
+// Menor diámetro longitudinal presente, usado para sugerir el confinamiento (So).
+// Considera esquina + caras (rectangular) o el listado circular, según corresponda.
+export function minDiametroLongitudinalMm(input: ColumnaInput): number {
+  if (input.tipoSeccion === "circular") {
+    return minDiametroMm(input.barrasLongitudinalesCirculares);
+  }
+  return minDiametroMm([
+    { diametroId: input.diametroEsquinaId, cantidad: 4 },
+    ...input.barrasCarasPeralteGrupos,
+    ...input.barrasCarasBaseGrupos,
+  ]);
+}
+
+export interface BarraLongitudinalPosicionada {
+  x: number; // cm, coordenada local [0,base] (rectangular) o [0,diametro] (circular)
+  z: number; // cm, coordenada local [0,peralte] (rectangular) o [0,diametro] (circular)
+  diametroId: string;
+}
+
+// Posiciones reales (en cm, coordenadas locales sin proyectar) de cada barra longitudinal,
+// usadas tanto por la sección transversal 2D como por la vista isométrica 3D — así ambas
+// vistas y el metrado están siempre de acuerdo. Rectangular: 4 esquinas fijas + barras
+// repartidas simétricamente a lo largo de las caras de peralte y de base (excluyendo las
+// esquinas, que ya están ocupadas). Circular: distribución uniforme en el perímetro.
+export function posicionesBarrasLongitudinales(input: ColumnaInput): BarraLongitudinalPosicionada[] {
+  if (input.tipoSeccion === "circular") {
+    const r = input.diametro / 2;
+    const diametros: string[] = [];
+    for (const g of input.barrasLongitudinalesCirculares) {
+      for (let k = 0; k < Math.max(Math.floor(g.cantidad), 0); k++) diametros.push(g.diametroId);
+    }
+    const n = diametros.length;
+    return diametros.map((diametroId, idx) => {
+      const angle = (2 * Math.PI * idx) / n - Math.PI / 2;
+      return { x: r + r * Math.cos(angle), z: r + r * Math.sin(angle), diametroId };
+    });
+  }
+
+  const w = input.base;
+  const d = input.peralte;
+  const posiciones: BarraLongitudinalPosicionada[] = [
+    { x: 0, z: 0, diametroId: input.diametroEsquinaId },
+    { x: w, z: 0, diametroId: input.diametroEsquinaId },
+    { x: w, z: d, diametroId: input.diametroEsquinaId },
+    { x: 0, z: d, diametroId: input.diametroEsquinaId },
+  ];
+
+  for (const { t, diametroId } of posicionesIntermediasCara(input, "peralte")) {
+    posiciones.push({ x: 0, z: t * d, diametroId });
+    posiciones.push({ x: w, z: t * d, diametroId });
+  }
+  for (const { t, diametroId } of posicionesIntermediasCara(input, "base")) {
+    posiciones.push({ x: t * w, z: 0, diametroId });
+    posiciones.push({ x: t * w, z: d, diametroId });
+  }
+
+  return posiciones;
+}
+
+// Posiciones intermedias (fracción 0..1 a lo largo de la cara, entre una esquina y la
+// otra) de las barras adicionales en una cara de peralte o de base, en el orden de los
+// grupos declarados. Se usa para dibujar las barras y para alinear los estribos
+// suplementarios con la barra real a la que arriostran.
+export function posicionesIntermediasCara(
+  input: ColumnaInput,
+  cara: CaraColumna
+): { t: number; diametroId: string }[] {
+  const grupos = cara === "peralte" ? input.barrasCarasPeralteGrupos : input.barrasCarasBaseGrupos;
+  const diametros: string[] = [];
+  for (const g of grupos) {
+    for (let k = 0; k < Math.max(Math.floor(g.cantidad), 0); k++) diametros.push(g.diametroId);
+  }
+  const total = diametros.length;
+  return diametros.map((diametroId, j) => ({ t: (j + 1) / (total + 1), diametroId }));
+}
+
 // Posiciones (en metros, desde 0 hasta la altura libre) de cada estribo en UNA columna.
 // Usa exactamente los mismos conteos que calcularColumna, para que cualquier vista (2D o
 // 3D) que dibuje estribos a partir de esto nunca quede desincronizada con el metrado.
@@ -150,16 +236,26 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   const volumenConcreto = areaSeccion * input.alturaLibre * input.numeroColumnas;
   const areaEncofrado = perimetroSeccion * input.alturaLibre * input.numeroColumnas;
 
-  const grupos = input.barrasLongitudinales;
-  if (grupos.length === 0 || grupos.every((g) => g.cantidad <= 0)) {
+  // Grupos "efectivos" de barras longitudinales, ya con la cantidad TOTAL de cada uno
+  // (esquina ×4, caras ×2 caras cada uno) — de aquí salen cuantía, peso y desglose.
+  const isRect = input.tipoSeccion === "rectangular";
+  const gruposEfectivos: BarraGrupo[] = isRect
+    ? [
+        { diametroId: input.diametroEsquinaId, cantidad: 4 },
+        ...input.barrasCarasPeralteGrupos.map((g) => ({ diametroId: g.diametroId, cantidad: 2 * Math.max(g.cantidad, 0) })),
+        ...input.barrasCarasBaseGrupos.map((g) => ({ diametroId: g.diametroId, cantidad: 2 * Math.max(g.cantidad, 0) })),
+      ]
+    : input.barrasLongitudinalesCirculares;
+
+  if (!isRect && (gruposEfectivos.length === 0 || gruposEfectivos.every((g) => g.cantidad <= 0))) {
     warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
   }
-  const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
-  const areaAceroLongitudinalCm2 = grupos.reduce((acc, g) => {
+  const numeroBarrasLongitudinales = gruposEfectivos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const areaAceroLongitudinalCm2 = gruposEfectivos.reduce((acc, g) => {
     const db = getRebar(g.diametroId).diameterMm / 10; // cm
     return acc + Math.max(g.cantidad, 0) * ((Math.PI * db * db) / 4);
   }, 0);
-  const pesoAceroLongitudinal = grupos.reduce(
+  const pesoAceroLongitudinal = gruposEfectivos.reduce(
     (acc, g) =>
       acc + Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas * getRebar(g.diametroId).weightKgPerM,
     0
@@ -219,12 +315,13 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
   // Estribos suplementarios: solo en columnas rectangulares, una rama recta que cruza la
-  // menor dimensión de la sección, al mismo nivel y cantidad que el estribo perimetral.
-  const suplementarios = input.tipoSeccion === "rectangular" ? input.estribosSuplementarios : [];
+  // sección entre las 2 caras que indica cada grupo (peralte o base), al mismo nivel y
+  // cantidad que el estribo perimetral.
+  const suplementarios = isRect ? input.estribosSuplementarios : [];
   const gruposSuplementarios = suplementarios.map((s) => {
-    const menorDimM = Math.min(input.base, input.peralte) / 100 - 2 * recubM;
+    const dimM = (s.cara === "peralte" ? input.base : input.peralte) / 100 - 2 * recubM;
     const longitudGancho = input.considerarGanchoEstribo ? 2 * longitudGanchoBarra90(s.diametroId) : 0;
-    const longitudPorRama = Math.max(menorDimM, 0) + longitudGancho;
+    const longitudPorRama = Math.max(dimM, 0) + longitudGancho;
     const longitudTotal = longitudPorRama * Math.max(s.numeroRamas, 0) * numeroEstribosTotal;
     return { diametroId: s.diametroId, longitudTotal, peso: longitudTotal * getRebar(s.diametroId).weightKgPerM };
   });
@@ -242,7 +339,7 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   }
 
   const desgloseAcero: AceroItem[] = [
-    ...grupos.map((g) => ({
+    ...gruposEfectivos.map((g) => ({
       diametroId: g.diametroId,
       longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas,
     })),
@@ -273,5 +370,3 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
     warnings,
   };
 }
-
-export { minDiametroMm as minDiametroLongitudinalMm };
