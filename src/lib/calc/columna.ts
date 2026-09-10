@@ -1,11 +1,21 @@
 import { getRebar } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
-import { longitudGanchoEstribo135 } from "./ganchos";
+import { longitudGanchoBarra90, longitudGanchoEstribo135 } from "./ganchos";
 
 export type { BarraGrupo };
 export type TipoSeccionColumna = "rectangular" | "circular";
 export type SistemaSismorresistenteColumna = "muros" | "porticos_dual";
+
+// Estribo suplementario ("grapa"/"gancho suplementario"): rama adicional recta que cruza
+// la sección para arriostrar barras longitudinales intermedias, en columnas donde el
+// estribo perimetral por sí solo no alcanza a confinar todas las barras (E.060 Art.
+// 21.6.4.3 / 21.4.5.4). Ocurre en el mismo nivel y con la misma cantidad que el estribo
+// perimetral, pero puede tener su propio diámetro. Solo aplica a columnas rectangulares.
+export interface EstriboSuplementario {
+  diametroId: string;
+  numeroRamas: number; // ramas adicionales por cada nivel de estribo
+}
 
 export interface ColumnaInput {
   numeroColumnas: number;
@@ -17,6 +27,7 @@ export interface ColumnaInput {
 
   barrasLongitudinales: BarraGrupo[];
   diametroEstribosId: string;
+  estribosSuplementarios: EstriboSuplementario[]; // hasta 2 grupos adicionales
   recubrimiento: number; // cm
 
   sistemaSismorresistente: SistemaSismorresistenteColumna;
@@ -42,6 +53,7 @@ export interface ColumnaResult {
   numeroEstribosTotal: number;
   longitudPorEstribo: number; // m
   pesoEstribos: number; // kg
+  pesoEstribosSuplementarios: number; // kg
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
   desgloseAcero: AceroItem[];
@@ -206,9 +218,24 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   const longitudTotalEstribos = longitudPorEstribo * numeroEstribosTotal;
   const pesoEstribos = longitudTotalEstribos * rebarEstribo.weightKgPerM;
 
-  const pesoAceroTotal = pesoAceroLongitudinal + pesoEstribos;
+  // Estribos suplementarios: solo en columnas rectangulares, una rama recta que cruza la
+  // menor dimensión de la sección, al mismo nivel y cantidad que el estribo perimetral.
+  const suplementarios = input.tipoSeccion === "rectangular" ? input.estribosSuplementarios : [];
+  const gruposSuplementarios = suplementarios.map((s) => {
+    const menorDimM = Math.min(input.base, input.peralte) / 100 - 2 * recubM;
+    const longitudGancho = input.considerarGanchoEstribo ? 2 * longitudGanchoBarra90(s.diametroId) : 0;
+    const longitudPorRama = Math.max(menorDimM, 0) + longitudGancho;
+    const longitudTotal = longitudPorRama * Math.max(s.numeroRamas, 0) * numeroEstribosTotal;
+    return { diametroId: s.diametroId, longitudTotal, peso: longitudTotal * getRebar(s.diametroId).weightKgPerM };
+  });
+  const pesoEstribosSuplementarios = gruposSuplementarios.reduce((acc, g) => acc + g.peso, 0);
+  const longitudTotalSuplementarios = gruposSuplementarios.reduce((acc, g) => acc + g.longitudTotal, 0);
+
+  const pesoAceroTotal = pesoAceroLongitudinal + pesoEstribos + pesoEstribosSuplementarios;
   const longitudTotalFierro =
-    numeroBarrasLongitudinales * input.alturaLibre * input.numeroColumnas + longitudTotalEstribos;
+    numeroBarrasLongitudinales * input.alturaLibre * input.numeroColumnas +
+    longitudTotalEstribos +
+    longitudTotalSuplementarios;
 
   if (input.recubrimiento * 2 >= menorDimensionCm) {
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la columna.");
@@ -220,6 +247,9 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
       longitudM: Math.max(g.cantidad, 0) * input.alturaLibre * input.numeroColumnas,
     })),
     { diametroId: input.diametroEstribosId, longitudM: longitudTotalEstribos },
+    ...gruposSuplementarios
+      .filter((g) => g.longitudTotal > 0)
+      .map((g) => ({ diametroId: g.diametroId, longitudM: g.longitudTotal })),
   ];
 
   return {
@@ -236,6 +266,7 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
     numeroEstribosTotal,
     longitudPorEstribo,
     pesoEstribos,
+    pesoEstribosSuplementarios,
     pesoAceroTotal,
     longitudTotalFierro,
     desgloseAcero,

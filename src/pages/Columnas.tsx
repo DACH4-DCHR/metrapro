@@ -18,6 +18,7 @@ import {
   type TipoSeccionColumna,
   type SistemaSismorresistenteColumna,
   type BarraGrupo,
+  type EstriboSuplementario,
 } from "../lib/calc/columna";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
@@ -62,6 +63,7 @@ export function ColumnasPage() {
     diametro: 35,
     barrasLongitudinales: [{ diametroId: "16", cantidad: 6 }],
     diametroEstribosId: "8",
+    estribosSuplementarios: [],
     recubrimiento: 4,
     sistemaSismorresistente: "muros",
     incluirConfinamiento: true,
@@ -104,6 +106,30 @@ export function ColumnasPage() {
     setInput((prev) => ({
       ...prev,
       barrasLongitudinales: prev.barrasLongitudinales.filter((_, i) => i !== index),
+    }));
+    setSaved(false);
+  }
+
+  function updateEstriboSuplementario(index: number, patch: Partial<EstriboSuplementario>) {
+    setInput((prev) => ({
+      ...prev,
+      estribosSuplementarios: prev.estribosSuplementarios.map((s, i) => (i === index ? { ...s, ...patch } : s)),
+    }));
+    setSaved(false);
+  }
+
+  function addEstriboSuplementario() {
+    setInput((prev) => ({
+      ...prev,
+      estribosSuplementarios: [...prev.estribosSuplementarios, { diametroId: prev.diametroEstribosId, numeroRamas: 1 }],
+    }));
+    setSaved(false);
+  }
+
+  function removeEstriboSuplementario(index: number) {
+    setInput((prev) => ({
+      ...prev,
+      estribosSuplementarios: prev.estribosSuplementarios.filter((_, i) => i !== index),
     }));
     setSaved(false);
   }
@@ -168,6 +194,9 @@ export function ColumnasPage() {
         "Altura libre": `${input.alturaLibre} m`,
         "Acero longitudinal": grupoLabel(input.barrasLongitudinales) || "-",
         "Cuantía": `${result.cuantiaPct.toFixed(2)}%`,
+        ...(input.estribosSuplementarios.length > 0
+          ? { "Estribos suplementarios": grupoLabel(input.estribosSuplementarios.map((s) => ({ diametroId: s.diametroId, cantidad: s.numeroRamas }))) }
+          : {}),
       },
     };
     addElement(el);
@@ -314,6 +343,52 @@ export function ColumnasPage() {
               </label>
             </div>
 
+            {input.tipoSeccion === "rectangular" && (
+              <div className="mt-4 flex flex-col gap-3 border-t border-steel-100 pt-4">
+                <span className="text-sm font-medium text-navy-800">
+                  Estribos suplementarios (grapas/ganchos para barras intermedias, columnas grandes)
+                </span>
+                {input.estribosSuplementarios.map((s, i) => (
+                  <div key={i} className="flex items-end gap-2">
+                    <div className="w-24">
+                      <NumberField
+                        label={i === 0 ? "N° ramas" : ""}
+                        unit="und"
+                        step={1}
+                        min={1}
+                        value={s.numeroRamas}
+                        onChange={(v) => updateEstriboSuplementario(i, { numeroRamas: v })}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <SelectField
+                        label={i === 0 ? "Diámetro" : ""}
+                        value={s.diametroId}
+                        onChange={(v) => updateEstriboSuplementario(i, { diametroId: v })}
+                        options={rebarOptions}
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeEstriboSuplementario(i)}
+                      aria-label="Quitar estribo suplementario"
+                      className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                {input.estribosSuplementarios.length < 2 && (
+                  <button
+                    onClick={addEstriboSuplementario}
+                    className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
+                  >
+                    <Plus size={14} />
+                    Agregar estribo suplementario
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="mt-4 border-t border-steel-100 pt-4">
               <label className="flex items-start gap-2">
                 <input
@@ -387,6 +462,9 @@ export function ColumnasPage() {
               ) : null}
               <ResultMetric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />
               <ResultMetric label="Peso de estribos" value={result.pesoEstribos} unit="kg" accent="steel" />
+              {result.pesoEstribosSuplementarios > 0 && (
+                <ResultMetric label="Peso estribos suplementarios" value={result.pesoEstribosSuplementarios} unit="kg" accent="steel" />
+              )}
               <ResultMetric label="Acero total" value={result.pesoAceroTotal} unit="kg" accent="steel" />
               <ResultMetric label="Longitud total de fierro" value={result.longitudTotalFierro} unit="m" accent="steel" />
             </div>

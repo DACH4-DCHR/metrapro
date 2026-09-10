@@ -93,6 +93,101 @@ export function isoProject(x: number, z: number, y: number): { x: number; y: num
   return { x: (x - z) * ISO_COS, y: (x + z) * ISO_SIN - y };
 }
 
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+// Distribuye N barras en el perímetro de un rectángulo [0,w] x [0,h], garantizando una
+// barra en cada una de las 4 esquinas (igual que el detallado real de columnas/vigas) y
+// repartiendo las barras restantes uniformemente a lo largo de cada lado, en proporción a
+// su longitud (método del mayor resto, para que la suma cuadre exacto con n). Con menos
+// de 4 barras se reparte por simple longitud de arco, ya que no hay 4 esquinas que llenar.
+export function rectPerimeterPoints(n: number, w: number, h: number): Point2D[] {
+  if (n <= 0) return [];
+  if (n < 4) {
+    const perimeter = 2 * (w + h);
+    return Array.from({ length: n }, (_, i) => {
+      const s = (i * perimeter) / n;
+      if (s < w) return { x: s, y: 0 };
+      if (s < w + h) return { x: w, y: s - w };
+      if (s < 2 * w + h) return { x: w - (s - w - h), y: h };
+      return { x: 0, y: h - (s - 2 * w - h) };
+    });
+  }
+
+  const corners: Point2D[] = [
+    { x: 0, y: 0 },
+    { x: w, y: 0 },
+    { x: w, y: h },
+    { x: 0, y: h },
+  ];
+  const edgeLengths = [w, h, w, h];
+  const remaining = n - 4;
+  const totalLen = 2 * (w + h);
+  const raw = edgeLengths.map((len) => (totalLen > 0 ? (len / totalLen) * remaining : 0));
+  const counts = raw.map(Math.floor);
+  const assigned = counts.reduce((a, b) => a + b, 0);
+  const leftover = remaining - assigned;
+  const byFrac = raw.map((r, i) => ({ i, frac: r - counts[i] })).sort((a, b) => b.frac - a.frac);
+  for (let k = 0; k < leftover; k++) counts[byFrac[k].i]++;
+
+  const points: Point2D[] = [];
+  for (let e = 0; e < 4; e++) {
+    const from = corners[e];
+    const to = corners[(e + 1) % 4];
+    points.push(from);
+    const cnt = counts[e];
+    for (let j = 1; j <= cnt; j++) {
+      const t = j / (cnt + 1);
+      points.push({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+    }
+  }
+  return points;
+}
+
+// Distribuye N barras uniformemente en el perímetro de un círculo de radio r, en
+// coordenadas locales [0,2r] x [0,2r] (centro en (r,r)) para poder combinarse con el
+// mismo encuadre que usa rectPerimeterPoints.
+export function circlePerimeterPoints(n: number, r: number): Point2D[] {
+  if (n <= 0) return [];
+  return Array.from({ length: n }, (_, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    return { x: r + r * Math.cos(angle), y: r + r * Math.sin(angle) };
+  });
+}
+
+export interface BarGroupLike {
+  diametroId: string;
+  cantidad: number;
+}
+
+export interface PositionedBar extends Point2D {
+  diametroId: string;
+}
+
+// Reparte una lista ordenada de posiciones (de rectPerimeterPoints o circlePerimeterPoints)
+// entre los grupos de barras en el orden en que fueron declarados, para poder pintar cada
+// barra con el color/tamaño de su propio diámetro. Es solo una convención de dibujo (qué
+// diámetro "cae" en qué posición) — no afecta ningún cálculo de metrado, que ya suma por
+// grupo independientemente de la posición.
+export function assignDiametersToPositions(positions: Point2D[], grupos: BarGroupLike[]): PositionedBar[] {
+  const result: PositionedBar[] = [];
+  let idx = 0;
+  for (const g of grupos) {
+    const cantidad = Math.max(Math.floor(g.cantidad), 0);
+    for (let i = 0; i < cantidad && idx < positions.length; i++, idx++) {
+      result.push({ ...positions[idx], diametroId: g.diametroId });
+    }
+  }
+  const fallbackId = grupos.length > 0 ? grupos[grupos.length - 1].diametroId : undefined;
+  while (idx < positions.length && fallbackId) {
+    result.push({ ...positions[idx], diametroId: fallbackId });
+    idx++;
+  }
+  return result;
+}
+
 // Fondo tipo "papel cuadriculado de plano" para reforzar la estética de dibujo técnico
 // en los diagramas SVG. Se coloca como primer hijo del <svg>, antes de las figuras. El
 // "id" debe ser único por componente de diagrama (no por instancia) para evitar colisión

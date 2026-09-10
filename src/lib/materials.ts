@@ -23,17 +23,20 @@ export interface RebarSize {
   diameterMm: number;
   label: string;
   weightKgPerM: number; // peso nominal kg/m (norma ASTM/NTP)
+  color: string; // color distintivo por diámetro, usado en las vistas de planta/3D
 }
 
-// Pesos unitarios nominales de barras corrugadas de acero (kg/m)
+// Pesos unitarios nominales de barras corrugadas de acero (kg/m). El color es fijo por
+// diámetro (no por rol) para que un mismo Ø se identifique igual en toda la app —
+// cámbialo aquí si se agregan más diámetros.
 export const REBAR_SIZES: RebarSize[] = [
-  { id: "6", diameterMm: 6, label: 'Ø 6 mm (1/4")', weightKgPerM: 0.222 },
-  { id: "8", diameterMm: 8, label: 'Ø 8 mm (3/8" aprox.)', weightKgPerM: 0.395 },
-  { id: "10", diameterMm: 10, label: 'Ø 10 mm', weightKgPerM: 0.617 },
-  { id: "12", diameterMm: 12, label: 'Ø 12 mm (1/2")', weightKgPerM: 0.888 },
-  { id: "16", diameterMm: 16, label: 'Ø 16 mm (5/8")', weightKgPerM: 1.578 },
-  { id: "20", diameterMm: 20, label: 'Ø 20 mm (3/4")', weightKgPerM: 2.466 },
-  { id: "25", diameterMm: 25, label: "Ø 25 mm (1\")", weightKgPerM: 3.853 },
+  { id: "6", diameterMm: 6, label: 'Ø 6 mm (1/4")', weightKgPerM: 0.222, color: "#0891b2" },
+  { id: "8", diameterMm: 8, label: 'Ø 8 mm (3/8" aprox.)', weightKgPerM: 0.395, color: "#7c3aed" },
+  { id: "10", diameterMm: 10, label: 'Ø 10 mm', weightKgPerM: 0.617, color: "#db2777" },
+  { id: "12", diameterMm: 12, label: 'Ø 12 mm (1/2")', weightKgPerM: 0.888, color: "#2563eb" },
+  { id: "16", diameterMm: 16, label: 'Ø 16 mm (5/8")', weightKgPerM: 1.578, color: "#0b1f3a" },
+  { id: "20", diameterMm: 20, label: 'Ø 20 mm (3/4")', weightKgPerM: 2.466, color: "#16a34a" },
+  { id: "25", diameterMm: 25, label: "Ø 25 mm (1\")", weightKgPerM: 3.853, color: "#dc2626" },
 ];
 
 export function getRebar(id: string): RebarSize {

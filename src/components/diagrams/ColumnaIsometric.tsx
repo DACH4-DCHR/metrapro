@@ -1,6 +1,12 @@
 import { getRebar } from "../../lib/materials";
 import { estribosPositionsColumnaM, type ColumnaInput } from "../../lib/calc/columna";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import {
+  DIAGRAM_COLORS,
+  isoProject,
+  rectPerimeterPoints,
+  circlePerimeterPoints,
+  assignDiametersToPositions,
+} from "./svgHelpers";
 
 interface ColumnaIsometricProps {
   input: ColumnaInput;
@@ -12,30 +18,6 @@ const MARGIN = 22;
 
 function totalBarras(input: ColumnaInput): number {
   return input.barrasLongitudinales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
-}
-
-// Distribuye N puntos a espaciamiento uniforme por longitud de arco sobre el perímetro
-// de un rectángulo [0,W] x [0,D], en unidades reales (cm), empezando en (0,0).
-function rectPerimeterPointsCm(n: number, w: number, d: number): { x: number; z: number }[] {
-  if (n <= 0) return [];
-  const perimeter = 2 * (w + d);
-  const points: { x: number; z: number }[] = [];
-  for (let i = 0; i < n; i++) {
-    const s = (i * perimeter) / n;
-    if (s < w) points.push({ x: s, z: 0 });
-    else if (s < w + d) points.push({ x: w, z: s - w });
-    else if (s < 2 * w + d) points.push({ x: w - (s - w - d), z: d });
-    else points.push({ x: 0, z: d - (s - 2 * w - d) });
-  }
-  return points;
-}
-
-function circlePerimeterPointsCm(n: number, r: number): { x: number; z: number }[] {
-  if (n <= 0) return [];
-  return Array.from({ length: n }, (_, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-    return { x: r + r * Math.cos(angle), z: r + r * Math.sin(angle) };
-  });
 }
 
 function ellipsePathCm(r: number, segments = 48): { x: number; z: number }[] {
@@ -65,7 +47,13 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
   const maxDim = Math.max(w, d);
   const hSeg = Math.min(Math.max(2.6 * maxDim, 70), 320); // altura del segmento esquemático, no a escala real
 
-  const barPositions = isRect ? rectPerimeterPointsCm(n, w, d) : circlePerimeterPointsCm(n, w / 2);
+  const barGroups = input.barrasLongitudinales.filter((g) => g.cantidad > 0);
+  const rawPositions = isRect ? rectPerimeterPoints(n, w, d) : circlePerimeterPoints(n, w / 2);
+  const barPositions = assignDiametersToPositions(rawPositions, barGroups).map((p) => ({
+    x: p.x,
+    z: p.y,
+    diametroId: p.diametroId,
+  }));
   const ringOutlineCm = isRect
     ? [
         { x: recub, z: recub },
@@ -187,11 +175,24 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
           />
         ))}
 
-        {/* Acero longitudinal: todas las barras, de piso a techo del segmento */}
+        {/* Acero longitudinal: todas las barras, de piso a techo del segmento, con el
+            color y grosor propios de cada diámetro */}
         {barPositions.map((p, i) => {
           const a = screen(p.x, p.z, 0);
           const b = screen(p.x, p.z, hSeg);
-          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.rebar} strokeWidth={2.25} strokeLinecap="round" />;
+          const rebar = getRebar(p.diametroId);
+          return (
+            <line
+              key={i}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+              stroke={rebar.color}
+              strokeWidth={Math.max(1.4, 1.4 * (rebar.diameterMm / 16))}
+              strokeLinecap="round"
+            />
+          );
         })}
       </svg>
       <p className="mt-1 text-center text-xs text-steel-500">
@@ -200,6 +201,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
       </p>
       <p className="text-center text-xs text-steel-500">
         {rebarLabel || "sin barras"} · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por columna
+        {input.estribosSuplementarios.length > 0 ? " (no incluye ramas suplementarias, ver sección transversal)" : ""}
       </p>
     </div>
   );
