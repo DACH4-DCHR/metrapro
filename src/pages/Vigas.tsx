@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RectangleHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { RectangleHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -10,6 +10,7 @@ import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { VigaCrossSection } from "../components/diagrams/VigaCrossSection";
 import { VigaElevation } from "../components/diagrams/VigaElevation";
+import { VigaIsometric } from "../components/diagrams/VigaIsometric";
 import {
   calcularViga,
   sugerirConfinamiento,
@@ -443,9 +444,15 @@ export function VigasPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <VigaCrossSection input={input} />
-          </SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
+            <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <VigaCrossSection input={input} />
+            </SectionCard>
+
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <VigaIsometric input={input} />
+            </SectionCard>
+          </div>
 
           <SectionCard title="Distribución de estribos en elevación" icon={<Eye size={16} className="text-navy-700" />}>
             <VigaElevation input={input} />

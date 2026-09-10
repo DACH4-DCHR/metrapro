@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { LayoutPanelTop, Save, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { LayoutPanelTop, Save, Tag, Ruler, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -9,6 +9,7 @@ import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaMacizaPlanView } from "../components/diagrams/LosaMacizaPlanView";
+import { LosaMacizaIsometric } from "../components/diagrams/LosaMacizaIsometric";
 import { calcularLosaMaciza, type LosaMacizaInput, type TipoApoyoLosaMaciza } from "../lib/calc/losaMaciza";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES } from "../lib/materials";
@@ -240,9 +241,15 @@ export function LosaMacizaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <LosaMacizaPlanView input={input} />
-          </SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
+            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <LosaMacizaPlanView input={input} />
+            </SectionCard>
+
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <LosaMacizaIsometric input={input} />
+            </SectionCard>
+          </div>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

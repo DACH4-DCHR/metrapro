@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layers3, Save, Tag, Package, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { Layers3, Save, Tag, Package, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -9,6 +9,7 @@ import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaCrossSection } from "../components/diagrams/LosaCrossSection";
+import { LosaAligeradaIsometric } from "../components/diagrams/LosaAligeradaIsometric";
 import { calcularLosaAligerada, type AceroViguetasMetodo, type LosaAligeradaInput } from "../lib/calc/losaAligerada";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { HOLLOW_BLOCK_HEIGHT_OPTIONS, HOLLOW_BLOCK_MATERIALS, REBAR_SIZES, type HollowBlockMaterialId } from "../lib/materials";
@@ -319,9 +320,15 @@ export function LosaAligeradaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Corte transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <LosaCrossSection input={input} />
-          </SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
+            <SectionCard title="Corte transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <LosaCrossSection input={input} />
+            </SectionCard>
+
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <LosaAligeradaIsometric input={input} />
+            </SectionCard>
+          </div>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

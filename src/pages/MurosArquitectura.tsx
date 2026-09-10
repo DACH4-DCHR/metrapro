@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Grid2x2, Save, Plus, Trash2, Tag, Ruler, Package, ShieldCheck, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { Grid2x2, Save, Plus, Trash2, Tag, Ruler, Package, ShieldCheck, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -9,6 +9,7 @@ import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { MuroArquitecturaElevation } from "../components/diagrams/MuroArquitecturaElevation";
+import { MuroArquitecturaIsometric } from "../components/diagrams/MuroArquitecturaIsometric";
 import { calcularMuroArquitectura, type MuroArquitecturaInput, type BarraGrupo } from "../lib/calc/muroArquitectura";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
@@ -299,9 +300,15 @@ export function MurosArquitecturaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Elevación (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <MuroArquitecturaElevation input={input} />
-          </SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
+            <SectionCard title="Elevación (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <MuroArquitecturaElevation input={input} />
+            </SectionCard>
+
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <MuroArquitecturaIsometric input={input} />
+            </SectionCard>
+          </div>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
