@@ -150,7 +150,7 @@ export function ColumnasPage() {
       ...prev,
       estribosSuplementarios: [
         ...prev.estribosSuplementarios,
-        { diametroId: prev.diametroEstribosId, numeroRamas: 1, cara: "peralte", tipo: "grapa" },
+        { diametroId: prev.diametroEstribosId, numeroRamas: 1, cara: "peralte", tipo: "grapa", numeroBarrasEncerradas: 99 },
       ],
     }));
     setSaved(false);
@@ -223,7 +223,7 @@ export function ColumnasPage() {
               "Estribos suplementarios": input.estribosSuplementarios
                 .map((s) =>
                   s.tipo === "cerrado"
-                    ? `${s.numeroRamas} cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm`
+                    ? `${s.numeroRamas} cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm (encierra ${s.numeroBarrasEncerradas} barras centrales)`
                     : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
                 )
                 .join(" + "),
@@ -512,12 +512,22 @@ export function ColumnasPage() {
                       onChange={(v) => updateEstriboSuplementario(i, { tipo: v as TipoEstriboSuplementario })}
                       options={tipoSuplementarioOptions}
                     />
-                    {s.tipo === "grapa" && (
+                    {s.tipo === "grapa" ? (
                       <SelectField
                         label="Arriostra a la barra intermedia de..."
                         value={s.cara}
                         onChange={(v) => updateEstriboSuplementario(i, { cara: v as CaraColumna })}
                         options={caraOptions}
+                      />
+                    ) : (
+                      <NumberField
+                        label="N° de barras a encerrar (desde el centro)"
+                        unit="und"
+                        step={1}
+                        min={2}
+                        value={s.numeroBarrasEncerradas}
+                        onChange={(v) => updateEstriboSuplementario(i, { numeroBarrasEncerradas: v })}
+                        helper="Ej: si hay 4 barras intermedias en una cara, pon 2 para un estribo interior más chico, o 4 (o más) para que las encierre todas"
                       />
                     )}
                   </div>

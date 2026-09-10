@@ -14,9 +14,11 @@ export type CaraColumna = "peralte" | "base";
 // - "grapa": una rama recta con gancho a 90° en un extremo y a 135° en el otro (ACI 318
 //   25.3.4), que cruza entre dos barras intermedias opuestas — necesita "cara" para saber
 //   qué par de caras (y por lo tanto qué barra) conecta.
-// - "cerrado": un estribo cerrado adicional, con el mismo perímetro que el estribo
-//   principal (gancho a 135° en ambos extremos) — "cara" no aplica, ya que rodea toda la
-//   sección igual que el estribo principal.
+// - "cerrado": un estribo cerrado adicional, más chico que el principal — encierra solo
+//   las "numeroBarrasEncerradas" barras intermedias más cercanas al centro en cada cara
+//   con barras adicionales (peralte y/o base), sin llegar a las esquinas. Si una cara no
+//   tiene barras intermedias, ese lado del estribo llega hasta el recubrimiento, igual que
+//   el estribo principal. "cara" no aplica: se evalúa en ambas caras a la vez.
 // Ocurre al mismo nivel y con la misma cantidad que el estribo perimetral.
 export type TipoEstriboSuplementario = "grapa" | "cerrado";
 
@@ -25,6 +27,7 @@ export interface EstriboSuplementario {
   numeroRamas: number; // grapa: N° de ramas; cerrado: N° de estribos cerrados adicionales
   cara: CaraColumna; // solo aplica si tipo === "grapa"
   tipo: TipoEstriboSuplementario;
+  numeroBarrasEncerradas: number; // solo aplica si tipo === "cerrado"; mínimo 2
 }
 
 export interface ColumnaInput {
@@ -185,6 +188,25 @@ export function posicionesIntermediasCara(
   return diametros.map((diametroId, j) => ({ t: (j + 1) / (total + 1), diametroId }));
 }
 
+// Para un estribo cerrado suplementario: el rango (fracción 0..1 a lo largo de la cara)
+// que ocupan las "numeroBarrasEncerradas" barras intermedias más cercanas al centro de esa
+// cara — es decir, el estribo se dibuja/mide desde la primera hasta la última de esas
+// barras, sin llegar a las de esquina. Devuelve null si la cara no tiene al menos 2 barras
+// intermedias (no hay "entre cuáles" encerrar), en cuyo caso ese lado del estribo cerrado
+// debe llegar hasta el recubrimiento, igual que el estribo principal.
+export function rangoBarrasEncerradas(
+  input: ColumnaInput,
+  cara: CaraColumna,
+  numeroBarrasEncerradas: number
+): { tMin: number; tMax: number } | null {
+  const bars = posicionesIntermediasCara(input, cara);
+  if (bars.length < 2) return null;
+  const n = Math.max(Math.min(Math.floor(numeroBarrasEncerradas), bars.length), 2);
+  const porCercaniaAlCentro = [...bars].sort((a, b) => Math.abs(a.t - 0.5) - Math.abs(b.t - 0.5));
+  const seleccionadas = porCercaniaAlCentro.slice(0, n).map((b) => b.t);
+  return { tMin: Math.min(...seleccionadas), tMax: Math.max(...seleccionadas) };
+}
+
 // Posiciones (en metros, desde 0 hasta la altura libre) de cada estribo en UNA columna.
 // Usa exactamente los mismos conteos que calcularColumna, para que cualquier vista (2D o
 // 3D) que dibuje estribos a partir de esto nunca quede desincronizada con el metrado.
@@ -327,10 +349,19 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   const suplementarios = isRect ? input.estribosSuplementarios : [];
   const gruposSuplementarios = suplementarios.map((s) => {
     if (s.tipo === "cerrado") {
-      // Estribo cerrado adicional: mismo perímetro que el principal, gancho a 135° en
-      // ambos extremos (igual convención que longitudPorEstribo, arriba).
+      // Estribo cerrado adicional, más chico que el principal: encierra solo las barras
+      // intermedias centrales de cada cara con barras (si una cara no tiene, ese lado
+      // llega hasta el recubrimiento, igual que el estribo principal).
+      const rangoPeralte = rangoBarrasEncerradas(input, "peralte", s.numeroBarrasEncerradas);
+      const rangoBase = rangoBarrasEncerradas(input, "base", s.numeroBarrasEncerradas);
+      const altoM = rangoPeralte
+        ? ((rangoPeralte.tMax - rangoPeralte.tMin) * input.peralte) / 100
+        : input.peralte / 100 - 2 * recubM;
+      const anchoM = rangoBase
+        ? ((rangoBase.tMax - rangoBase.tMin) * input.base) / 100
+        : input.base / 100 - 2 * recubM;
       const longitudGancho = input.considerarGanchoEstribo ? longitudGanchoEstribo135(s.diametroId) : 0;
-      const longitudPorEstriboSuplementario = longitudPorEstriboBase + longitudGancho;
+      const longitudPorEstriboSuplementario = 2 * Math.max(anchoM, 0) + 2 * Math.max(altoM, 0) + longitudGancho;
       const longitudTotal = longitudPorEstriboSuplementario * Math.max(s.numeroRamas, 0) * numeroEstribosTotal;
       return { diametroId: s.diametroId, longitudTotal, peso: longitudTotal * getRebar(s.diametroId).weightKgPerM };
     }

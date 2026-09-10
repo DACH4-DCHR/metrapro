@@ -2,6 +2,7 @@ import { getRebar } from "../../lib/materials";
 import {
   posicionesBarrasLongitudinales,
   posicionesIntermediasCara,
+  rangoBarrasEncerradas,
   type ColumnaInput,
 } from "../../lib/calc/columna";
 import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
@@ -149,14 +150,25 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
           const color = SUPLEMENTARIO_COLORS[i % SUPLEMENTARIO_COLORS.length];
 
           if (s.tipo === "cerrado") {
-            const nestInsetPx = 2.5 * i;
+            // Encierra solo las barras intermedias centrales de cada cara con barras (si
+            // una cara no tiene, ese lado llega hasta la esquina, igual que el principal).
+            const rangoPeralte = rangoBarrasEncerradas(input, "peralte", s.numeroBarrasEncerradas);
+            const rangoBase = rangoBarrasEncerradas(input, "base", s.numeroBarrasEncerradas);
+            const z0 = rangoPeralte ? rangoPeralte.tMin * peralte : 0;
+            const z1 = rangoPeralte ? rangoPeralte.tMax * peralte : peralte;
+            const xa = rangoBase ? rangoBase.tMin * base : 0;
+            const xb = rangoBase ? rangoBase.tMax * base : base;
+            const sx0 = x0 + mapX(xa) * scale;
+            const sx1 = x0 + mapX(xb) * scale;
+            const sy0 = y0 + mapZ(z0) * scale;
+            const sy1 = y0 + mapZ(z1) * scale;
             return (
               <rect
                 key={i}
-                x={x0 + recubPx + nestInsetPx}
-                y={y0 + recubPx + nestInsetPx}
-                width={Math.max(w - 2 * (recubPx + nestInsetPx), 0)}
-                height={Math.max(h - 2 * (recubPx + nestInsetPx), 0)}
+                x={Math.min(sx0, sx1)}
+                y={Math.min(sy0, sy1)}
+                width={Math.abs(sx1 - sx0)}
+                height={Math.abs(sy1 - sy0)}
                 fill="none"
                 stroke={color}
                 strokeWidth={strokeW}
@@ -199,7 +211,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
           ? ` + ${input.estribosSuplementarios
               .map((s) =>
                 s.tipo === "cerrado"
-                  ? `${s.numeroRamas} estribo(s) cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm supl.`
+                  ? `${s.numeroRamas} estribo(s) cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm supl. (encierra ${s.numeroBarrasEncerradas} barras centrales)`
                   : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
               )
               .join(" + ")}`
