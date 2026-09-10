@@ -79,7 +79,7 @@ export function EscaleraProfile({ input }: EscaleraProfileProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${viewW} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-md"
+        className="mx-auto block w-full max-w-lg"
         role="img"
         aria-label="Perfil de escalera"
       >

@@ -70,7 +70,7 @@ export function VigaCimentacionCrossSection({ input }: VigaCimentacionCrossSecti
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-[220px]"
+        className="mx-auto block w-full max-w-[340px]"
         role="img"
         aria-label="Sección transversal de viga de cimentación"
       >

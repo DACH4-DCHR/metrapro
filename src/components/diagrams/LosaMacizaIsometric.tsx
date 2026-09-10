@@ -85,7 +85,7 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-[280px]"
+        className="mx-auto block w-full max-w-[400px]"
         role="img"
         aria-label="Vista isométrica esquemática del acero de la losa maciza"
       >

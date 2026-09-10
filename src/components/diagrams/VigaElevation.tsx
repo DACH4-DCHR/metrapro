@@ -28,7 +28,7 @@ export function VigaElevation({ input }: VigaElevationProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-lg"
+        className="mx-auto block w-full max-w-xl"
         role="img"
         aria-label="Elevación de viga con distribución de estribos"
       >

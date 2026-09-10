@@ -103,7 +103,7 @@ export function VigaCrossSection({ input }: VigaCrossSectionProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-[240px]"
+        className="mx-auto block w-full max-w-[360px]"
         role="img"
         aria-label="Sección transversal de viga"
       >

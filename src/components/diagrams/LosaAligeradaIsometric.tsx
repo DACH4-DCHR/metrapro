@@ -74,7 +74,7 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-[300px]"
+        className="mx-auto block w-full max-w-[420px]"
         role="img"
         aria-label="Vista isométrica esquemática de la losa aligerada"
       >

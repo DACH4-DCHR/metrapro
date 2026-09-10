@@ -78,7 +78,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
 
     return (
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[220px]" role="img" aria-label="Sección transversal de columna circular">
+        <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[340px]" role="img" aria-label="Sección transversal de columna circular">
           <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-columna-circ" />
           <circle cx={cx} cy={cy} r={rOuter} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} />
           <circle
@@ -129,7 +129,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[220px]" role="img" aria-label="Sección transversal de columna">
+      <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mx-auto block w-full max-w-[340px]" role="img" aria-label="Sección transversal de columna">
         <BlueprintGrid width={VIEW_W} height={VIEW_H} id="grid-columna-rect" />
         <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.concrete} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} />
         <rect

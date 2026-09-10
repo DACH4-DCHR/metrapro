@@ -39,7 +39,7 @@ export function LosaMacizaPlanView({ input }: LosaMacizaPlanViewProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="mx-auto block w-full max-w-md"
+        className="mx-auto block w-full max-w-lg"
         role="img"
         aria-label="Vista en planta de losa maciza con malla de acero"
       >

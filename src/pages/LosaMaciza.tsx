@@ -7,6 +7,7 @@ import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
+import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { LosaMacizaPlanView } from "../components/diagrams/LosaMacizaPlanView";
 import { LosaMacizaIsometric } from "../components/diagrams/LosaMacizaIsometric";
@@ -107,7 +108,18 @@ export function LosaMacizaPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
+      <div className="p-6">
+        <StickyViewsRow>
+            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <LosaMacizaPlanView input={input} />
+            </SectionCard>
+
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <LosaMacizaIsometric input={input} />
+            </SectionCard>
+        </StickyViewsRow>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
           <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
@@ -241,15 +253,6 @@ export function LosaMacizaPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
-            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-              <LosaMacizaPlanView input={input} />
-            </SectionCard>
-
-            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
-              <LosaMacizaIsometric input={input} />
-            </SectionCard>
-          </div>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
@@ -279,6 +282,7 @@ export function LosaMacizaPage() {
           <SectionCard title="Losas macizas registradas en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="losaMaciza" emptyLabel="Aún no has agregado ninguna losa maciza. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
+        </div>
         </div>
       </div>
     </div>
