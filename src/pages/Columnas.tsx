@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RectangleVertical, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { RectangleVertical, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -9,6 +9,7 @@ import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { ColumnaCrossSection } from "../components/diagrams/ColumnaCrossSection";
+import { ColumnaIsometric } from "../components/diagrams/ColumnaIsometric";
 import {
   calcularColumna,
   sugerirConfinamientoColumna,
@@ -361,6 +362,10 @@ export function ColumnasPage() {
 
           <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
             <ColumnaCrossSection input={input} />
+          </SectionCard>
+
+          <SectionCard title="Vista isométrica del acero (3D esquemático)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+            <ColumnaIsometric input={input} />
           </SectionCard>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>

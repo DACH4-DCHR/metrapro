@@ -84,6 +84,15 @@ export function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals).replace(/\.0+$/, "");
 }
 
+// Proyección isométrica estándar (30°) para las vistas 3D esquemáticas de acero.
+// Ejes locales: x = ancho (base), z = profundidad (peralte), y = altura (hacia arriba).
+const ISO_COS = Math.cos(Math.PI / 6); // ≈0.866
+const ISO_SIN = Math.sin(Math.PI / 6); // 0.5
+
+export function isoProject(x: number, z: number, y: number): { x: number; y: number } {
+  return { x: (x - z) * ISO_COS, y: (x + z) * ISO_SIN - y };
+}
+
 // Fondo tipo "papel cuadriculado de plano" para reforzar la estética de dibujo técnico
 // en los diagramas SVG. Se coloca como primer hijo del <svg>, antes de las figuras. El
 // "id" debe ser único por componente de diagrama (no por instancia) para evitar colisión
