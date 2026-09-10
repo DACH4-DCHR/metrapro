@@ -247,7 +247,7 @@ export function Layout() {
           <p className="text-sm font-bold">MetraPro</p>
         </div>
 
-        <main className="min-w-0 flex-1 overflow-x-hidden">
+        <main className="min-w-0 flex-1">
           {error && (
             <div className="no-print flex items-center justify-between gap-3 bg-red-50 px-6 py-2 text-sm text-red-700">
               <span className="flex items-center gap-2">

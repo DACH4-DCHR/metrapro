@@ -140,11 +140,31 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
           stroke={DIAGRAM_COLORS.stirrup}
           strokeWidth={Math.max((getRebar(input.diametroEstribosId).diameterMm / 10) * scale * 0.6, 1.5)}
         />
-        {/* Estribos suplementarios: alineados a una barra intermedia real de la cara que
-            indica cada grupo (o al centro, si esa cara no tiene barras intermedias). */}
+        {/* Estribos suplementarios: "grapa" se alinea a una barra intermedia real de la
+            cara que indica el grupo (o al centro, si esa cara no tiene barras intermedias);
+            "cerrado" se dibuja como un segundo estribo, con el mismo contorno que el
+            principal pero en su propio color y trazo, para distinguirlo. */}
         {input.estribosSuplementarios.map((s, i) => {
           const strokeW = Math.max((getRebar(s.diametroId).diameterMm / 10) * scale * 0.6, 1.5);
           const color = SUPLEMENTARIO_COLORS[i % SUPLEMENTARIO_COLORS.length];
+
+          if (s.tipo === "cerrado") {
+            const nestInsetPx = 2.5 * i;
+            return (
+              <rect
+                key={i}
+                x={x0 + recubPx + nestInsetPx}
+                y={y0 + recubPx + nestInsetPx}
+                width={Math.max(w - 2 * (recubPx + nestInsetPx), 0)}
+                height={Math.max(h - 2 * (recubPx + nestInsetPx), 0)}
+                fill="none"
+                stroke={color}
+                strokeWidth={strokeW}
+                strokeDasharray="2 2"
+              />
+            );
+          }
+
           const disponibles = posicionesIntermediasCara(input, s.cara);
           const ramas = Math.max(Math.floor(s.numeroRamas), 0);
           return Array.from({ length: ramas }, (_, r) => {
@@ -177,7 +197,11 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
         {grupoLabel(input) || "sin barras"} ({n} und total) · estribo Ø{getRebar(input.diametroEstribosId).diameterMm}mm
         {input.estribosSuplementarios.length > 0
           ? ` + ${input.estribosSuplementarios
-              .map((s) => `${s.numeroRamas}Ø${getRebar(s.diametroId).diameterMm}mm supl. (cara ${s.cara})`)
+              .map((s) =>
+                s.tipo === "cerrado"
+                  ? `${s.numeroRamas} estribo(s) cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm supl.`
+                  : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
+              )
               .join(" + ")}`
           : ""}
       </p>

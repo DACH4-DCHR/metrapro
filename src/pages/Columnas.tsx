@@ -18,6 +18,7 @@ import {
   type TipoSeccionColumna,
   type SistemaSismorresistenteColumna,
   type CaraColumna,
+  type TipoEstriboSuplementario,
   type BarraGrupo,
   type EstriboSuplementario,
 } from "../lib/calc/columna";
@@ -38,6 +39,10 @@ const sistemaSismorresistenteOptions: { value: SistemaSismorresistenteColumna; l
 const caraOptions: { value: CaraColumna; label: string }[] = [
   { value: "peralte", label: "Caras de peralte" },
   { value: "base", label: "Caras de base" },
+];
+const tipoSuplementarioOptions: { value: TipoEstriboSuplementario; label: string }[] = [
+  { value: "grapa", label: "Grapa (rama con gancho 90°/135°)" },
+  { value: "cerrado", label: "Estribo cerrado (gancho 135° en ambos extremos)" },
 ];
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 3 });
@@ -143,7 +148,10 @@ export function ColumnasPage() {
   function addEstriboSuplementario() {
     setInput((prev) => ({
       ...prev,
-      estribosSuplementarios: [...prev.estribosSuplementarios, { diametroId: prev.diametroEstribosId, numeroRamas: 1, cara: "peralte" }],
+      estribosSuplementarios: [
+        ...prev.estribosSuplementarios,
+        { diametroId: prev.diametroEstribosId, numeroRamas: 1, cara: "peralte", tipo: "grapa" },
+      ],
     }));
     setSaved(false);
   }
@@ -213,7 +221,11 @@ export function ColumnasPage() {
         ...(input.estribosSuplementarios.length > 0
           ? {
               "Estribos suplementarios": input.estribosSuplementarios
-                .map((s) => `${s.numeroRamas}Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`)
+                .map((s) =>
+                  s.tipo === "cerrado"
+                    ? `${s.numeroRamas} cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm`
+                    : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
+                )
                 .join(" + "),
             }
           : {}),
@@ -470,7 +482,7 @@ export function ColumnasPage() {
                     <div className="flex items-end gap-2">
                       <div className="w-20">
                         <NumberField
-                          label="N° ramas"
+                          label={s.tipo === "cerrado" ? "N° estribos" : "N° ramas"}
                           unit="und"
                           step={1}
                           min={1}
@@ -495,11 +507,19 @@ export function ColumnasPage() {
                       </button>
                     </div>
                     <SelectField
-                      label="Arriostra a la barra intermedia de..."
-                      value={s.cara}
-                      onChange={(v) => updateEstriboSuplementario(i, { cara: v as CaraColumna })}
-                      options={caraOptions}
+                      label="Tipo"
+                      value={s.tipo}
+                      onChange={(v) => updateEstriboSuplementario(i, { tipo: v as TipoEstriboSuplementario })}
+                      options={tipoSuplementarioOptions}
                     />
+                    {s.tipo === "grapa" && (
+                      <SelectField
+                        label="Arriostra a la barra intermedia de..."
+                        value={s.cara}
+                        onChange={(v) => updateEstriboSuplementario(i, { cara: v as CaraColumna })}
+                        options={caraOptions}
+                      />
+                    )}
                   </div>
                 ))}
                 {input.estribosSuplementarios.length < 2 && (
@@ -560,13 +580,15 @@ export function ColumnasPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <ColumnaCrossSection input={input} />
-          </SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:sticky xl:top-24 xl:z-10">
+            <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+              <ColumnaCrossSection input={input} />
+            </SectionCard>
 
-          <SectionCard title="Vista isométrica del acero (3D esquemático)" icon={<Box size={16} className="text-navy-700" />} collapsible>
-            <ColumnaIsometric input={input} />
-          </SectionCard>
+            <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+              <ColumnaIsometric input={input} />
+            </SectionCard>
+          </div>
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">

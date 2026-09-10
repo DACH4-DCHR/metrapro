@@ -8,16 +8,23 @@ export type TipoSeccionColumna = "rectangular" | "circular";
 export type SistemaSismorresistenteColumna = "muros" | "porticos_dual";
 export type CaraColumna = "peralte" | "base";
 
-// Estribo suplementario ("grapa"/"gancho suplementario"): rama adicional recta que cruza
-// la sección para arriostrar barras longitudinales intermedias, en columnas donde el
-// estribo perimetral por sí solo no alcanza a confinar todas las barras (E.060 Art.
-// 21.6.4.3 / 21.4.5.4). Ocurre en el mismo nivel y con la misma cantidad que el estribo
-// perimetral, pero puede tener su propio diámetro. Solo aplica a columnas rectangulares.
-// "cara" indica a qué par de caras (y por lo tanto a qué barra intermedia) arriostra.
+// Refuerzo transversal suplementario, adicional al estribo perimetral, en columnas donde
+// éste solo no alcanza a confinar todas las barras longitudinales (E.060 Art. 21.6.4.3 /
+// 21.4.5.4). Dos tipos, según el detalle real de obra:
+// - "grapa": una rama recta con gancho a 90° en un extremo y a 135° en el otro (ACI 318
+//   25.3.4), que cruza entre dos barras intermedias opuestas — necesita "cara" para saber
+//   qué par de caras (y por lo tanto qué barra) conecta.
+// - "cerrado": un estribo cerrado adicional, con el mismo perímetro que el estribo
+//   principal (gancho a 135° en ambos extremos) — "cara" no aplica, ya que rodea toda la
+//   sección igual que el estribo principal.
+// Ocurre al mismo nivel y con la misma cantidad que el estribo perimetral.
+export type TipoEstriboSuplementario = "grapa" | "cerrado";
+
 export interface EstriboSuplementario {
   diametroId: string;
-  numeroRamas: number; // ramas adicionales por cada nivel de estribo
-  cara: CaraColumna;
+  numeroRamas: number; // grapa: N° de ramas; cerrado: N° de estribos cerrados adicionales
+  cara: CaraColumna; // solo aplica si tipo === "grapa"
+  tipo: TipoEstriboSuplementario;
 }
 
 export interface ColumnaInput {
@@ -319,8 +326,20 @@ export function calcularColumna(input: ColumnaInput): ColumnaResult {
   // cantidad que el estribo perimetral.
   const suplementarios = isRect ? input.estribosSuplementarios : [];
   const gruposSuplementarios = suplementarios.map((s) => {
+    if (s.tipo === "cerrado") {
+      // Estribo cerrado adicional: mismo perímetro que el principal, gancho a 135° en
+      // ambos extremos (igual convención que longitudPorEstribo, arriba).
+      const longitudGancho = input.considerarGanchoEstribo ? longitudGanchoEstribo135(s.diametroId) : 0;
+      const longitudPorEstriboSuplementario = longitudPorEstriboBase + longitudGancho;
+      const longitudTotal = longitudPorEstriboSuplementario * Math.max(s.numeroRamas, 0) * numeroEstribosTotal;
+      return { diametroId: s.diametroId, longitudTotal, peso: longitudTotal * getRebar(s.diametroId).weightKgPerM };
+    }
+    // Grapa: una rama recta con gancho a 90° en un extremo y a 135° en el otro.
     const dimM = (s.cara === "peralte" ? input.base : input.peralte) / 100 - 2 * recubM;
-    const longitudGancho = input.considerarGanchoEstribo ? 2 * longitudGanchoBarra90(s.diametroId) : 0;
+    const dbM = getRebar(s.diametroId).diameterMm / 1000;
+    const longitudGancho = input.considerarGanchoEstribo
+      ? longitudGanchoBarra90(s.diametroId) + Math.max(6 * dbM, 0.075)
+      : 0;
     const longitudPorRama = Math.max(dimM, 0) + longitudGancho;
     const longitudTotal = longitudPorRama * Math.max(s.numeroRamas, 0) * numeroEstribosTotal;
     return { diametroId: s.diametroId, longitudTotal, peso: longitudTotal * getRebar(s.diametroId).weightKgPerM };
