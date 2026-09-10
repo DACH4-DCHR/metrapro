@@ -1,5 +1,5 @@
 import { getRebar } from "../../lib/materials";
-import type { ColumnaInput } from "../../lib/calc/columna";
+import { estribosPositionsColumnaM, type ColumnaInput } from "../../lib/calc/columna";
 import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
 
 interface ColumnaIsometricProps {
@@ -9,7 +9,6 @@ interface ColumnaIsometricProps {
 const VIEW_W = 280;
 const VIEW_H = 280;
 const MARGIN = 22;
-const NUM_ESTRIBOS_ESQUEMA = 5; // representativos, no la cantidad real (ver texto de resultados)
 
 function totalBarras(input: ColumnaInput): number {
   return input.barrasLongitudinales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
@@ -64,7 +63,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
   const w = isRect ? input.base : input.diametro;
   const d = isRect ? input.peralte : input.diametro;
   const maxDim = Math.max(w, d);
-  const hSeg = Math.min(Math.max(2.2 * maxDim, 60), 300); // altura del segmento esquemático, no a escala real
+  const hSeg = Math.min(Math.max(2.6 * maxDim, 70), 320); // altura del segmento esquemático, no a escala real
 
   const barPositions = isRect ? rectPerimeterPointsCm(n, w, d) : circlePerimeterPointsCm(n, w / 2);
   const ringOutlineCm = isRect
@@ -120,7 +119,19 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
   const outlineTop = isRect
     ? [{ x: 0, z: 0 }, { x: w, z: 0 }, { x: w, z: d }, { x: 0, z: d }]
     : ellipsePathCm(w / 2);
-  const stirrupLevels = Array.from({ length: NUM_ESTRIBOS_ESQUEMA }, (_, i) => (0.08 + i * (0.84 / (NUM_ESTRIBOS_ESQUEMA - 1))) * hSeg);
+
+  // Posiciones reales de los estribos (mismas que el metrado), reescaladas por fracción
+  // de altura al segmento esquemático — así la zona de confinamiento (más juntos en los
+  // extremos) y la separación central se ven reflejadas cuando el usuario las cambia.
+  const estribosReales = estribosPositionsColumnaM(input);
+  const loM = input.incluirConfinamiento ? input.longitudConfinamiento / 100 : 0;
+  const stirrupLevels =
+    input.alturaLibre > 0
+      ? estribosReales.map((posM) => ({
+          y: (posM / input.alturaLibre) * hSeg,
+          confinado: input.incluirConfinamiento && (posM <= loM || posM >= input.alturaLibre - loM),
+        }))
+      : [];
 
   const rebarLabel = input.barrasLongitudinales
     .filter((g) => g.cantidad > 0)
@@ -162,9 +173,18 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
           })()
         )}
 
-        {/* Estribos: aros representativos (no la cantidad real calculada) */}
-        {stirrupLevels.map((y, i) => (
-          <path key={i} d={pathFor(ringOutlineCm, y, true)} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.75} />
+        {/* Estribos: todas las posiciones reales, comprimidas al segmento esquemático. Los
+            de la zona de confinamiento se dibujan más gruesos y opacos para que la zona se
+            note de inmediato, además de estar más juntos entre sí. */}
+        {stirrupLevels.map(({ y, confinado }, i) => (
+          <path
+            key={i}
+            d={pathFor(ringOutlineCm, y, true)}
+            fill="none"
+            stroke={DIAGRAM_COLORS.stirrup}
+            strokeWidth={confinado ? 2.25 : 1.4}
+            opacity={confinado ? 1 : 0.6}
+          />
         ))}
 
         {/* Acero longitudinal: todas las barras, de piso a techo del segmento */}
@@ -175,10 +195,11 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
         })}
       </svg>
       <p className="mt-1 text-center text-xs text-steel-500">
-        Vista isométrica esquemática de la jaula de acero (segmento representativo, no a escala real)
+        Vista isométrica esquemática (altura comprimida, no a escala real) — la distribución de estribos sí refleja
+        tus valores de separación{input.incluirConfinamiento ? " y confinamiento" : ""}
       </p>
       <p className="text-center text-xs text-steel-500">
-        {rebarLabel || "sin barras"} · estribo Ø{getRebar(input.diametroEstribosId).diameterMm}mm
+        {rebarLabel || "sin barras"} · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por columna
       </p>
     </div>
   );

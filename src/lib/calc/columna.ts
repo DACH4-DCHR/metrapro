@@ -80,6 +80,37 @@ function minDiametroMm(grupos: BarraGrupo[]): number {
   return dbs.length > 0 ? Math.min(...dbs) : 16;
 }
 
+// Posiciones (en metros, desde 0 hasta la altura libre) de cada estribo en UNA columna.
+// Usa exactamente los mismos conteos que calcularColumna, para que cualquier vista (2D o
+// 3D) que dibuje estribos a partir de esto nunca quede desincronizada con el metrado.
+export function estribosPositionsColumnaM(input: ColumnaInput): number[] {
+  const separacionCentralM = input.separacionCentral / 100;
+
+  if (!input.incluirConfinamiento) {
+    if (separacionCentralM <= 0) return [];
+    const n = Math.floor(input.alturaLibre / separacionCentralM) + 1;
+    return Array.from({ length: n }, (_, i) => Math.min(i * separacionCentralM, input.alturaLibre));
+  }
+
+  const loM = input.longitudConfinamiento / 100;
+  const soM = input.separacionConfinamiento / 100;
+  const positions: number[] = [];
+
+  if (soM > 0) {
+    const nConf = Math.floor(loM / soM) + 1;
+    for (let i = 0; i < nConf; i++) positions.push(Math.min(i * soM, loM));
+    for (let i = 0; i < nConf; i++) positions.push(Math.max(input.alturaLibre - i * soM, input.alturaLibre - loM));
+  }
+
+  if (separacionCentralM > 0) {
+    const alturaCentral = Math.max(input.alturaLibre - 2 * loM, 0);
+    const nCentral = Math.max(Math.floor(alturaCentral / separacionCentralM) - 1, 0);
+    for (let i = 1; i <= nCentral; i++) positions.push(loM + i * separacionCentralM);
+  }
+
+  return positions.sort((a, b) => a - b);
+}
+
 export function calcularColumna(input: ColumnaInput): ColumnaResult {
   const warnings: string[] = [];
   const recubM = input.recubrimiento / 100;
