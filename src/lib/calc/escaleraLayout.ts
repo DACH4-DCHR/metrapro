@@ -76,6 +76,9 @@ export function calcularEscaleraLayout(
   }
 
   // "U": giro de 180°, tramo2 vuelve en paralelo a tramo1 separado por un pasillo.
+  // El descanso conecta ambos tramos por el mismo lado (el que da hacia tramo1): tramo2
+  // arranca ahí, junto a tramo1, y sube alejándose del descanso — no desde el lado
+  // opuesto/lejano del descanso, que no es un extremo real de la escalera.
   const gap = ancho * 0.2;
   const landingCorners = [
     { x: 0, z: desarrollo1 },
@@ -84,7 +87,7 @@ export function calcularEscaleraLayout(
     { x: 0, z: desarrollo1 + landingLargo },
   ];
   const tramo2: FlightFootprint = {
-    origin: { x: ancho + gap, z: desarrollo1 + landingLargo },
+    origin: { x: ancho + gap, z: desarrollo1 },
     dir: { x: 0, z: -1 },
     perp: { x: 1, z: 0 },
     length: desarrollo2,
