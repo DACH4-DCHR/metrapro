@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { EscaleraInput } from "../../lib/calc/escalera";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface EscaleraIsometricProps {
   input: EscaleraInput;
@@ -11,6 +13,7 @@ const VIEW_H = 260;
 const MARGIN = 22;
 
 export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const ancho = input.anchoEscalera * 100; // cm — eje x
   const espesor = input.espesorLosaInclinada; // cm
   const { numeroPeldanos, huella, contrahuella } = input.tramo1;
@@ -31,7 +34,7 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
     { x: ancho, z: desarrollo, y: alturaTramo + espesor },
     { x: 0, z: desarrollo, y: alturaTramo + espesor },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -42,7 +45,7 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   // Punto sobre la garganta a fracción t (0..1) de su desarrollo, offset vertical adicional
@@ -113,6 +116,7 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
           return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarPrincipal.color} strokeWidth={1.6} strokeLinecap="round" />;
         })}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática de la garganta (Tramo 1, sin peldaños — ver perfil 2D)
       </p>

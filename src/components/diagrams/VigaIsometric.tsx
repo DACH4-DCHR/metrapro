@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import { estribosPositionsM, type VigaInput } from "../../lib/calc/viga";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface VigaIsometricProps {
   input: VigaInput;
@@ -19,6 +21,7 @@ function flattenBarras(input: VigaInput): string[] {
 }
 
 export function VigaIsometric({ input }: VigaIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   if (input.tipoSeccion === "personalizada") {
     return <p className="text-sm text-steel-500">Vista no disponible para sección personalizada.</p>;
   }
@@ -59,7 +62,7 @@ export function VigaIsometric({ input }: VigaIsometricProps) {
     { x: lSeg, z: base, y: altura },
     { x: 0, z: base, y: altura },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -70,7 +73,7 @@ export function VigaIsometric({ input }: VigaIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathFor(points: { z: number; y: number }[], x: number, close: boolean): string {
@@ -130,6 +133,7 @@ export function VigaIsometric({ input }: VigaIsometricProps) {
           );
         })}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática (segmento representativo, no a escala real) — la distribución de estribos sí
         refleja tus valores de separación{input.incluirConfinamiento ? " y confinamiento" : ""}

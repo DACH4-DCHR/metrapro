@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { ZapataInput } from "../../lib/calc/zapata";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface ZapataIsometricProps {
   input: ZapataInput;
@@ -11,6 +13,7 @@ const VIEW_H = 260;
 const MARGIN = 22;
 
 export function ZapataIsometric({ input }: ZapataIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const largoCm = input.largo * 100;
   const anchoCm = input.ancho * 100;
   const peralte = input.peralte;
@@ -29,7 +32,7 @@ export function ZapataIsometric({ input }: ZapataIsometricProps) {
     { x: largoCm, z: anchoCm, y: peralte },
     { x: 0, z: anchoCm, y: peralte },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -40,7 +43,7 @@ export function ZapataIsometric({ input }: ZapataIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathForTop(points: { x: number; z: number }[], y: number, close: boolean): string {
@@ -100,6 +103,7 @@ export function ZapataIsometric({ input }: ZapataIsometricProps) {
         {input.incluirMallaSuperior &&
           mallaLines(input.diametroSuperiorXId, input.separacionSuperiorX, input.diametroSuperiorYId, input.separacionSuperiorY, peralte - recub)}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">Vista isométrica esquemática (no a escala real)</p>
       <p className="text-center text-xs text-steel-500">
         Malla inferior Ø{getRebar(input.diametroInferiorXId).diameterMm}/Ø{getRebar(input.diametroInferiorYId).diameterMm}mm

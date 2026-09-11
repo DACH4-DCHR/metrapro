@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { LosaMacizaInput } from "../../lib/calc/losaMaciza";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface LosaMacizaIsometricProps {
   input: LosaMacizaInput;
@@ -12,6 +14,7 @@ const MARGIN = 22;
 const RECUB_VISUAL_CM = 2; // la losa maciza no pide recubrimiento explícito; solo para separar visualmente la malla de las caras
 
 export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const largoCm = input.largo * 100;
   const anchoCm = input.ancho * 100;
   const espesor = input.espesor;
@@ -30,7 +33,7 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
     { x: largoCm, z: anchoCm, y: espesor },
     { x: 0, z: anchoCm, y: espesor },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -41,7 +44,7 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathForTop(points: { x: number; z: number }[], y: number, close: boolean): string {
@@ -108,6 +111,7 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
             "sup"
           )}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">Vista isométrica esquemática (no a escala real)</p>
       <p className="text-center text-xs text-steel-500">
         Malla inferior Ø{getRebar(input.diametroPrincipalId).diameterMm}/Ø{getRebar(input.diametroTemperaturaId).diameterMm}mm

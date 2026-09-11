@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import { estribosPositionsColumnaM, posicionesBarrasLongitudinales, type ColumnaInput } from "../../lib/calc/columna";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface ColumnaIsometricProps {
   input: ColumnaInput;
@@ -18,6 +20,7 @@ function ellipsePathCm(r: number, segments = 48): { x: number; z: number }[] {
 }
 
 export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const barPositions = posicionesBarrasLongitudinales(input);
   const n = barPositions.length;
   const recub = input.recubrimiento;
@@ -65,7 +68,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
         { x: p.x, z: p.z, y: hSeg },
       ]);
 
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -76,7 +79,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return {
       x: MARGIN + (p.x - minX) * scale,
       y: MARGIN + (p.y - minY) * scale,
@@ -176,6 +179,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
           );
         })}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática (altura comprimida, no a escala real) — la distribución de estribos sí refleja
         tus valores de separación{input.incluirConfinamiento ? " y confinamiento" : ""}

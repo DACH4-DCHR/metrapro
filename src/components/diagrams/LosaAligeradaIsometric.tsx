@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { LosaAligeradaInput } from "../../lib/calc/losaAligerada";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface LosaAligeradaIsometricProps {
   input: LosaAligeradaInput;
@@ -12,6 +14,7 @@ const MARGIN = 22;
 const NUM_MODULES = 2.4;
 
 export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const espesor = input.espesorLosa;
   const s = input.separacionViguetas;
   const b0 = input.anchoVigueta;
@@ -35,7 +38,7 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
     { x: anchoCm, z: largoCm, y: espesor },
     { x: 0, z: largoCm, y: espesor },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -46,7 +49,7 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathForTop(points: { x: number; z: number }[], y: number, close: boolean): string {
@@ -118,6 +121,7 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
             });
           })}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática (segmento representativo de {modules} nervios, no a escala real)
       </p>

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { PlacaInput } from "../../lib/calc/placa";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface PlacaIsometricProps {
   input: PlacaInput;
@@ -11,6 +13,7 @@ const VIEW_H = 260;
 const MARGIN = 22;
 
 export function PlacaIsometric({ input }: PlacaIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const longitudCm = input.longitud * 100;
   const alturaCm = input.alturaLibre * 100;
   const espesor = input.espesor;
@@ -29,7 +32,7 @@ export function PlacaIsometric({ input }: PlacaIsometricProps) {
     { x: longitudCm, z: espesor, y: alturaCm },
     { x: 0, z: espesor, y: alturaCm },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -40,7 +43,7 @@ export function PlacaIsometric({ input }: PlacaIsometricProps) {
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathFor(points: { x: number; y: number }[], z: number, close: boolean): string {
@@ -164,6 +167,7 @@ export function PlacaIsometric({ input }: PlacaIsometricProps) {
             </g>
           ))}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática (no a escala real)
       </p>

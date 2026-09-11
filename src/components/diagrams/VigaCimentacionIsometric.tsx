@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { VigaCimentacionInput } from "../../lib/calc/vigaCimentacion";
-import { DIAGRAM_COLORS, isoProject } from "./svgHelpers";
+import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
+import { RotationSlider } from "./RotationSlider";
 
 interface VigaCimentacionIsometricProps {
   input: VigaCimentacionInput;
@@ -19,6 +21,7 @@ function flattenBarras(input: VigaCimentacionInput): string[] {
 }
 
 export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProps) {
+  const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const base = input.base;
   const altura = input.altura;
   const recub = input.recubrimiento;
@@ -56,7 +59,7 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
     { x: lSeg, z: base, y: altura },
     { x: 0, z: base, y: altura },
   ];
-  const projected = boundingRaw.map((p) => isoProject(p.x, p.z, p.y));
+  const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
   const maxX = Math.max(...projected.map((p) => p.x));
   const minY = Math.min(...projected.map((p) => p.y));
@@ -67,7 +70,7 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
   const scale = Math.min(drawW / (maxX - minX || 1), drawH / (maxY - minY || 1));
 
   function screen(x: number, z: number, y: number): { x: number; y: number } {
-    const p = isoProject(x, z, y);
+    const p = isoProjectAt(x, z, y, azimuth);
     return { x: MARGIN + (p.x - minX) * scale, y: MARGIN + (p.y - minY) * scale };
   }
   function pathFor(points: { z: number; y: number }[], x: number, close: boolean): string {
@@ -124,6 +127,7 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
           );
         })}
       </svg>
+      <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">
         Vista isométrica esquemática (segmento representativo, no a escala real)
       </p>

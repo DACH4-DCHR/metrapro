@@ -90,7 +90,27 @@ const ISO_COS = Math.cos(Math.PI / 6); // ≈0.866
 const ISO_SIN = Math.sin(Math.PI / 6); // 0.5
 
 export function isoProject(x: number, z: number, y: number): { x: number; y: number } {
-  return { x: (x - z) * ISO_COS, y: (x + z) * ISO_SIN - y };
+  return isoProjectAt(x, z, y, ISO_DEFAULT_AZIMUTH);
+}
+
+// Azimut (rotación horizontal, en grados) que reproduce la vista isométrica clásica usada
+// en toda la app — equivale a mirar el elemento desde su esquina.
+export const ISO_DEFAULT_AZIMUTH = 45;
+
+const ISO_ROT_SCALE_H = Math.SQRT2 * ISO_COS;
+const ISO_ROT_SCALE_V = Math.SQRT2 * ISO_SIN;
+
+// Proyección isométrica con azimut variable: rota el plano horizontal (x,z) el ángulo
+// indicado antes de proyectar, lo que permite "girar" la vista 3D alrededor del eje
+// vertical sin cambiar la inclinación de la cámara. Con azimuthDeg=ISO_DEFAULT_AZIMUTH
+// el resultado es idéntico a isoProject (misma vista de siempre).
+export function isoProjectAt(x: number, z: number, y: number, azimuthDeg: number): Point2D {
+  const theta = (azimuthDeg * Math.PI) / 180;
+  const cosT = Math.cos(theta);
+  const sinT = Math.sin(theta);
+  const xr = x * cosT - z * sinT;
+  const zr = x * sinT + z * cosT;
+  return { x: xr * ISO_ROT_SCALE_H, y: zr * ISO_ROT_SCALE_V - y };
 }
 
 export interface Point2D {
