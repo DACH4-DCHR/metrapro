@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { Rows3, Save, Tag, Ruler, Eye, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { Rows3, Save, Tag, Ruler, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
+import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { ConcretoCiclopeoSection } from "../components/diagrams/ConcretoCiclopeoSection";
+import { ConcretoCiclopeoIsometric } from "../components/diagrams/ConcretoCiclopeoIsometric";
 import { calcularSobrecimiento, type SobrecimientoInput } from "../lib/calc/sobrecimiento";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
@@ -83,7 +85,18 @@ export function SobrecimientoPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[420px_1fr]">
+      <div className="p-6">
+        <StickyViewsRow>
+          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <ConcretoCiclopeoSection input={input} stoneLabel="P.M." />
+          </SectionCard>
+
+          <SectionCard title="Vista isométrica del concreto (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
+            <ConcretoCiclopeoIsometric input={input} stoneLabel="P.M." />
+          </SectionCard>
+        </StickyViewsRow>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
         <div className="flex flex-col gap-6">
           <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
             <TextField label="Nombre del elemento" value={nombre} onChange={setNombre} />
@@ -130,10 +143,6 @@ export function SobrecimientoPage() {
         <div className="flex flex-col gap-6">
           <WarningsBox warnings={result.warnings} />
 
-          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
-            <ConcretoCiclopeoSection input={input} stoneLabel="P.M." />
-          </SectionCard>
-
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
               <ResultMetric label="Volumen total" value={result.volumenTotal} unit="m³" accent="navy" />
@@ -150,6 +159,7 @@ export function SobrecimientoPage() {
           <SectionCard title="Tramos registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
             <ModuleElementsList module="sobrecimiento" emptyLabel="Aún no has agregado ningún tramo de sobrecimiento. Calcula arriba y presiona 'Agregar a la lista'." />
           </SectionCard>
+        </div>
         </div>
       </div>
     </div>
