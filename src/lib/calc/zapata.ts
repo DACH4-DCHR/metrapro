@@ -1,5 +1,6 @@
 import { CONCRETE_DENSITY_KG_M3, getRebar } from "../materials";
 import type { AceroItem } from "./aceroResumen";
+import { longitudGanchoBarra90 } from "./ganchos";
 
 export interface ZapataInput {
   numeroZapatas: number;
@@ -20,6 +21,11 @@ export interface ZapataInput {
   separacionSuperiorX: number;
   diametroSuperiorYId: string;
   separacionSuperiorY: number;
+
+  // Gancho estándar a 90° en los extremos de la malla (anclaje hacia el borde de la
+  // zapata). Opcional: depende del detallado de cada proyecto.
+  considerarGanchoLongitudinal: boolean;
+  extremosConGancho: number; // 0, 1 ó 2 extremos por barra, si se considera
 }
 
 export interface ZapataResult {
@@ -46,21 +52,20 @@ function pesoMalla(
   diametroXId: string,
   separacionX: number,
   diametroYId: string,
-  separacionY: number
+  separacionY: number,
+  extremosConGancho: number
 ) {
   const separacionXM = separacionX / 100;
   const separacionYM = separacionY / 100;
 
-  // Barras "X": corren paralelas al largo (longitud = largo), repetidas cada
-  // "separacionX" a lo largo del ancho.
+  // Barras "X": corren paralelas al largo, repetidas cada "separacionX" a lo largo del ancho.
   const numeroBarrasX = separacionXM > 0 ? Math.ceil(ancho / separacionXM) : 0;
-  const longitudX = numeroBarrasX * largo * numeroZapatas;
+  const longitudX = numeroBarrasX * (largo + extremosConGancho * longitudGanchoBarra90(diametroXId)) * numeroZapatas;
   const pesoX = longitudX * getRebar(diametroXId).weightKgPerM;
 
-  // Barras "Y": corren paralelas al ancho (longitud = ancho), repetidas cada
-  // "separacionY" a lo largo del largo.
+  // Barras "Y": corren paralelas al ancho, repetidas cada "separacionY" a lo largo del largo.
   const numeroBarrasY = separacionYM > 0 ? Math.ceil(largo / separacionYM) : 0;
-  const longitudY = numeroBarrasY * ancho * numeroZapatas;
+  const longitudY = numeroBarrasY * (ancho + extremosConGancho * longitudGanchoBarra90(diametroYId)) * numeroZapatas;
   const pesoY = longitudY * getRebar(diametroYId).weightKgPerM;
 
   const longitudTotal = longitudX + longitudY;
@@ -88,6 +93,8 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
     );
   }
 
+  const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
+
   const inferior = pesoMalla(
     input.largo,
     input.ancho,
@@ -95,7 +102,8 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
     input.diametroInferiorXId,
     input.separacionInferiorX,
     input.diametroInferiorYId,
-    input.separacionInferiorY
+    input.separacionInferiorY,
+    extremosConGancho
   );
 
   let superior = { numeroBarrasX: 0, numeroBarrasY: 0, longitudX: 0, longitudY: 0, peso: 0, longitudTotal: 0 };
@@ -107,7 +115,8 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
       input.diametroSuperiorXId,
       input.separacionSuperiorX,
       input.diametroSuperiorYId,
-      input.separacionSuperiorY
+      input.separacionSuperiorY,
+      extremosConGancho
     );
   }
 
