@@ -11,6 +11,12 @@
 
 export type TipoExcavacion = "zapata" | "zanja" | "general";
 
+// "altura": la cimentación tiene el mismo largo x ancho ya ingresado arriba, y solo
+// se pide su altura/peralte (cm) — el volumen se calcula solo, igual que ya hacen
+// Zapatas, Cimiento Corrido y Vigas de Cimentación con su propia geometría.
+// "volumen": para cimentaciones de forma irregular, se ingresa el volumen directo.
+export type ModoVolumenCimentacion = "altura" | "volumen";
+
 export interface MovimientoTierrasInput {
   tipoExcavacion: TipoExcavacion; // define si el sobreancho se aplica en 1 o 2 direcciones en planta
   largo: number; // m, longitud de la zanja (zanja/general) o largo del pozo (zapata)
@@ -18,7 +24,9 @@ export interface MovimientoTierrasInput {
   profundidad: number; // m, profundidad de excavación desde el nivel de terreno
   numeroExcavaciones: number; // und, número de zanjas/pozos iguales
   sobreanchoTrabajo: number; // cm, holgura por lado para encofrado y compactado (típico 10 cm)
-  volumenOcupadoCimentacion: number; // m3, volumen que ocupará el concreto de la cimentación (se descuenta del relleno)
+  modoVolumenCimentacion: ModoVolumenCimentacion;
+  alturaCimentacion: number; // cm, alto/peralte de la cimentación (modo "altura")
+  volumenOcupadoCimentacion: number; // m3, volumen que ocupará el concreto de la cimentación (modo "volumen")
   porcentajeEsponjamiento: number; // %, esponjamiento del material excavado para eliminación (típico 25-30%)
 }
 
@@ -27,6 +35,7 @@ export interface MovimientoTierrasResult {
   anchoExcavacion: number; // m, ancho + sobreancho de trabajo en ambos lados
   volumenExcavacion: number; // m3
   areaNivelacionFondo: number; // m2, refine y nivelación del fondo de excavación
+  volumenOcupadoCimentacion: number; // m3, resuelto según el modo elegido (altura o volumen directo)
   volumenRelleno: number; // m3, relleno y compactado con material propio
   volumenEliminacion: number; // m3, material excedente en banco (sin esponjar)
   volumenEliminacionEsponjado: number; // m3, material excedente esponjado, para acarreo y eliminación
@@ -81,9 +90,17 @@ export function calcularMovimientoTierras(input: MovimientoTierrasInput): Movimi
   const volumenExcavacion = anchoExcavacion * largoExcavacion * Math.max(input.profundidad, 0) * numeroExcavaciones;
   const areaNivelacionFondo = anchoExcavacion * largoExcavacion * numeroExcavaciones;
 
+  // El volumen que ocupa la cimentación usa el largo x ancho ya ingresado arriba
+  // (sin el sobreancho de trabajo, que es solo espacio para excavar/trabajar, no
+  // parte del concreto), para que "por altura" refleje el elemento real.
+  const volumenOcupadoCimentacion =
+    input.modoVolumenCimentacion === "altura"
+      ? Math.max(input.largo, 0) * Math.max(input.ancho, 0) * (Math.max(input.alturaCimentacion, 0) / 100) * numeroExcavaciones
+      : Math.max(input.volumenOcupadoCimentacion, 0);
+
   const { volumenRelleno, volumenEliminacion, volumenEliminacionEsponjado, warning } = calcularRellenoYEliminacion({
     volumenExcavacion,
-    volumenOcupadoCimentacion: input.volumenOcupadoCimentacion,
+    volumenOcupadoCimentacion,
     porcentajeEsponjamiento: input.porcentajeEsponjamiento,
   });
   if (warning) warnings.push(warning);
@@ -104,6 +121,7 @@ export function calcularMovimientoTierras(input: MovimientoTierrasInput): Movimi
     anchoExcavacion,
     volumenExcavacion,
     areaNivelacionFondo,
+    volumenOcupadoCimentacion,
     volumenRelleno,
     volumenEliminacion,
     volumenEliminacionEsponjado,

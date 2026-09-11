@@ -11,7 +11,12 @@ import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { MovimientoTierrasSection } from "../components/diagrams/MovimientoTierrasSection";
 import { MovimientoTierrasIsometric } from "../components/diagrams/MovimientoTierrasIsometric";
-import { calcularMovimientoTierras, type MovimientoTierrasInput, type TipoExcavacion } from "../lib/calc/movimientoTierras";
+import {
+  calcularMovimientoTierras,
+  type MovimientoTierrasInput,
+  type TipoExcavacion,
+  type ModoVolumenCimentacion,
+} from "../lib/calc/movimientoTierras";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
@@ -19,6 +24,11 @@ const tipoExcavacionOptions: { value: TipoExcavacion; label: string }[] = [
   { value: "zapata", label: "Zapata aislada (pozo, sobreancho en ambas direcciones)" },
   { value: "zanja", label: "Cimiento corrido / viga de cimentación (zanja continua)" },
   { value: "general", label: "General (zanja/pozo, sobreancho solo en el ancho)" },
+];
+
+const modoVolumenOptions: { value: ModoVolumenCimentacion; label: string }[] = [
+  { value: "altura", label: "Por altura de la cimentación (recomendado)" },
+  { value: "volumen", label: "Por volumen directo (cimentación de forma irregular)" },
 ];
 
 const partidaExcavacionPorTipo: Record<TipoExcavacion, string> = {
@@ -44,6 +54,8 @@ export function MovimientoTierrasPage() {
     profundidad: 1.2,
     numeroExcavaciones: 1,
     sobreanchoTrabajo: 10,
+    modoVolumenCimentacion: "altura",
+    alturaCimentacion: 20,
     volumenOcupadoCimentacion: 1,
     porcentajeEsponjamiento: 25,
   });
@@ -102,15 +114,21 @@ export function MovimientoTierrasPage() {
       <div className="p-6">
         <StickyViewsRow>
           <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
-            <MovimientoTierrasSection input={input} anchoExcavacion={result.anchoExcavacion} volumenExcavacion={result.volumenExcavacion} />
+            <MovimientoTierrasSection
+              profundidad={input.profundidad}
+              anchoExcavacion={result.anchoExcavacion}
+              volumenExcavacion={result.volumenExcavacion}
+              volumenOcupadoCimentacion={result.volumenOcupadoCimentacion}
+            />
           </SectionCard>
 
           <SectionCard title="Vista isométrica de la excavación (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
             <MovimientoTierrasIsometric
-              input={input}
+              profundidad={input.profundidad}
               largoExcavacion={result.largoExcavacion}
               anchoExcavacion={result.anchoExcavacion}
               volumenExcavacion={result.volumenExcavacion}
+              volumenOcupadoCimentacion={result.volumenOcupadoCimentacion}
             />
           </SectionCard>
         </StickyViewsRow>
@@ -177,14 +195,34 @@ export function MovimientoTierrasPage() {
           <SectionCard title="Relleno y eliminación" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <NumberField
-                  label="Volumen ocupado por la cimentación"
-                  unit="m³"
-                  value={input.volumenOcupadoCimentacion}
-                  onChange={(v) => update("volumenOcupadoCimentacion", v)}
-                  helper="Volumen de concreto (o concreto ciclópeo) que desplazará al relleno; usa el resultado del módulo de la cimentación"
+                <SelectField
+                  label="Cómo calcular el volumen de la cimentación"
+                  value={input.modoVolumenCimentacion}
+                  onChange={(v) => update("modoVolumenCimentacion", v as ModoVolumenCimentacion)}
+                  options={modoVolumenOptions}
                 />
               </div>
+              {input.modoVolumenCimentacion === "altura" ? (
+                <div className="col-span-2">
+                  <NumberField
+                    label="Altura de la cimentación"
+                    unit="cm"
+                    value={input.alturaCimentacion}
+                    onChange={(v) => update("alturaCimentacion", v)}
+                    helper={`Peralte del elemento; con ${input.largo}m x ${input.ancho}m x ${input.numeroExcavaciones} und, el volumen se calcula solo`}
+                  />
+                </div>
+              ) : (
+                <div className="col-span-2">
+                  <NumberField
+                    label="Volumen ocupado por la cimentación"
+                    unit="m³"
+                    value={input.volumenOcupadoCimentacion}
+                    onChange={(v) => update("volumenOcupadoCimentacion", v)}
+                    helper="Volumen de concreto (o concreto ciclópeo) que desplazará al relleno; usa el resultado del módulo de la cimentación"
+                  />
+                </div>
+              )}
               <NumberField
                 label="Esponjamiento del material"
                 unit="%"
@@ -207,6 +245,7 @@ export function MovimientoTierrasPage() {
               <ResultMetric label="Ancho de excavación" value={result.anchoExcavacion} unit="m" />
               <ResultMetric label="Volumen excavado" value={result.volumenExcavacion} unit="m³" accent="navy" />
               <ResultMetric label="Área de nivelación de fondo" value={result.areaNivelacionFondo} unit="m²" />
+              <ResultMetric label="Volumen de la cimentación" value={result.volumenOcupadoCimentacion} unit="m³" />
               <ResultMetric label="Relleno y compactado" value={result.volumenRelleno} unit="m³" accent="navy" />
               <ResultMetric label="Eliminación (en banco)" value={result.volumenEliminacion} unit="m³" accent="amber" />
               <ResultMetric label="Eliminación (esponjado)" value={result.volumenEliminacionEsponjado} unit="m³" accent="amber" />

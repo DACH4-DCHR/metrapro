@@ -1,23 +1,29 @@
 import { useState } from "react";
-import type { MovimientoTierrasInput } from "../../lib/calc/movimientoTierras";
 import { DIAGRAM_COLORS, fmt, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
 import { RotationSlider } from "./RotationSlider";
 
 interface MovimientoTierrasIsometricProps {
-  input: MovimientoTierrasInput;
+  profundidad: number; // m
   largoExcavacion: number; // m, ya con sobreancho de trabajo (modo "zapata")
   anchoExcavacion: number; // m, ya con sobreancho de trabajo
   volumenExcavacion: number; // m3, ya calculado
+  volumenOcupadoCimentacion: number; // m3, ya resuelto (modo altura o volumen directo)
 }
 
 const VIEW_W = 300;
 const VIEW_H = 240;
 const MARGIN = 22;
 
-export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcavacion, volumenExcavacion }: MovimientoTierrasIsometricProps) {
+export function MovimientoTierrasIsometric({
+  profundidad: profundidadRaw,
+  largoExcavacion,
+  anchoExcavacion,
+  volumenExcavacion,
+  volumenOcupadoCimentacion,
+}: MovimientoTierrasIsometricProps) {
   const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
   const largo = Math.max(largoExcavacion, 0);
-  const profundidad = Math.max(input.profundidad, 0);
+  const profundidad = Math.max(profundidadRaw, 0);
   if (anchoExcavacion <= 0 || largo <= 0 || profundidad <= 0) {
     return <p className="text-sm text-steel-500">Ingresa un largo, ancho y profundidad válidos para ver la vista isométrica.</p>;
   }
@@ -68,7 +74,7 @@ export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcava
   // constante), así que su altura real es exactamente volumenOcupado / áreaDeFondo,
   // apoyado en el fondo — no es un valor inventado para el dibujo.
   const fraccionOcupada =
-    volumenExcavacion > 0 ? Math.min(Math.max(input.volumenOcupadoCimentacion, 0) / volumenExcavacion, 1) : 0;
+    volumenExcavacion > 0 ? Math.min(Math.max(volumenOcupadoCimentacion, 0) / volumenExcavacion, 1) : 0;
   const hCimentacion = profundidad * fraccionOcupada;
 
   return (

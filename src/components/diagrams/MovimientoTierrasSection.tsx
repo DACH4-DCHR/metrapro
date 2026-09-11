@@ -1,10 +1,10 @@
-import type { MovimientoTierrasInput } from "../../lib/calc/movimientoTierras";
 import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface MovimientoTierrasSectionProps {
-  input: MovimientoTierrasInput;
+  profundidad: number; // m
   anchoExcavacion: number; // m, ya con sobreancho de trabajo
   volumenExcavacion: number; // m3, ya calculado (evita repetir la fórmula aquí)
+  volumenOcupadoCimentacion: number; // m3, ya resuelto (modo altura o volumen directo)
 }
 
 const VIEW_W = 300;
@@ -14,8 +14,12 @@ const MARGIN_R = 55;
 const MARGIN_TOP = 40;
 const MARGIN_BOTTOM = 55;
 
-export function MovimientoTierrasSection({ input, anchoExcavacion, volumenExcavacion }: MovimientoTierrasSectionProps) {
-  const { profundidad, volumenOcupadoCimentacion } = input;
+export function MovimientoTierrasSection({
+  profundidad,
+  anchoExcavacion,
+  volumenExcavacion,
+  volumenOcupadoCimentacion,
+}: MovimientoTierrasSectionProps) {
   if (anchoExcavacion <= 0 || profundidad <= 0) {
     return <p className="text-sm text-steel-500">Ingresa un ancho y profundidad válidos para ver la sección.</p>;
   }
