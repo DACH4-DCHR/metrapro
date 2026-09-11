@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { LosaMacizaInput } from "../../lib/calc/losaMaciza";
+import { longitudGanchoBarra90 } from "../../lib/calc/ganchos";
 import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
 import { RotationSlider } from "./RotationSlider";
 
@@ -59,6 +60,13 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
     { x: 0, z: anchoCm },
   ];
 
+  // Gancho estándar a 90° en los extremos de la malla: dobla verticalmente hacia el
+  // interior del espesor (mismo criterio que zapatas), acotado para no salir de la losa.
+  const extremosConGancho = input.considerarGanchoLongitudinal
+    ? Math.max(Math.min(input.extremosConGancho, 2), 0)
+    : 0;
+  const hookDoblaHaciaArriba = (y0: number) => y0 < espesor / 2;
+
   function mallaLines(diametroXId: string, sepX: number, diametroYId: string, sepY: number, y: number, keyPrefix: string) {
     const sepXCm = Math.max(sepX, 1);
     const sepYCm = Math.max(sepY, 1);
@@ -68,17 +76,73 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
     for (let x = sepYCm / 2; x < largoCm; x += sepYCm) barrasY.push(x);
     const colorX = getRebar(diametroXId).color;
     const colorY = getRebar(diametroYId).color;
+
+    const dirY = hookDoblaHaciaArriba(y) ? 1 : -1;
+    const maxHookCm = Math.max(espesor - 2 * recub, 0);
+    const hookXCm = extremosConGancho > 0 ? Math.min(longitudGanchoBarra90(diametroXId) * 100, maxHookCm) : 0;
+    const hookYCm = extremosConGancho > 0 ? Math.min(longitudGanchoBarra90(diametroYId) * 100, maxHookCm) : 0;
+    const ganchoEnInicio = extremosConGancho >= 2;
+    const ganchoEnFin = extremosConGancho >= 1;
+
     return (
       <>
         {barrasX.map((z, i) => {
           const a = screen(0, z, y);
           const b = screen(largoCm, z, y);
-          return <line key={`${keyPrefix}-x-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colorX} strokeWidth={1.4} />;
+          return (
+            <g key={`${keyPrefix}-x-${i}`}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colorX} strokeWidth={1.4} />
+              {ganchoEnInicio && hookXCm > 0 && (
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={screen(0, z, y + dirY * hookXCm).x}
+                  y2={screen(0, z, y + dirY * hookXCm).y}
+                  stroke={colorX}
+                  strokeWidth={1.4}
+                />
+              )}
+              {ganchoEnFin && hookXCm > 0 && (
+                <line
+                  x1={b.x}
+                  y1={b.y}
+                  x2={screen(largoCm, z, y + dirY * hookXCm).x}
+                  y2={screen(largoCm, z, y + dirY * hookXCm).y}
+                  stroke={colorX}
+                  strokeWidth={1.4}
+                />
+              )}
+            </g>
+          );
         })}
         {barrasY.map((x, i) => {
           const a = screen(x, 0, y);
           const b = screen(x, anchoCm, y);
-          return <line key={`${keyPrefix}-y-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colorY} strokeWidth={1.4} />;
+          return (
+            <g key={`${keyPrefix}-y-${i}`}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colorY} strokeWidth={1.4} />
+              {ganchoEnInicio && hookYCm > 0 && (
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={screen(x, 0, y + dirY * hookYCm).x}
+                  y2={screen(x, 0, y + dirY * hookYCm).y}
+                  stroke={colorY}
+                  strokeWidth={1.4}
+                />
+              )}
+              {ganchoEnFin && hookYCm > 0 && (
+                <line
+                  x1={b.x}
+                  y1={b.y}
+                  x2={screen(x, anchoCm, y + dirY * hookYCm).x}
+                  y2={screen(x, anchoCm, y + dirY * hookYCm).y}
+                  stroke={colorY}
+                  strokeWidth={1.4}
+                />
+              )}
+            </g>
+          );
         })}
       </>
     );
