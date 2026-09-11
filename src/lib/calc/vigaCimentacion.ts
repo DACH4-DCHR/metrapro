@@ -112,7 +112,11 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
 
   const rebarEstribo: RebarSize = getRebar(input.diametroEstribosId);
   const separacionM = input.separacionEstribos / 100;
-  const numeroEstribosPorViga = separacionM > 0 ? Math.floor(input.luzLibre / separacionM) + 1 : 0;
+  // Si el acero longitudinal se prolonga dentro de una zapata, los estribos también
+  // deben acompañarlo en ese tramo (la jaula de la viga sigue siendo la misma hasta
+  // llegar a la columna, aunque el concreto de la viga ya no se metre ahí).
+  const longitudConEstribos = input.luzLibre + extremosConProlongacion * input.longitudProlongacionZapata;
+  const numeroEstribosPorViga = separacionM > 0 ? Math.floor(longitudConEstribos / separacionM) + 1 : 0;
   const numeroEstribosTotal = numeroEstribosPorViga * input.numeroVigas;
   const longitudGanchoEstribo = input.considerarGanchoEstribo ? longitudGanchoEstribo135(input.diametroEstribosId) : 0;
   const longitudPorEstribo = 2 * (input.base / 100 - 2 * recubM) + 2 * (input.altura / 100 - 2 * recubM) + longitudGanchoEstribo;

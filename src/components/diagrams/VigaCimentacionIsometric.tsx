@@ -70,7 +70,7 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
 
   // Ganchos a 90° en los extremos (doblan hacia el centro de la sección) y/o
   // prolongación recta del acero dentro de una zapata contigua (esquemática, con línea
-  // discontinua), según las opciones activadas.
+  // discontinua + un bloque de columna al final), según las opciones activadas.
   const extremosConGancho = input.considerarGanchoLongitudinal
     ? Math.max(Math.min(input.extremosConGancho, 2), 0)
     : 0;
@@ -81,9 +81,10 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
   const ganchoEnFin = extremosConGancho >= 1;
   const prolongacionEnInicio = extremosConProlongacion >= 2;
   const prolongacionEnFin = extremosConProlongacion >= 1;
-  const prolongacionPx = lSeg * 0.18;
-  const xMinBound = prolongacionEnInicio ? -prolongacionPx : 0;
-  const xMaxBound = prolongacionEnFin ? lSeg + prolongacionPx : lSeg;
+  const prolongacionPx = lSeg * 0.3;
+  const columnaAnchoPx = prolongacionPx * 0.55;
+  const xMinBound = prolongacionEnInicio ? -prolongacionPx - columnaAnchoPx / 2 : 0;
+  const xMaxBound = prolongacionEnFin ? lSeg + prolongacionPx + columnaAnchoPx / 2 : lSeg;
 
   const boundingRaw = [
     { x: xMinBound, z: 0, y: 0 },
@@ -127,12 +128,44 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
     { z: recub, y: altura - recub },
   ];
 
+  // Los estribos acompañan al acero longitudinal también dentro del tramo prolongado
+  // hacia la zapata (misma jaula hasta llegar a la columna) — misma fórmula que
+  // calcularVigaCimentacion, para que el conteo mostrado sea siempre el mismo. El
+  // tramo dentro de la luz libre se reparte en 0..lSeg; el resto (proporcional) se
+  // reparte en la(s) zona(s) de prolongación activas, solo para fines de dibujo.
   const separacionM = input.separacionEstribos / 100;
-  const numeroEstribosPorViga = separacionM > 0 ? Math.floor(input.luzLibre / separacionM) + 1 : 0;
-  const stirrupPositions =
+  const longitudProlongTotal = extremosConProlongacion * input.longitudProlongacionZapata;
+  const longitudConEstribos = input.luzLibre + longitudProlongTotal;
+  const numeroEstribosPorViga = separacionM > 0 ? Math.floor(longitudConEstribos / separacionM) + 1 : 0;
+  const numeroEstribosEnLuz =
+    longitudConEstribos > 0 ? Math.round(numeroEstribosPorViga * (input.luzLibre / longitudConEstribos)) : 0;
+  const numeroEstribosProlongacionTotal = numeroEstribosPorViga - numeroEstribosEnLuz;
+
+  const stirrupPositionsLuz =
     input.luzLibre > 0 && separacionM > 0
-      ? Array.from({ length: numeroEstribosPorViga }, (_, i) => (Math.min(i * separacionM, input.luzLibre) / input.luzLibre) * lSeg)
+      ? Array.from({ length: numeroEstribosEnLuz }, (_, i) => (Math.min(i * separacionM, input.luzLibre) / input.luzLibre) * lSeg)
       : [];
+
+  const zonasProlongacionActivas = (prolongacionEnInicio ? 1 : 0) + (prolongacionEnFin ? 1 : 0);
+  const estribosPorZonaProlongacion = zonasProlongacionActivas > 0 ? Math.ceil(numeroEstribosProlongacionTotal / zonasProlongacionActivas) : 0;
+  function estribosEnProlongacion(desde: number, hacia: number, cantidad: number): number[] {
+    if (cantidad <= 0) return [];
+    return Array.from({ length: cantidad }, (_, i) => desde + ((i + 1) * (hacia - desde)) / (cantidad + 1));
+  }
+  const stirrupPositionsProlongInicio = prolongacionEnInicio
+    ? estribosEnProlongacion(0, -prolongacionPx, estribosPorZonaProlongacion)
+    : [];
+  const stirrupPositionsProlongFin = prolongacionEnFin
+    ? estribosEnProlongacion(lSeg, lSeg + prolongacionPx, estribosPorZonaProlongacion)
+    : [];
+  const stirrupPositions = [...stirrupPositionsLuz, ...stirrupPositionsProlongInicio, ...stirrupPositionsProlongFin];
+
+  const columnaOutline = [
+    { z: -recub, y: -recub },
+    { z: base + recub, y: -recub },
+    { z: base + recub, y: altura + recub },
+    { z: -recub, y: altura + recub },
+  ];
 
   return (
     <div className="overflow-x-auto">
@@ -142,13 +175,37 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
         role="img"
         aria-label="Vista isométrica esquemática de la jaula de acero de la viga de cimentación"
       >
-        <path d={pathFor(outline, 0, true)} fill={DIAGRAM_COLORS.concrete} fillOpacity={0.12} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} strokeDasharray="3 2" />
-        <path d={pathFor(outline, lSeg, true)} fill={DIAGRAM_COLORS.concrete} fillOpacity={0.08} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} strokeDasharray="3 2" />
+        <path d={pathFor(outline, 0, true)} fill={DIAGRAM_COLORS.concrete} fillOpacity={0.35} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
+        <path d={pathFor(outline, lSeg, true)} fill={DIAGRAM_COLORS.concrete} fillOpacity={0.22} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
         {outline.map((p, i) => {
           const a = screen(0, p.z, p.y);
           const b = screen(lSeg, p.z, p.y);
-          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />;
+          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} opacity={0.85} />;
         })}
+
+        {/* Bloque esquemático de columna al final de cada tramo de prolongación */}
+        {prolongacionEnInicio && (
+          <>
+            <path d={pathFor(columnaOutline, -prolongacionPx - columnaAnchoPx / 2, true)} fill={DIAGRAM_COLORS.concreteStroke} fillOpacity={0.3} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
+            <path d={pathFor(columnaOutline, -prolongacionPx + columnaAnchoPx / 2, true)} fill={DIAGRAM_COLORS.concreteStroke} fillOpacity={0.18} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
+            {columnaOutline.map((p, i) => {
+              const a = screen(-prolongacionPx - columnaAnchoPx / 2, p.z, p.y);
+              const b = screen(-prolongacionPx + columnaAnchoPx / 2, p.z, p.y);
+              return <line key={`col-i-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} opacity={0.7} />;
+            })}
+          </>
+        )}
+        {prolongacionEnFin && (
+          <>
+            <path d={pathFor(columnaOutline, lSeg + prolongacionPx - columnaAnchoPx / 2, true)} fill={DIAGRAM_COLORS.concreteStroke} fillOpacity={0.18} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
+            <path d={pathFor(columnaOutline, lSeg + prolongacionPx + columnaAnchoPx / 2, true)} fill={DIAGRAM_COLORS.concreteStroke} fillOpacity={0.3} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} />
+            {columnaOutline.map((p, i) => {
+              const a = screen(lSeg + prolongacionPx - columnaAnchoPx / 2, p.z, p.y);
+              const b = screen(lSeg + prolongacionPx + columnaAnchoPx / 2, p.z, p.y);
+              return <line key={`col-f-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1.25} opacity={0.7} />;
+            })}
+          </>
+        )}
 
         {stirrupPositions.map((x, i) => (
           <path key={i} d={pathFor(ringOutline, x, true)} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.75} />
@@ -158,25 +215,27 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
           const a = screen(0, p.z, p.y);
           const b = screen(lSeg, p.z, p.y);
           const rebar = getRebar(p.diametroId);
-          const strokeWidth = Math.max(1.4, 1.4 * (rebar.diameterMm / 16));
+          const strokeWidth = Math.max(1.8, 1.8 * (rebar.diameterMm / 16));
 
           const hookLenRaw = longitudGanchoBarra90(p.diametroId) * 100;
           let hookEndInicio = a;
           let hookEndFin = b;
           if (p.bend === "y") {
-            const hookLen = Math.min(hookLenRaw, Math.max(altura - 2 * recub, 0));
+            const hookLen = Math.min(Math.max(hookLenRaw, maxDim * 0.35), Math.max(altura - 2 * recub, 0));
             const dirY = p.y < altura / 2 ? 1 : -1;
             hookEndInicio = screen(0, p.z, p.y + dirY * hookLen);
             hookEndFin = screen(lSeg, p.z, p.y + dirY * hookLen);
           } else {
-            const hookLen = Math.min(hookLenRaw, Math.max(base - 2 * recub, 0));
+            const hookLen = Math.min(Math.max(hookLenRaw, maxDim * 0.35), Math.max(base - 2 * recub, 0));
             const dirZ = p.z < base / 2 ? 1 : -1;
             hookEndInicio = screen(0, p.z + dirZ * hookLen, p.y);
             hookEndFin = screen(lSeg, p.z + dirZ * hookLen, p.y);
           }
 
-          const prolongInicio = screen(-prolongacionPx, p.z, p.y);
-          const prolongFin = screen(lSeg + prolongacionPx, p.z, p.y);
+          const prolongInicioEnd = prolongacionEnInicio ? -prolongacionPx - columnaAnchoPx / 2 : -prolongacionPx;
+          const prolongFinEnd = prolongacionEnFin ? lSeg + prolongacionPx + columnaAnchoPx / 2 : lSeg + prolongacionPx;
+          const prolongInicio = screen(prolongInicioEnd, p.z, p.y);
+          const prolongFin = screen(prolongFinEnd, p.z, p.y);
 
           return (
             <g key={i}>
@@ -188,10 +247,10 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
                 <line x1={b.x} y1={b.y} x2={hookEndFin.x} y2={hookEndFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
               )}
               {prolongacionEnInicio && (
-                <line x1={a.x} y1={a.y} x2={prolongInicio.x} y2={prolongInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.65} strokeLinecap="round" />
+                <line x1={a.x} y1={a.y} x2={prolongInicio.x} y2={prolongInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
               )}
               {prolongacionEnFin && (
-                <line x1={b.x} y1={b.y} x2={prolongFin.x} y2={prolongFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.65} strokeLinecap="round" />
+                <line x1={b.x} y1={b.y} x2={prolongFin.x} y2={prolongFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
               )}
             </g>
           );
@@ -207,7 +266,8 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
       </p>
       {(prolongacionEnInicio || prolongacionEnFin) && (
         <p className="text-center text-xs text-steel-500">
-          Línea discontinua: prolongación del acero dentro de la zapata, hacia la columna
+          Línea discontinua y bloque sombreado: acero y estribos que se prolongan dentro de la zapata, hasta la
+          columna (el concreto de la viga solo se metra hasta la luz libre)
         </p>
       )}
     </div>
