@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Square, Save, Tag, Ruler, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { Square, Save, Tag, Ruler, Grid3x3, Shovel, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -46,14 +46,30 @@ export function ZapatasPage() {
     separacionSuperiorY: 25,
     considerarGanchoLongitudinal: false,
     extremosConGancho: 2,
+    incluirMovimientoTierras: true,
+    profundidadExcavacion: 0.7,
+    sobreanchoExcavacion: 10,
+    porcentajeEsponjamiento: 25,
   });
 
   const result = useMemo(() => calcularZapata(input), [input]);
 
   const lines: MetradoLine[] = [
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Excavación para zapatas aisladas (terreno normal)", unidad: "m³", cantidad: result.volumenExcavacion },
+          { partida: "Refine y nivelación de fondo de excavación", unidad: "m²", cantidad: result.areaNivelacionFondo },
+        ]
+      : []),
     { partida: "Concreto f'c=210 kg/cm² en zapatas", unidad: "m³", cantidad: result.volumenConcreto },
     ...lineasAceroPorDiametro(result.desgloseAcero),
     { partida: "Encofrado y desencofrado de zapatas", unidad: "m²", cantidad: result.encofradoM2 },
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Relleno y compactado con material propio", unidad: "m³", cantidad: result.volumenRelleno },
+          { partida: "Eliminación de material excedente", unidad: "m³", cantidad: result.volumenEliminacionEsponjado },
+        ]
+      : []),
   ];
 
   function update<K extends keyof ZapataInput>(key: K, value: ZapataInput[K]) {
@@ -146,6 +162,45 @@ export function ZapatasPage() {
                 helper="Mínimo 7.5 cm, concreto contra el suelo (E.060 Art. 7.7.1a)"
               />
             </div>
+          </SectionCard>
+
+          <SectionCard title="Movimiento de tierras" icon={<Shovel size={16} className="text-navy-700" />}>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={input.incluirMovimientoTierras}
+                onChange={(e) => update("incluirMovimientoTierras", e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+              />
+              <span className="text-sm font-medium text-navy-800">
+                Incluir excavación, relleno y eliminación en el metrado de este grupo de zapatas
+              </span>
+            </label>
+            {input.incluirMovimientoTierras && (
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Profundidad de excavación"
+                  unit="m"
+                  value={input.profundidadExcavacion}
+                  onChange={(v) => update("profundidadExcavacion", v)}
+                  helper="Desde el nivel de terreno hasta el fondo de la zapata"
+                />
+                <NumberField
+                  label="Sobreancho de trabajo (por lado)"
+                  unit="cm"
+                  value={input.sobreanchoExcavacion}
+                  onChange={(v) => update("sobreanchoExcavacion", v)}
+                  helper="En las dos direcciones; típico 10 cm"
+                />
+                <NumberField
+                  label="Esponjamiento del material"
+                  unit="%"
+                  value={input.porcentajeEsponjamiento}
+                  onChange={(v) => update("porcentajeEsponjamiento", v)}
+                  helper="Para eliminación/acarreo; típico 25-30%"
+                />
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
@@ -260,6 +315,13 @@ export function ZapatasPage() {
               <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
               <ResultMetric label="Peso de concreto" value={result.pesoConcreto} unit="kg" accent="navy" />
               <ResultMetric label="Área de encofrado" value={result.encofradoM2} unit="m²" accent="amber" />
+              {input.incluirMovimientoTierras && (
+                <>
+                  <ResultMetric label="Volumen excavado" value={result.volumenExcavacion} unit="m³" />
+                  <ResultMetric label="Relleno y compactado" value={result.volumenRelleno} unit="m³" />
+                  <ResultMetric label="Eliminación (esponjado)" value={result.volumenEliminacionEsponjado} unit="m³" />
+                </>
+              )}
               <ResultMetric label="Barras malla inf. (X)" value={result.numeroBarrasInferiorX} unit="und" />
               <ResultMetric label="Barras malla inf. (Y)" value={result.numeroBarrasInferiorY} unit="und" />
               <ResultMetric label="Peso malla inferior" value={result.pesoMallaInferior} unit="kg" accent="steel" />

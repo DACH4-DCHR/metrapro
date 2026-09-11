@@ -1,6 +1,7 @@
 import { CONCRETE_DENSITY_KG_M3, getRebar } from "../materials";
 import type { AceroItem } from "./aceroResumen";
 import { longitudGanchoBarra90 } from "./ganchos";
+import { calcularRellenoYEliminacion } from "./movimientoTierras";
 
 export interface ZapataInput {
   numeroZapatas: number;
@@ -26,6 +27,14 @@ export interface ZapataInput {
   // zapata). Opcional: depende del detallado de cada proyecto.
   considerarGanchoLongitudinal: boolean;
   extremosConGancho: number; // 0, 1 ó 2 extremos por barra, si se considera
+
+  // Movimiento de tierras: excavación del pozo de la zapata (sobreancho en las dos
+  // direcciones en planta), relleno y compactado con material propio, y eliminación
+  // del material excedente que desplaza el propio concreto de la zapata.
+  incluirMovimientoTierras: boolean;
+  profundidadExcavacion: number; // m, desde el nivel de terreno hasta el fondo de la zapata
+  sobreanchoExcavacion: number; // cm, holgura por lado para encofrar y compactar (típico 10 cm)
+  porcentajeEsponjamiento: number; // %, esponjamiento del material excedente (típico 25-30%)
 }
 
 export interface ZapataResult {
@@ -42,6 +51,14 @@ export interface ZapataResult {
   pesoAceroTotal: number; // kg
   longitudTotalFierro: number; // m
   desgloseAcero: AceroItem[];
+  // Movimiento de tierras (solo cuando incluirMovimientoTierras es true)
+  largoExcavacion: number; // m
+  anchoExcavacion: number; // m
+  volumenExcavacion: number; // m3
+  areaNivelacionFondo: number; // m2
+  volumenRelleno: number; // m3
+  volumenEliminacion: number; // m3
+  volumenEliminacionEsponjado: number; // m3
   warnings: string[];
 }
 
@@ -134,6 +151,28 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
       : []),
   ];
 
+  // Movimiento de tierras: el pozo de cada zapata es más ancho y más largo que la
+  // propia zapata (sobreancho de trabajo en las dos direcciones en planta), y el
+  // volumen que desplaza el relleno es exactamente el volumen de concreto ya
+  // calculado arriba (no se le vuelve a pedir al usuario).
+  const sobreanchoM = (Math.max(input.sobreanchoExcavacion, 0) * 2) / 100;
+  const largoExcavacion = input.incluirMovimientoTierras ? input.largo + sobreanchoM : 0;
+  const anchoExcavacion = input.incluirMovimientoTierras ? input.ancho + sobreanchoM : 0;
+  const volumenExcavacion = input.incluirMovimientoTierras
+    ? largoExcavacion * anchoExcavacion * Math.max(input.profundidadExcavacion, 0) * input.numeroZapatas
+    : 0;
+  const areaNivelacionFondo = input.incluirMovimientoTierras ? largoExcavacion * anchoExcavacion * input.numeroZapatas : 0;
+  const { volumenRelleno, volumenEliminacion, volumenEliminacionEsponjado, warning: warningRelleno } =
+    calcularRellenoYEliminacion({
+      volumenExcavacion,
+      volumenOcupadoCimentacion: volumenConcreto,
+      porcentajeEsponjamiento: input.porcentajeEsponjamiento,
+    });
+  if (input.incluirMovimientoTierras && warningRelleno) warnings.push(warningRelleno);
+  if (input.incluirMovimientoTierras && input.profundidadExcavacion < peralteM) {
+    warnings.push("La profundidad de excavación debe ser al menos igual al peralte de la zapata.");
+  }
+
   return {
     areaPlanta,
     volumenConcreto,
@@ -148,6 +187,13 @@ export function calcularZapata(input: ZapataInput): ZapataResult {
     pesoAceroTotal,
     longitudTotalFierro,
     desgloseAcero,
+    largoExcavacion,
+    anchoExcavacion,
+    volumenExcavacion,
+    areaNivelacionFondo,
+    volumenRelleno,
+    volumenEliminacion,
+    volumenEliminacionEsponjado,
     warnings,
   };
 }

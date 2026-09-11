@@ -2,6 +2,7 @@ import { getRebar, type RebarSize } from "../materials";
 import type { BarraGrupo } from "./viga";
 import type { AceroItem } from "./aceroResumen";
 import { longitudGanchoBarra90, longitudGanchoEstribo135 } from "./ganchos";
+import { calcularRellenoYEliminacion } from "./movimientoTierras";
 
 export type { BarraGrupo };
 
@@ -28,6 +29,15 @@ export interface VigaCimentacionInput {
   considerarProlongacionZapata: boolean;
   longitudProlongacionZapata: number; // m, por extremo que ingresa a una zapata
   extremosConProlongacion: number; // 0, 1 ó 2 extremos por barra longitudinal, si se considera
+
+  // Movimiento de tierras: excavación de la zanja continua (sobreancho solo en el
+  // ancho, ya que "luzLibre" es la longitud del tramo), relleno y compactado con
+  // material propio, y eliminación del material excedente que desplaza el propio
+  // concreto de la viga.
+  incluirMovimientoTierras: boolean;
+  profundidadExcavacion: number; // m, desde el nivel de terreno hasta el fondo de la viga
+  sobreanchoExcavacion: number; // cm, holgura por lado para encofrar y compactar (típico 10 cm)
+  porcentajeEsponjamiento: number; // %, esponjamiento del material excedente (típico 25-30%)
 }
 
 export interface VigaCimentacionResult {
@@ -50,6 +60,13 @@ export interface VigaCimentacionResult {
   dimensionMinimaSugeridaCm: number; // E.060 Art. 21.12.3.2: luz libre/20, máx. 45 cm
   separacionMaximaSugeridaCm: number; // E.060 Art. 21.12.3.2: mín(menor dimensión, 30 cm, 16·db)
   desgloseAcero: AceroItem[];
+  // Movimiento de tierras (solo cuando incluirMovimientoTierras es true)
+  anchoExcavacion: number; // m
+  volumenExcavacion: number; // m3
+  areaNivelacionFondo: number; // m2
+  volumenRelleno: number; // m3
+  volumenEliminacion: number; // m3
+  volumenEliminacionEsponjado: number; // m3
   warnings: string[];
 }
 
@@ -148,6 +165,23 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     warnings.push("Indica la longitud de prolongación del acero dentro de la zapata (distancia hasta la columna).");
   }
 
+  const sobreanchoM = (Math.max(input.sobreanchoExcavacion, 0) * 2) / 100;
+  const anchoExcavacion = input.incluirMovimientoTierras ? baseM + sobreanchoM : 0;
+  const volumenExcavacion = input.incluirMovimientoTierras
+    ? anchoExcavacion * input.luzLibre * Math.max(input.profundidadExcavacion, 0) * input.numeroVigas
+    : 0;
+  const areaNivelacionFondo = input.incluirMovimientoTierras ? anchoExcavacion * input.luzLibre * input.numeroVigas : 0;
+  const { volumenRelleno, volumenEliminacion, volumenEliminacionEsponjado, warning: warningRelleno } =
+    calcularRellenoYEliminacion({
+      volumenExcavacion,
+      volumenOcupadoCimentacion: volumenConcreto,
+      porcentajeEsponjamiento: input.porcentajeEsponjamiento,
+    });
+  if (input.incluirMovimientoTierras && warningRelleno) warnings.push(warningRelleno);
+  if (input.incluirMovimientoTierras && input.profundidadExcavacion < alturaM) {
+    warnings.push("La profundidad de excavación debe ser al menos igual a la altura de la viga de cimentación.");
+  }
+
   const desgloseAcero: AceroItem[] = [
     ...grupos.map((g) => ({
       diametroId: g.diametroId,
@@ -176,6 +210,12 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     dimensionMinimaSugeridaCm,
     separacionMaximaSugeridaCm,
     desgloseAcero,
+    anchoExcavacion,
+    volumenExcavacion,
+    areaNivelacionFondo,
+    volumenRelleno,
+    volumenEliminacion,
+    volumenEliminacionEsponjado,
     warnings,
   };
 }

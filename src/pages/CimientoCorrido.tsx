@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { StretchHorizontal, Save, Tag, Ruler, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { StretchHorizontal, Save, Tag, Ruler, Shovel, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -29,16 +29,32 @@ export function CimientoCorridoPage() {
     ancho: 50,
     altura: 60,
     porcentajePiedra: 30,
+    incluirMovimientoTierras: true,
+    profundidadExcavacion: 0.7,
+    sobreanchoExcavacion: 10,
+    porcentajeEsponjamiento: 25,
   });
 
   const result = useMemo(() => calcularCimientoCorrido(input), [input]);
 
   const lines: MetradoLine[] = [
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Excavación de zanjas para cimiento corrido (terreno normal)", unidad: "m³", cantidad: result.volumenExcavacion },
+          { partida: "Refine y nivelación de fondo de excavación", unidad: "m²", cantidad: result.areaNivelacionFondo },
+        ]
+      : []),
     {
       partida: `Concreto ciclópeo en cimientos corridos f'c=140 kg/cm² + ${input.porcentajePiedra}% P.G.`,
       unidad: "m³",
       cantidad: result.volumenTotal,
     },
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Relleno y compactado con material propio", unidad: "m³", cantidad: result.volumenRelleno },
+          { partida: "Eliminación de material excedente", unidad: "m³", cantidad: result.volumenEliminacionEsponjado },
+        ]
+      : []),
   ];
 
   function update<K extends keyof CimientoCorridoInput>(key: K, value: CimientoCorridoInput[K]) {
@@ -136,6 +152,45 @@ export function CimientoCorridoPage() {
               </div>
             </div>
           </SectionCard>
+
+          <SectionCard title="Movimiento de tierras" icon={<Shovel size={16} className="text-navy-700" />}>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={input.incluirMovimientoTierras}
+                onChange={(e) => update("incluirMovimientoTierras", e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+              />
+              <span className="text-sm font-medium text-navy-800">
+                Incluir excavación, relleno y eliminación en el metrado de este tramo
+              </span>
+            </label>
+            {input.incluirMovimientoTierras && (
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Profundidad de excavación"
+                  unit="m"
+                  value={input.profundidadExcavacion}
+                  onChange={(v) => update("profundidadExcavacion", v)}
+                  helper="Desde el nivel de terreno hasta el fondo del cimiento"
+                />
+                <NumberField
+                  label="Sobreancho de trabajo (por lado)"
+                  unit="cm"
+                  value={input.sobreanchoExcavacion}
+                  onChange={(v) => update("sobreanchoExcavacion", v)}
+                  helper="Típico 10 cm"
+                />
+                <NumberField
+                  label="Esponjamiento del material"
+                  unit="%"
+                  value={input.porcentajeEsponjamiento}
+                  onChange={(v) => update("porcentajeEsponjamiento", v)}
+                  helper="Para eliminación/acarreo; típico 25-30%"
+                />
+              </div>
+            )}
+          </SectionCard>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -146,6 +201,13 @@ export function CimientoCorridoPage() {
               <ResultMetric label="Volumen total" value={result.volumenTotal} unit="m³" accent="navy" />
               <ResultMetric label="Volumen de piedra grande" value={result.volumenPiedra} unit="m³" />
               <ResultMetric label="Volumen de concreto simple" value={result.volumenConcretoSimple} unit="m³" accent="navy" />
+              {input.incluirMovimientoTierras && (
+                <>
+                  <ResultMetric label="Volumen excavado" value={result.volumenExcavacion} unit="m³" />
+                  <ResultMetric label="Relleno y compactado" value={result.volumenRelleno} unit="m³" />
+                  <ResultMetric label="Eliminación (esponjado)" value={result.volumenEliminacionEsponjado} unit="m³" />
+                </>
+              )}
             </div>
           </SectionCard>
 

@@ -5,6 +5,7 @@ import { RotationSlider } from "./RotationSlider";
 
 interface MovimientoTierrasIsometricProps {
   input: MovimientoTierrasInput;
+  largoExcavacion: number; // m, ya con sobreancho de trabajo (modo "zapata")
   anchoExcavacion: number; // m, ya con sobreancho de trabajo
   volumenExcavacion: number; // m3, ya calculado
 }
@@ -13,9 +14,9 @@ const VIEW_W = 300;
 const VIEW_H = 240;
 const MARGIN = 22;
 
-export function MovimientoTierrasIsometric({ input, anchoExcavacion, volumenExcavacion }: MovimientoTierrasIsometricProps) {
+export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcavacion, volumenExcavacion }: MovimientoTierrasIsometricProps) {
   const [azimuth, setAzimuth] = useState(ISO_DEFAULT_AZIMUTH);
-  const largo = Math.max(input.largo, 0);
+  const largo = Math.max(largoExcavacion, 0);
   const profundidad = Math.max(input.profundidad, 0);
   if (anchoExcavacion <= 0 || largo <= 0 || profundidad <= 0) {
     return <p className="text-sm text-steel-500">Ingresa un largo, ancho y profundidad válidos para ver la vista isométrica.</p>;

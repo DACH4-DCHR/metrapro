@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GitCommitHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { GitCommitHorizontal, Save, Plus, Trash2, Tag, Ruler, Grid3x3, Shovel, Eye, Box, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
@@ -59,14 +59,30 @@ export function VigasCimentacionPage() {
     considerarProlongacionZapata: false,
     longitudProlongacionZapata: 0.5,
     extremosConProlongacion: 2,
+    incluirMovimientoTierras: true,
+    profundidadExcavacion: 0.7,
+    sobreanchoExcavacion: 10,
+    porcentajeEsponjamiento: 25,
   });
 
   const result = useMemo(() => calcularVigaCimentacion(input), [input]);
 
   const lines: MetradoLine[] = [
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Excavación de zanjas para vigas de cimentación (terreno normal)", unidad: "m³", cantidad: result.volumenExcavacion },
+          { partida: "Refine y nivelación de fondo de excavación", unidad: "m²", cantidad: result.areaNivelacionFondo },
+        ]
+      : []),
     { partida: "Concreto f'c=210 kg/cm² en vigas de cimentación", unidad: "m³", cantidad: result.volumenConcreto },
     ...lineasAceroPorDiametro(result.desgloseAcero),
     { partida: "Encofrado y desencofrado de vigas de cimentación", unidad: "m²", cantidad: result.areaEncofrado },
+    ...(input.incluirMovimientoTierras
+      ? [
+          { partida: "Relleno y compactado con material propio", unidad: "m³", cantidad: result.volumenRelleno },
+          { partida: "Eliminación de material excedente", unidad: "m³", cantidad: result.volumenEliminacionEsponjado },
+        ]
+      : []),
   ];
 
   function update<K extends keyof VigaCimentacionInput>(key: K, value: VigaCimentacionInput[K]) {
@@ -188,6 +204,45 @@ export function VigasCimentacionPage() {
               Dimensión mínima sugerida: {numberFormatter.format(result.dimensionMinimaSugeridaCm)} cm (luz libre/20,
               máx. 45 cm — E.060 Art. 21.12.3.2)
             </p>
+          </SectionCard>
+
+          <SectionCard title="Movimiento de tierras" icon={<Shovel size={16} className="text-navy-700" />}>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={input.incluirMovimientoTierras}
+                onChange={(e) => update("incluirMovimientoTierras", e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+              />
+              <span className="text-sm font-medium text-navy-800">
+                Incluir excavación, relleno y eliminación en el metrado de este grupo de vigas
+              </span>
+            </label>
+            {input.incluirMovimientoTierras && (
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Profundidad de excavación"
+                  unit="m"
+                  value={input.profundidadExcavacion}
+                  onChange={(v) => update("profundidadExcavacion", v)}
+                  helper="Desde el nivel de terreno hasta el fondo de la viga"
+                />
+                <NumberField
+                  label="Sobreancho de trabajo (por lado)"
+                  unit="cm"
+                  value={input.sobreanchoExcavacion}
+                  onChange={(v) => update("sobreanchoExcavacion", v)}
+                  helper="Típico 10 cm"
+                />
+                <NumberField
+                  label="Esponjamiento del material"
+                  unit="%"
+                  value={input.porcentajeEsponjamiento}
+                  onChange={(v) => update("porcentajeEsponjamiento", v)}
+                  helper="Para eliminación/acarreo; típico 25-30%"
+                />
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
@@ -326,6 +381,13 @@ export function VigasCimentacionPage() {
               <ResultMetric label="Área de sección" value={result.areaSeccion} unit="m²" />
               <ResultMetric label="Volumen de concreto" value={result.volumenConcreto} unit="m³" accent="navy" />
               <ResultMetric label="Área de encofrado" value={result.areaEncofrado} unit="m²" accent="amber" />
+              {input.incluirMovimientoTierras && (
+                <>
+                  <ResultMetric label="Volumen excavado" value={result.volumenExcavacion} unit="m³" />
+                  <ResultMetric label="Relleno y compactado" value={result.volumenRelleno} unit="m³" />
+                  <ResultMetric label="Eliminación (esponjado)" value={result.volumenEliminacionEsponjado} unit="m³" />
+                </>
+              )}
               <ResultMetric label="N° barras longitudinales" value={result.numeroBarrasLongitudinales} unit="und" />
               <ResultMetric label="Peso acero longitudinal" value={result.pesoAceroLongitudinal} unit="kg" accent="steel" />
               <ResultMetric label="N° de estribos (total)" value={result.numeroEstribosTotal} unit="und" />

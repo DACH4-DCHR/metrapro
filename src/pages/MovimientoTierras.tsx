@@ -3,6 +3,7 @@ import { Shovel, Save, Tag, Ruler, Eye, Box, Calculator, ClipboardList, ListChec
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
+import { SelectField } from "../components/ui/SelectField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
@@ -10,9 +11,21 @@ import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
 import { MovimientoTierrasSection } from "../components/diagrams/MovimientoTierrasSection";
 import { MovimientoTierrasIsometric } from "../components/diagrams/MovimientoTierrasIsometric";
-import { calcularMovimientoTierras, type MovimientoTierrasInput } from "../lib/calc/movimientoTierras";
+import { calcularMovimientoTierras, type MovimientoTierrasInput, type TipoExcavacion } from "../lib/calc/movimientoTierras";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
+
+const tipoExcavacionOptions: { value: TipoExcavacion; label: string }[] = [
+  { value: "zapata", label: "Zapata aislada (pozo, sobreancho en ambas direcciones)" },
+  { value: "zanja", label: "Cimiento corrido / viga de cimentación (zanja continua)" },
+  { value: "general", label: "General (zanja/pozo, sobreancho solo en el ancho)" },
+];
+
+const partidaExcavacionPorTipo: Record<TipoExcavacion, string> = {
+  zapata: "Excavación para zapatas aisladas (terreno normal)",
+  zanja: "Excavación de zanjas para cimiento corrido / vigas de cimentación (terreno normal)",
+  general: "Excavación de zanjas/pozos para cimentación (terreno normal)",
+};
 
 function nextName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "movimientoTierras").length;
@@ -25,6 +38,7 @@ export function MovimientoTierrasPage() {
   const [nombre, setNombre] = useState(nextName);
 
   const [input, setInput] = useState<MovimientoTierrasInput>({
+    tipoExcavacion: "general",
     largo: 10,
     ancho: 0.5,
     profundidad: 1.2,
@@ -37,7 +51,7 @@ export function MovimientoTierrasPage() {
   const result = useMemo(() => calcularMovimientoTierras(input), [input]);
 
   const lines: MetradoLine[] = [
-    { partida: "Excavación de zanjas/pozos para cimentación (terreno normal)", unidad: "m³", cantidad: result.volumenExcavacion },
+    { partida: partidaExcavacionPorTipo[input.tipoExcavacion], unidad: "m³", cantidad: result.volumenExcavacion },
     { partida: "Refine y nivelación de fondo de excavación", unidad: "m²", cantidad: result.areaNivelacionFondo },
     { partida: "Relleno y compactado con material propio", unidad: "m³", cantidad: result.volumenRelleno },
     { partida: "Eliminación de material excedente", unidad: "m³", cantidad: result.volumenEliminacionEsponjado },
@@ -92,7 +106,12 @@ export function MovimientoTierrasPage() {
           </SectionCard>
 
           <SectionCard title="Vista isométrica de la excavación (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
-            <MovimientoTierrasIsometric input={input} anchoExcavacion={result.anchoExcavacion} volumenExcavacion={result.volumenExcavacion} />
+            <MovimientoTierrasIsometric
+              input={input}
+              largoExcavacion={result.largoExcavacion}
+              anchoExcavacion={result.anchoExcavacion}
+              volumenExcavacion={result.volumenExcavacion}
+            />
           </SectionCard>
         </StickyViewsRow>
 
@@ -105,12 +124,24 @@ export function MovimientoTierrasPage() {
           <SectionCard title="Geometría de la excavación" icon={<Ruler size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
+                <SelectField
+                  label="Tipo de excavación"
+                  value={input.tipoExcavacion}
+                  onChange={(v) => update("tipoExcavacion", v as TipoExcavacion)}
+                  options={tipoExcavacionOptions}
+                />
+              </div>
+              <div className="col-span-2">
                 <NumberField
                   label="Longitud"
                   unit="m"
                   value={input.largo}
                   onChange={(v) => update("largo", v)}
-                  helper="Longitud total de la zanja o del tramo repetido"
+                  helper={
+                    input.tipoExcavacion === "zapata"
+                      ? "Largo del pozo (dirección X de la zapata)"
+                      : "Longitud total de la zanja o del tramo repetido"
+                  }
                 />
               </div>
               <NumberField
@@ -170,6 +201,9 @@ export function MovimientoTierrasPage() {
 
           <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+              {input.tipoExcavacion === "zapata" && (
+                <ResultMetric label="Largo de excavación" value={result.largoExcavacion} unit="m" />
+              )}
               <ResultMetric label="Ancho de excavación" value={result.anchoExcavacion} unit="m" />
               <ResultMetric label="Volumen excavado" value={result.volumenExcavacion} unit="m³" accent="navy" />
               <ResultMetric label="Área de nivelación de fondo" value={result.areaNivelacionFondo} unit="m²" />
