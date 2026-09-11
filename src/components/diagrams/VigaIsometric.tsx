@@ -48,8 +48,11 @@ export function VigaIsometric({ input }: VigaIsometricProps) {
     const right = base - recub;
     return ids.map((_, i) => (ids.length > 1 ? left + (i * (right - left)) / (ids.length - 1) : (left + right) / 2));
   }
-  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: altura - recub, diametroId: bottomIds[i] }));
-  const topPos = rowZ(topIds).map((z, i) => ({ z, y: recub, diametroId: topIds[i] }));
+  // Nota de orientación: en esta proyección, un valor de "y" MENOR se dibuja más abajo
+  // en la pantalla (y uno MAYOR, más arriba) — por eso la malla inferior usa y=recub y
+  // la superior usa y=altura-recub, igual que en la vista en planta.
+  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: recub, diametroId: bottomIds[i] }));
+  const topPos = rowZ(topIds).map((z, i) => ({ z, y: altura - recub, diametroId: topIds[i] }));
   const barPositions = [...bottomPos, ...topPos];
 
   const boundingRaw = [

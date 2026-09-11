@@ -49,8 +49,12 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
   // "bend": eje en el que dobla el gancho (hacia el centro de la sección) — "y" para
   // barras de malla inf./sup. (doblan en altura), "z" para el acero lateral (doblan en
   // el ancho de la base).
-  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: altura - recub, diametroId: bottomIds[i], bend: "y" as const }));
-  const topPos = rowZ(topIds).map((z, i) => ({ z, y: recub, diametroId: topIds[i], bend: "y" as const }));
+  // Nota de orientación: en esta proyección, un valor de "y" MENOR se dibuja más abajo
+  // en la pantalla (y un valor MAYOR, más arriba) — por eso la malla inferior usa
+  // y=recub (abajo) y la superior usa y=altura-recub (arriba), igual que en la vista en
+  // planta, para que ambas vistas concuerden.
+  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: recub, diametroId: bottomIds[i], bend: "y" as const }));
+  const topPos = rowZ(topIds).map((z, i) => ({ z, y: altura - recub, diametroId: topIds[i], bend: "y" as const }));
 
   // Acero lateral (piel): "cantidad" es el total en ambas caras del alma, repartido en
   // dos columnas (z=recub y z=base-recub) distribuidas verticalmente entre las mallas.
@@ -217,40 +221,49 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
           const rebar = getRebar(p.diametroId);
           const strokeWidth = Math.max(1.8, 1.8 * (rebar.diameterMm / 16));
 
+          // Punto (z,y) al que dobla el gancho, hacia el centro de la sección — el
+          // gancho se dibuja en el extremo real de la barra: si esta prolonga dentro
+          // de una zapata, ese extremo real es el final de la prolongación (junto a
+          // la columna), no el encuentro viga-zapata.
           const hookLenRaw = longitudGanchoBarra90(p.diametroId) * 100;
-          let hookEndInicio = a;
-          let hookEndFin = b;
+          let hookZ = p.z;
+          let hookY = p.y;
           if (p.bend === "y") {
             const hookLen = Math.min(Math.max(hookLenRaw, maxDim * 0.35), Math.max(altura - 2 * recub, 0));
             const dirY = p.y < altura / 2 ? 1 : -1;
-            hookEndInicio = screen(0, p.z, p.y + dirY * hookLen);
-            hookEndFin = screen(lSeg, p.z, p.y + dirY * hookLen);
+            hookY = p.y + dirY * hookLen;
           } else {
             const hookLen = Math.min(Math.max(hookLenRaw, maxDim * 0.35), Math.max(base - 2 * recub, 0));
             const dirZ = p.z < base / 2 ? 1 : -1;
-            hookEndInicio = screen(0, p.z + dirZ * hookLen, p.y);
-            hookEndFin = screen(lSeg, p.z + dirZ * hookLen, p.y);
+            hookZ = p.z + dirZ * hookLen;
           }
 
           const prolongInicioEnd = prolongacionEnInicio ? -prolongacionPx - columnaAnchoPx / 2 : -prolongacionPx;
           const prolongFinEnd = prolongacionEnFin ? lSeg + prolongacionPx + columnaAnchoPx / 2 : lSeg + prolongacionPx;
-          const prolongInicio = screen(prolongInicioEnd, p.z, p.y);
-          const prolongFin = screen(prolongFinEnd, p.z, p.y);
+
+          // Extremo real de cada lado: el final de la prolongación si está activa,
+          // si no, el propio extremo de la viga (x=0 ó x=lSeg).
+          const xExtremoInicio = prolongacionEnInicio ? prolongInicioEnd : 0;
+          const xExtremoFin = prolongacionEnFin ? prolongFinEnd : lSeg;
+          const extremoInicio = screen(xExtremoInicio, p.z, p.y);
+          const extremoFin = screen(xExtremoFin, p.z, p.y);
+          const ganchoInicioPt = screen(xExtremoInicio, hookZ, hookY);
+          const ganchoFinPt = screen(xExtremoFin, hookZ, hookY);
 
           return (
             <g key={i}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
-              {ganchoEnInicio && (
-                <line x1={a.x} y1={a.y} x2={hookEndInicio.x} y2={hookEndInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
-              )}
-              {ganchoEnFin && (
-                <line x1={b.x} y1={b.y} x2={hookEndFin.x} y2={hookEndFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
-              )}
               {prolongacionEnInicio && (
-                <line x1={a.x} y1={a.y} x2={prolongInicio.x} y2={prolongInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
+                <line x1={a.x} y1={a.y} x2={extremoInicio.x} y2={extremoInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
               )}
               {prolongacionEnFin && (
-                <line x1={b.x} y1={b.y} x2={prolongFin.x} y2={prolongFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
+                <line x1={b.x} y1={b.y} x2={extremoFin.x} y2={extremoFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.75} strokeLinecap="round" />
+              )}
+              {ganchoEnInicio && (
+                <line x1={extremoInicio.x} y1={extremoInicio.y} x2={ganchoInicioPt.x} y2={ganchoInicioPt.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
+              )}
+              {ganchoEnFin && (
+                <line x1={extremoFin.x} y1={extremoFin.y} x2={ganchoFinPt.x} y2={ganchoFinPt.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
               )}
             </g>
           );
