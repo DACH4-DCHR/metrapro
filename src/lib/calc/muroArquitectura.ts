@@ -32,6 +32,7 @@ export interface MuroArquitecturaResult {
   areaMuroBruta: number; // m2
   areaMuroNeta: number; // m2, descontando vanos
   numeroUnidades: number;
+  unidadesPorM2: number; // rendimiento (sin desperdicio), unidades por m2 de muro
   volumenMortero: number; // m3
   volumenConcretoColumnetas: number; // m3
   encofradoColumnetas: number; // m2
@@ -58,6 +59,7 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
   const areaUnidadEfectiva = (largoUnidadM + juntaM) * (alturaUnidadM + juntaM);
   const numeroUnidadesNeto = areaUnidadEfectiva > 0 ? areaMuroNeta / areaUnidadEfectiva : 0;
   const numeroUnidades = Math.ceil(numeroUnidadesNeto * (1 + input.desperdicioPct / 100));
+  const unidadesPorM2 = areaUnidadEfectiva > 0 ? 1 / areaUnidadEfectiva : 0;
 
   const volumenMuroNeto = areaMuroNeta * espesorM;
   const volumenUnidades = numeroUnidadesNeto * largoUnidadM * alturaUnidadM * espesorM;
@@ -133,6 +135,7 @@ export function calcularMuroArquitectura(input: MuroArquitecturaInput): MuroArqu
     areaMuroBruta,
     areaMuroNeta,
     numeroUnidades,
+    unidadesPorM2,
     volumenMortero,
     volumenConcretoColumnetas,
     encofradoColumnetas,

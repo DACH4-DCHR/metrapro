@@ -348,6 +348,7 @@ export function MurosArquitecturaPage() {
               <ResultMetric label="Área bruta" value={result.areaMuroBruta} unit="m²" />
               <ResultMetric label="Área neta (sin vanos)" value={result.areaMuroNeta} unit="m²" />
               <ResultMetric label="N° de unidades" value={result.numeroUnidades} unit="und" />
+              <ResultMetric label="Ladrillos por m²" value={result.unidadesPorM2} unit="und/m²" />
               <ResultMetric label="Volumen de mortero" value={result.volumenMortero} unit="m³" accent="navy" />
               {input.incluirArriostres && (
                 <>
