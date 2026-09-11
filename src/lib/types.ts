@@ -2,6 +2,7 @@ export type ModuleType =
   | "losa"
   | "viga"
   | "escalera"
+  | "movimientoTierras"
   | "zapata"
   | "cimientoCorrido"
   | "sobrecimiento"

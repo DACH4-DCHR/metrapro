@@ -14,6 +14,7 @@ import {
   BrickWall,
   LayoutPanelTop,
   Grid2x2,
+  Shovel,
   HardHat,
   Building2,
   AlertTriangle,
@@ -27,13 +28,18 @@ import {
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
 
-// Orden constructivo/normativo: cimentación primero (de abajo hacia arriba: zapatas,
-// cimiento corrido, sobrecimiento, vigas de cimentación), luego la superestructura
-// (vigas, losas) y finalmente escaleras. Los módulos de un mismo grupo comparten
-// sección visual en el menú.
+// Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
+// cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
+// corrido, sobrecimiento, vigas de cimentación), luego la superestructura (vigas,
+// losas) y finalmente escaleras. Los módulos de un mismo grupo comparten sección
+// visual en el menú.
 const dashboardItem = { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true };
 
 const navGroups: { section: string; items: { to: string; label: string; icon: typeof Layers3 }[] }[] = [
+  {
+    section: "Movimiento de Tierras",
+    items: [{ to: "/movimiento-tierras", label: "Movimiento de Tierras", icon: Shovel }],
+  },
   {
     section: "Cimentación",
     items: [

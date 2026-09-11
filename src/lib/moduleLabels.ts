@@ -4,6 +4,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   losa: "Losa Aligerada",
   viga: "Viga",
   escalera: "Escalera",
+  movimientoTierras: "Movimiento de Tierras",
   zapata: "Zapata",
   cimientoCorrido: "Cimiento Corrido",
   sobrecimiento: "Sobrecimiento",

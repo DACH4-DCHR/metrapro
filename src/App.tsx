@@ -6,6 +6,7 @@ import { DashboardPage } from "./pages/Dashboard";
 import { LosaAligeradaPage } from "./pages/LosaAligerada";
 import { VigasPage } from "./pages/Vigas";
 import { EscalerasPage } from "./pages/Escaleras";
+import { MovimientoTierrasPage } from "./pages/MovimientoTierras";
 import { ZapatasPage } from "./pages/Zapatas";
 import { CimientoCorridoPage } from "./pages/CimientoCorrido";
 import { SobrecimientoPage } from "./pages/Sobrecimiento";
@@ -64,6 +65,7 @@ function ProjectGate() {
           <Route path="/losa-aligerada" element={<LosaAligeradaPage />} />
           <Route path="/vigas" element={<VigasPage />} />
           <Route path="/escaleras" element={<EscalerasPage />} />
+          <Route path="/movimiento-tierras" element={<MovimientoTierrasPage />} />
           <Route path="/zapatas" element={<ZapatasPage />} />
           <Route path="/cimiento-corrido" element={<CimientoCorridoPage />} />
           <Route path="/sobrecimiento" element={<SobrecimientoPage />} />
