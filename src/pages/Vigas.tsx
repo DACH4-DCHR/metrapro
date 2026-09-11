@@ -201,7 +201,7 @@ export function VigasPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+          <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
             <VigaCrossSection input={input} />
           </SectionCard>
 
@@ -213,6 +213,7 @@ export function VigasPage() {
             className="col-span-2"
             title="Distribución de estribos en elevación"
             icon={<Eye size={16} className="text-navy-700" />}
+            collapsible
           >
             <VigaElevation input={input} />
           </SectionCard>

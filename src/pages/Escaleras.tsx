@@ -125,7 +125,7 @@ export function EscalerasPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Perfil de escalera (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <SectionCard title="Perfil de escalera (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
               <EscaleraProfile input={input} />
             </SectionCard>
 

@@ -164,7 +164,7 @@ export function MurosAlbanileriaPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Elevación (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <SectionCard title="Elevación (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
               <MuroAlbanileriaElevation input={input} />
             </SectionCard>
 

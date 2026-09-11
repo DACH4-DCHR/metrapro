@@ -140,7 +140,7 @@ export function VigasCimentacionPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <SectionCard title="Sección transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
               <VigaCimentacionCrossSection input={input} />
             </SectionCard>
 

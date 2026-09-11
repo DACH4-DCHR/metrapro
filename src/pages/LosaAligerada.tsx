@@ -128,7 +128,7 @@ export function LosaAligeradaPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Corte transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <SectionCard title="Corte transversal (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
               <LosaCrossSection input={input} />
             </SectionCard>
 

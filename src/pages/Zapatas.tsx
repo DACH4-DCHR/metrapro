@@ -103,7 +103,7 @@ export function ZapatasPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />}>
+            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
               <ZapataPlanView input={input} />
             </SectionCard>
 
