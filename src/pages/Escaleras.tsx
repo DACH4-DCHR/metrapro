@@ -9,7 +9,7 @@ import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
 import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
-import { EscaleraProfile } from "../components/diagrams/EscaleraProfile";
+import { EscaleraPlanView } from "../components/diagrams/EscaleraPlanView";
 import { EscaleraIsometric } from "../components/diagrams/EscaleraIsometric";
 import { calcularEscalera, type EscaleraInput, type TipoEscalera } from "../lib/calc/escalera";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
@@ -47,6 +47,10 @@ export function EscalerasPage() {
     aceroPrincipalSeparacion: 20,
     aceroDistribucionDiametroId: "8",
     aceroDistribucionSeparacion: 25,
+    incluirAceroSuperior: false,
+    diametroSuperiorId: "10",
+    separacionSuperior: 20,
+    longitudBastonSuperior: 0.8,
   });
 
   const result = useMemo(() => calcularEscalera(input), [input]);
@@ -125,8 +129,8 @@ export function EscalerasPage() {
 
       <div className="p-6">
         <StickyViewsRow>
-            <SectionCard title="Perfil de escalera (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
-              <EscaleraProfile input={input} />
+            <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
+              <EscaleraPlanView input={input} />
             </SectionCard>
 
             <SectionCard title="Vista isométrica del acero (3D)" icon={<Box size={16} className="text-navy-700" />} collapsible>
@@ -274,6 +278,44 @@ export function EscalerasPage() {
                 onChange={(v) => updateRoot("aceroDistribucionSeparacion", v)}
               />
             </div>
+
+            <div className="mt-4 border-t border-steel-100 pt-4">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.incluirAceroSuperior}
+                  onChange={(e) => updateRoot("incluirAceroSuperior", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Incluir acero superior (bastones cerca de los apoyos, refuerzo negativo)
+                </span>
+              </label>
+              {input.incluirAceroSuperior && (
+                <div className="mt-3 grid grid-cols-2 gap-4">
+                  <SelectField
+                    label="Ø acero superior"
+                    value={input.diametroSuperiorId}
+                    onChange={(v) => updateRoot("diametroSuperiorId", v)}
+                    options={rebarOptions}
+                  />
+                  <NumberField
+                    label="Separación"
+                    unit="cm"
+                    value={input.separacionSuperior}
+                    onChange={(v) => updateRoot("separacionSuperior", v)}
+                    helper="A lo ancho de la escalera"
+                  />
+                  <NumberField
+                    label="Longitud del bastón"
+                    unit="m"
+                    value={input.longitudBastonSuperior}
+                    onChange={(v) => updateRoot("longitudBastonSuperior", v)}
+                    helper="Por extremo de cada tramo, hacia el interior"
+                  />
+                </div>
+              )}
+            </div>
           </SectionCard>
         </div>
 
@@ -298,6 +340,9 @@ export function EscalerasPage() {
               <ResultMetric label="Acero distribución" value={result.aceroDistribucionKg} unit="kg" accent="steel" />
               {result.aceroDescansoKg > 0 && (
                 <ResultMetric label="Acero en descanso" value={result.aceroDescansoKg} unit="kg" accent="steel" />
+              )}
+              {result.aceroSuperiorKg > 0 && (
+                <ResultMetric label="Acero superior" value={result.aceroSuperiorKg} unit="kg" accent="steel" />
               )}
               <ResultMetric label="Acero total" value={result.aceroTotalKg} unit="kg" accent="steel" />
             </div>

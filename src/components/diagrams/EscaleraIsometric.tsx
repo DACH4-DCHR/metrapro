@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { EscaleraInput } from "../../lib/calc/escalera";
+import { calcularEscaleraLayout, type FlightFootprint } from "../../lib/calc/escaleraLayout";
 import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
 import { RotationSlider } from "./RotationSlider";
 
@@ -12,16 +13,11 @@ const VIEW_W = 320;
 const VIEW_H = 260;
 const MARGIN = 22;
 
-// Un tramo recto de escalera en el espacio (x=ancho perpendicular al avance,
-// z/x según "dir" = dirección de avance, y = altura). Permite ubicar tramo2 con
-// una orientación distinta a tramo1 (recto, giro de 90° o giro de 180°), para que
-// la vista 3D refleje realmente el tipo de escalera elegido.
-interface FlightGeom {
-  origin: { x: number; z: number }; // punto en t=0, wFrac=0
-  dir: { x: number; z: number }; // dirección de avance (unitaria, ±1 en x ó z)
-  perp: { x: number; z: number }; // dirección del ancho (perpendicular a dir)
-  length: number; // desarrollo horizontal, cm
-  width: number; // ancho de la escalera en este tramo, cm
+// Un tramo recto de escalera, con altura, en el espacio (x=ancho perpendicular al
+// avance, z/x según "dir" = dirección de avance, y = altura). Extiende la geometría
+// en planta (FlightFootprint, compartida con la vista en planta) agregándole la
+// pendiente, para que ambas vistas siempre coincidan en la forma del giro.
+interface FlightGeom extends FlightFootprint {
   yStart: number;
   yEnd: number;
 }
@@ -46,82 +42,18 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
     return <p className="text-sm text-steel-500">Ingresa datos válidos del Tramo 1 para ver la vista isométrica.</p>;
   }
 
-  const tramo1: FlightGeom = {
-    origin: { x: 0, z: 0 },
-    dir: { x: 0, z: 1 },
-    perp: { x: 1, z: 0 },
-    length: desarrollo1,
-    width: ancho,
-    yStart: 0,
-    yEnd: altura1,
-  };
-
   const esMultiTramo = input.tipo !== "un_tramo";
-  let landingCorners: { x: number; z: number }[] | null = null;
-  let tramo2: FlightGeom | null = null;
+  const desarrollo2 =
+    esMultiTramo && input.tramo2 ? Math.max(input.tramo2.numeroPeldanos - 1, 0) * input.tramo2.huella : 0;
+  const altura2 = esMultiTramo && input.tramo2 ? input.tramo2.numeroPeldanos * input.tramo2.contrahuella : 0;
+  const landingLargo = esMultiTramo && input.descanso ? Math.max(input.descanso.largo * 100, 1) : 0;
 
-  if (esMultiTramo && input.tramo2 && input.descanso) {
-    const { numeroPeldanos: n2, huella: h2, contrahuella: c2 } = input.tramo2;
-    const desarrollo2 = Math.max(n2 - 1, 0) * h2;
-    const altura2 = n2 * c2;
-    const landingLargo = Math.max(input.descanso.largo * 100, 1);
+  const layout = calcularEscaleraLayout(input.tipo, ancho, desarrollo1, desarrollo2, landingLargo);
 
-    if (desarrollo2 > 0 && altura2 > 0) {
-      if (input.tipo === "dos_tramos") {
-        // Continúa recto en la misma dirección, con un descanso intermedio.
-        landingCorners = [
-          { x: 0, z: desarrollo1 },
-          { x: ancho, z: desarrollo1 },
-          { x: ancho, z: desarrollo1 + landingLargo },
-          { x: 0, z: desarrollo1 + landingLargo },
-        ];
-        tramo2 = {
-          origin: { x: 0, z: desarrollo1 + landingLargo },
-          dir: { x: 0, z: 1 },
-          perp: { x: 1, z: 0 },
-          length: desarrollo2,
-          width: ancho,
-          yStart: altura1,
-          yEnd: altura1 + altura2,
-        };
-      } else if (input.tipo === "L") {
-        // Giro de 90°: el descanso es la esquina, tramo2 avanza en el eje x.
-        landingCorners = [
-          { x: 0, z: desarrollo1 },
-          { x: ancho, z: desarrollo1 },
-          { x: ancho, z: desarrollo1 + landingLargo },
-          { x: 0, z: desarrollo1 + landingLargo },
-        ];
-        tramo2 = {
-          origin: { x: ancho, z: desarrollo1 },
-          dir: { x: 1, z: 0 },
-          perp: { x: 0, z: 1 },
-          length: desarrollo2,
-          width: landingLargo,
-          yStart: altura1,
-          yEnd: altura1 + altura2,
-        };
-      } else if (input.tipo === "U") {
-        // Giro de 180°: tramo2 vuelve en paralelo a tramo1, separado por un pasillo.
-        const gap = ancho * 0.2;
-        landingCorners = [
-          { x: 0, z: desarrollo1 },
-          { x: 2 * ancho + gap, z: desarrollo1 },
-          { x: 2 * ancho + gap, z: desarrollo1 + landingLargo },
-          { x: 0, z: desarrollo1 + landingLargo },
-        ];
-        tramo2 = {
-          origin: { x: ancho + gap, z: desarrollo1 + landingLargo },
-          dir: { x: 0, z: -1 },
-          perp: { x: 1, z: 0 },
-          length: desarrollo2,
-          width: ancho,
-          yStart: altura1,
-          yEnd: altura1 + altura2,
-        };
-      }
-    }
-  }
+  const tramo1: FlightGeom = { ...layout.tramo1, yStart: 0, yEnd: altura1 };
+  const tramo2: FlightGeom | null =
+    layout.tramo2 && altura2 > 0 ? { ...layout.tramo2, yStart: altura1, yEnd: altura1 + altura2 } : null;
+  const landingCorners = tramo2 ? layout.landingCorners : null;
 
   const landingY = altura1;
   const landingEspesorM = input.descanso?.espesor ?? espesor;
@@ -179,8 +111,10 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
 
   const rebarPrincipal = getRebar(input.aceroPrincipalDiametroId);
   const rebarDistribucion = getRebar(input.aceroDistribucionDiametroId);
+  const rebarSuperior = getRebar(input.diametroSuperiorId);
   const sepPrincipalCm = Math.max(input.aceroPrincipalSeparacion, 1);
   const sepDistribucionCm = Math.max(input.aceroDistribucionSeparacion, 1);
+  const sepSuperiorCm = Math.max(input.separacionSuperior, 1);
 
   function renderFlight(f: FlightGeom, key: string) {
     const principalW: number[] = [];
@@ -189,6 +123,14 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
     const longitudInclinada = Math.sqrt(f.length ** 2 + (f.yEnd - f.yStart) ** 2);
     const distribucionT: number[] = [];
     for (let l = sepDistribucionCm / 2; l < longitudInclinada; l += sepDistribucionCm) distribucionT.push(l / longitudInclinada);
+
+    // Acero superior (bastones): tramos cortos cerca de ambos extremos, en la cara
+    // superior de la garganta — refuerzo negativo cerca de los apoyos.
+    const superiorW: number[] = [];
+    if (input.incluirAceroSuperior) {
+      for (let x = 0; x <= f.width + 0.01; x += sepSuperiorCm) superiorW.push(Math.min(x, f.width) / f.width);
+    }
+    const fracBaston = Math.min((input.longitudBastonSuperior * 100) / f.length, 0.9);
 
     return (
       <g key={key}>
@@ -214,6 +156,18 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
           const a = slabScreen(f, wFrac, 0, espesor / 2);
           const b = slabScreen(f, wFrac, 1, espesor / 2);
           return <line key={`p-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarPrincipal.color} strokeWidth={1.6} strokeLinecap="round" />;
+        })}
+        {superiorW.map((wFrac, i) => {
+          const aStart = slabScreen(f, wFrac, 0, espesor);
+          const aEnd = slabScreen(f, wFrac, fracBaston, espesor);
+          const bStart = slabScreen(f, wFrac, 1, espesor);
+          const bEnd = slabScreen(f, wFrac, 1 - fracBaston, espesor);
+          return (
+            <g key={`s-${i}`}>
+              <line x1={aStart.x} y1={aStart.y} x2={aEnd.x} y2={aEnd.y} stroke={rebarSuperior.color} strokeWidth={1.5} strokeLinecap="round" />
+              <line x1={bStart.x} y1={bStart.y} x2={bEnd.x} y2={bEnd.y} stroke={rebarSuperior.color} strokeWidth={1.5} strokeLinecap="round" />
+            </g>
+          );
         })}
       </g>
     );
@@ -291,6 +245,7 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
       </p>
       <p className="text-center text-xs text-steel-500">
         Principal Ø{rebarPrincipal.diameterMm}mm @ {input.aceroPrincipalSeparacion}cm · distribución Ø{rebarDistribucion.diameterMm}mm @ {input.aceroDistribucionSeparacion}cm
+        {input.incluirAceroSuperior && ` · superior Ø${rebarSuperior.diameterMm}mm @ ${input.separacionSuperior}cm`}
       </p>
     </div>
   );

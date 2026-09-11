@@ -28,6 +28,14 @@ export interface EscaleraInput {
   aceroPrincipalSeparacion: number; // cm
   aceroDistribucionDiametroId: string;
   aceroDistribucionSeparacion: number; // cm
+
+  // Acero superior (bastones): refuerzo negativo cerca de los apoyos de cada tramo
+  // (opuesto al acero principal, que va en la cara inferior/tensión positiva). Igual
+  // criterio que el acero negativo de losa aligerada.
+  incluirAceroSuperior: boolean;
+  diametroSuperiorId: string;
+  separacionSuperior: number; // cm, a lo ancho de la escalera
+  longitudBastonSuperior: number; // m, por extremo de cada tramo
 }
 
 export interface TramoResultado {
@@ -54,6 +62,7 @@ export interface EscaleraResult {
   aceroPrincipalKg: number;
   aceroDistribucionKg: number;
   aceroDescansoKg: number;
+  aceroSuperiorKg: number;
   aceroTotalKg: number;
   desgloseAcero: AceroItem[];
   warnings: string[];
@@ -182,11 +191,25 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
   const aceroDescansoKg =
     longitudDescansoPrincipal * rebarPrincipal.weightKgPerM + longitudDescansoDistribucion * rebarDistribucion.weightKgPerM;
 
-  const aceroTotalKg = aceroPrincipalKg + aceroDistribucionKg + aceroDescansoKg;
+  // Acero superior (bastones): un grupo de barras por cada extremo de cada tramo
+  // (2 extremos × 1 ó 2 tramos), a lo ancho de la escalera, con longitud fija hacia
+  // el interior del tramo — refuerzo negativo cerca de los apoyos.
+  const rebarSuperior = getRebar(input.diametroSuperiorId);
+  let longitudAceroSuperior = 0;
+  if (input.incluirAceroSuperior) {
+    const separacionSuperiorM = input.separacionSuperior / 100;
+    const numeroBarrasSuperior = separacionSuperiorM > 0 ? Math.ceil(input.anchoEscalera / separacionSuperiorM) + 1 : 0;
+    const numeroExtremos = (esMultiTramo && tramo2 ? 2 : 1) * 2; // 2 extremos por tramo
+    longitudAceroSuperior = numeroBarrasSuperior * Math.max(input.longitudBastonSuperior, 0) * numeroExtremos;
+  }
+  const aceroSuperiorKg = longitudAceroSuperior * rebarSuperior.weightKgPerM;
+
+  const aceroTotalKg = aceroPrincipalKg + aceroDistribucionKg + aceroDescansoKg + aceroSuperiorKg;
 
   const desgloseAcero: AceroItem[] = [
     { diametroId: input.aceroPrincipalDiametroId, longitudM: numeroBarrasPrincipal * longitudInclinadaTotal + longitudDescansoPrincipal },
     { diametroId: input.aceroDistribucionDiametroId, longitudM: numeroBarrasDistribucion * input.anchoEscalera + longitudDescansoDistribucion },
+    ...(input.incluirAceroSuperior ? [{ diametroId: input.diametroSuperiorId, longitudM: longitudAceroSuperior }] : []),
   ];
 
   return {
@@ -200,6 +223,7 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
     aceroPrincipalKg,
     aceroDistribucionKg,
     aceroDescansoKg,
+    aceroSuperiorKg,
     aceroTotalKg,
     desgloseAcero,
     warnings,
