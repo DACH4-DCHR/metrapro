@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { LosaAligeradaInput } from "../../lib/calc/losaAligerada";
+import { longitudGanchoBarra90 } from "../../lib/calc/ganchos";
 import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
 import { RotationSlider } from "./RotationSlider";
 
@@ -73,6 +74,23 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
   const tempZ: number[] = [];
   for (let z = tempSepCm / 2; z < largoCm; z += tempSepCm) tempZ.push(z);
 
+  // Ganchos a 90° en los extremos discontinuos (temperatura y vigueta comparten la
+  // misma opción en el metrado) y bastones de acero negativo cerca de los apoyos, en
+  // la parte superior del nervio (debajo de la capa de compresión).
+  const extremosConGancho = input.considerarGanchoLongitudinal
+    ? Math.max(Math.min(input.extremosConGancho, 2), 0)
+    : 0;
+  const ganchoEnInicio = extremosConGancho >= 2;
+  const ganchoEnFin = extremosConGancho >= 1;
+  const tempYPos = espesor - Math.max(capaCompresion / 2, 1.5);
+  const tempHookLen = Math.min(longitudGanchoBarra90(input.temperaturaDiametroId) * 100, tempYPos);
+  const viguetaYPos = 1.5;
+  const viguetaHookLen = Math.min(longitudGanchoBarra90(input.diametroVarillaViguetaId) * 100, espesor - viguetaYPos);
+
+  const rebarNegativo = getRebar(input.diametroNegativoId);
+  const bastonLenCm = Math.min(Math.max(input.longitudBaston * 100, 0), largoCm * 0.35) || largoCm * 0.2;
+  const negativoY = capaCompresion;
+
   return (
     <div className="overflow-x-auto">
       <svg
@@ -104,9 +122,21 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
 
         {/* Acero de temperatura: cruza el ancho, cerca de la cara superior */}
         {tempZ.map((z, i) => {
-          const a = screen(0, z, espesor - Math.max(capaCompresion / 2, 1.5));
-          const b = screen(anchoCm, z, espesor - Math.max(capaCompresion / 2, 1.5));
-          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarTemp.color} strokeWidth={1.3} opacity={0.9} />;
+          const a = screen(0, z, tempYPos);
+          const b = screen(anchoCm, z, tempYPos);
+          const hookA = screen(0, z, tempYPos - tempHookLen);
+          const hookB = screen(anchoCm, z, tempYPos - tempHookLen);
+          return (
+            <g key={i}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarTemp.color} strokeWidth={1.3} opacity={0.9} />
+              {ganchoEnInicio && (
+                <line x1={a.x} y1={a.y} x2={hookA.x} y2={hookA.y} stroke={rebarTemp.color} strokeWidth={1.3} opacity={0.9} strokeLinecap="round" />
+              )}
+              {ganchoEnFin && (
+                <line x1={b.x} y1={b.y} x2={hookB.x} y2={hookB.y} stroke={rebarTemp.color} strokeWidth={1.3} opacity={0.9} strokeLinecap="round" />
+              )}
+            </g>
+          );
         })}
 
         {/* Acero principal de vigueta (método por barras): corre a lo largo, dentro del nervio */}
@@ -115,9 +145,41 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
             const n = Math.max(input.numeroVarillasPorVigueta, 1);
             return Array.from({ length: n }, (_, j) => {
               const offset = n > 1 ? (j - (n - 1) / 2) * (b0 * 0.3) : 0;
-              const a = screen(cx + offset, 0, 1.5);
-              const b = screen(cx + offset, largoCm, 1.5);
-              return <line key={`${i}-${j}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarVigueta.color} strokeWidth={1.6} strokeLinecap="round" />;
+              const a = screen(cx + offset, 0, viguetaYPos);
+              const b = screen(cx + offset, largoCm, viguetaYPos);
+              const hookA = screen(cx + offset, 0, viguetaYPos + viguetaHookLen);
+              const hookB = screen(cx + offset, largoCm, viguetaYPos + viguetaHookLen);
+              return (
+                <g key={`${i}-${j}`}>
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarVigueta.color} strokeWidth={1.6} strokeLinecap="round" />
+                  {ganchoEnInicio && (
+                    <line x1={a.x} y1={a.y} x2={hookA.x} y2={hookA.y} stroke={rebarVigueta.color} strokeWidth={1.6} strokeLinecap="round" />
+                  )}
+                  {ganchoEnFin && (
+                    <line x1={b.x} y1={b.y} x2={hookB.x} y2={hookB.y} stroke={rebarVigueta.color} strokeWidth={1.6} strokeLinecap="round" />
+                  )}
+                </g>
+              );
+            });
+          })}
+
+        {/* Acero negativo (bastones sobre apoyos): tramos cortos junto a cada extremo del
+            segmento esquemático, en la parte superior del nervio */}
+        {input.incluirAceroNegativo &&
+          nerviosCenterX.map((cx, i) => {
+            const n = Math.max(input.numeroBastonesPorVigueta, 1);
+            return Array.from({ length: n }, (_, j) => {
+              const offset = n > 1 ? (j - (n - 1) / 2) * (b0 * 0.3) : 0;
+              const aStart = screen(cx + offset, 0, negativoY);
+              const aEnd = screen(cx + offset, bastonLenCm, negativoY);
+              const bStart = screen(cx + offset, largoCm, negativoY);
+              const bEnd = screen(cx + offset, largoCm - bastonLenCm, negativoY);
+              return (
+                <g key={`neg-${i}-${j}`}>
+                  <line x1={aStart.x} y1={aStart.y} x2={aEnd.x} y2={aEnd.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
+                  <line x1={bStart.x} y1={bStart.y} x2={bEnd.x} y2={bEnd.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
+                </g>
+              );
             });
           })}
       </svg>
@@ -128,6 +190,7 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
       <p className="text-center text-xs text-steel-500">
         Temperatura Ø{rebarTemp.diameterMm}mm
         {input.aceroViguetasMetodo === "barras" && ` · vigueta ${input.numeroVarillasPorVigueta}Ø${rebarVigueta.diameterMm}mm`}
+        {input.incluirAceroNegativo && ` · negativo ${input.numeroBastonesPorVigueta}Ø${rebarNegativo.diameterMm}mm sobre apoyos`}
       </p>
     </div>
   );

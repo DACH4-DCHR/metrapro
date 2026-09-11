@@ -1,4 +1,5 @@
 import type { LosaAligeradaInput } from "../../lib/calc/losaAligerada";
+import { getRebar } from "../../lib/materials";
 import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface LosaCrossSectionProps {
@@ -143,6 +144,31 @@ export function LosaCrossSection({ input }: LosaCrossSectionProps) {
             });
           })}
 
+        {/* Acero negativo (bastones sobre apoyos): en la parte superior de cada nervio,
+            justo debajo de la capa de compresión — distinto de la temperatura, que va
+            dentro de la capa de compresión. */}
+        {input.incluirAceroNegativo &&
+          (() => {
+            const negColor = getRebar(input.diametroNegativoId).color;
+            return Array.from({ length: modules }).map((_, i) => {
+              const moduleX = x0 + i * s * scale + (b0 * scale) / 2;
+              const n = Math.max(input.numeroBastonesPorVigueta, 1);
+              const spacing = Math.min((b0 * scale) / (n + 1), 6);
+              return Array.from({ length: n }).map((__, j) => {
+                const offset = (j - (n - 1) / 2) * spacing;
+                return (
+                  <circle
+                    key={`neg-${i}-${j}`}
+                    cx={moduleX + offset}
+                    cy={yTop + capaCompresion * scale + 5}
+                    r={2.6}
+                    fill={negColor}
+                  />
+                );
+              });
+            });
+          })()}
+
         {/* Cotas */}
         <VDim y1={yTop} y2={yBottom} x={x0 - 24} label={`e=${fmt(espesor)}cm`} />
         <VDim
@@ -164,6 +190,8 @@ export function LosaCrossSection({ input }: LosaCrossSectionProps) {
       <p className="mt-1 text-xs text-steel-500">
         Corte transversal esquemático (no a escala real) ·{" "}
         {isArcilla ? "ladrillo de arcilla" : "bloque de tecnopor (EPS)"} de {fmt(alturaLadrillo)} cm
+        {input.incluirAceroNegativo &&
+          ` · acero negativo Ø${getRebar(input.diametroNegativoId).diameterMm}mm sobre apoyos (parte superior del nervio)`}
       </p>
     </div>
   );
