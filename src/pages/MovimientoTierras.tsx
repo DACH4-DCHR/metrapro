@@ -44,7 +44,7 @@ export function MovimientoTierrasPage() {
     profundidad: 1.2,
     numeroExcavaciones: 1,
     sobreanchoTrabajo: 10,
-    volumenOcupadoCimentacion: 3,
+    volumenOcupadoCimentacion: 1,
     porcentajeEsponjamiento: 25,
   });
 
