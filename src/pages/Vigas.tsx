@@ -210,7 +210,7 @@ export function VigasPage() {
           </SectionCard>
 
           <SectionCard
-            className="sm:col-span-2"
+            className="col-span-2"
             title="Distribución de estribos en elevación"
             icon={<Eye size={16} className="text-navy-700" />}
           >
