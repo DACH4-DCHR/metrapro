@@ -82,17 +82,15 @@ export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcava
         {/* Nivel de terreno natural (tapa superior de la excavación) */}
         <path d={pathFor(footprint, 0, true)} fill="none" stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} />
 
-        {/* Paredes de la excavación */}
-        {footprint.map((p, i) => {
-          const a = screen(p.x, p.z, 0);
-          const b = screen(p.x, p.z, -profundidad);
-          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} strokeDasharray="3 2" opacity={0.7} />;
-        })}
-        <path d={pathFor(footprint, -profundidad, true)} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.22} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} strokeDasharray="3 2" />
-
-        {/* Caras laterales visibles del volumen excavado (relleno de material propio) */}
-        <path d={verticalFacePath(footprint[0], footprint[1], 0, -profundidad)} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.16} stroke="none" />
-        <path d={verticalFacePath(footprint[1], footprint[2], 0, -profundidad)} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.1} stroke="none" />
+        {/* Relleno de material propio: solo la franja que realmente queda sin concreto
+            (arriba del bloque), para que no "tape" visualmente el contorno de la
+            excavación cuando la cimentación ocupa casi toda la profundidad. */}
+        {hCimentacion < profundidad && (
+          <>
+            <path d={verticalFacePath(footprint[0], footprint[1], 0, -(profundidad - hCimentacion))} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.16} stroke="none" />
+            <path d={verticalFacePath(footprint[1], footprint[2], 0, -(profundidad - hCimentacion))} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.1} stroke="none" />
+          </>
+        )}
 
         {/* Bloque de cimentación en el fondo de la excavación */}
         {hCimentacion > 0 && (
@@ -105,6 +103,15 @@ export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcava
             })}
           </>
         )}
+
+        {/* Contorno de toda la excavación, siempre encima para que se vea entero sin
+            importar cuánta profundidad ocupe el bloque de concreto. */}
+        {footprint.map((p, i) => {
+          const a = screen(p.x, p.z, 0);
+          const b = screen(p.x, p.z, -profundidad);
+          return <line key={`wall-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} strokeDasharray="3 2" opacity={0.7} />;
+        })}
+        <path d={pathFor(footprint, -profundidad, true)} fill="none" stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} strokeDasharray="3 2" />
       </svg>
       <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">

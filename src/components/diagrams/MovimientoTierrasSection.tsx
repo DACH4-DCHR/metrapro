@@ -55,8 +55,12 @@ export function MovimientoTierrasSection({ input, anchoExcavacion, volumenExcava
           return <line key={i} x1={gx} y1={y0} x2={gx - 6} y2={y0 - 7} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1} />;
         })}
 
-        {/* Excavación (relleno de material propio tras vaciar la cimentación) */}
-        <rect x={x0} y={y0} width={w} height={h} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.28} stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1.5} strokeDasharray="4 3" />
+        {/* Relleno de material propio: solo la franja que realmente queda sin concreto
+            (arriba del bloque), para que no "tape" visualmente el contorno de la
+            excavación cuando la cimentación ocupa casi toda la profundidad. */}
+        {hCimentacion < h && (
+          <rect x={x0} y={y0} width={w} height={h - hCimentacion} fill={DIAGRAM_COLORS.arcilla} fillOpacity={0.28} />
+        )}
 
         {/* Bloque de cimentación dentro de la excavación */}
         {hCimentacion > 0 && (
@@ -70,6 +74,10 @@ export function MovimientoTierrasSection({ input, anchoExcavacion, volumenExcava
             strokeWidth={1.5}
           />
         )}
+
+        {/* Contorno de la excavación completa, siempre encima para que se vea entero
+            sin importar cuánta profundidad ocupe el bloque de concreto. */}
+        <rect x={x0} y={y0} width={w} height={h} fill="none" stroke={DIAGRAM_COLORS.arcillaStroke} strokeWidth={1.5} strokeDasharray="4 3" />
 
         <HDim x1={x0} x2={x0 + w} y={y0 + h + 20} label={`${fmt(anchoExcavacion, 2)}m`} labelBelow />
         <VDim y1={y0} y2={y0 + h} x={x0 - 20} label={`${fmt(profundidad, 2)}m`} />
