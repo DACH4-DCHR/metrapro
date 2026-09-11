@@ -70,7 +70,7 @@ export const LADRILLOS_PERU: LadrilloCatalogItem[] = [
     largoCm: 24,
     altoCm: 9,
     anchoCm: 13,
-    usoTipico: "Muros de cerco o tabiques gruesos no estructurales",
+    usoTipico: "Muros portantes de albañilería confinada (E.070) — el más usado en Lima; también en cercos",
   },
   {
     id: "kingkongIndustrial",
@@ -78,7 +78,7 @@ export const LADRILLOS_PERU: LadrilloCatalogItem[] = [
     largoCm: 24,
     altoCm: 9,
     anchoCm: 14,
-    usoTipico: "Alternativa maciza al King Kong 18 huecos",
+    usoTipico: "Alternativa maciza al King Kong 18 huecos, para muros portantes o cercos",
   },
   {
     id: "bloqueta9",

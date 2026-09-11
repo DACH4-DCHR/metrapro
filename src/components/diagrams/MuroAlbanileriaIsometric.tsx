@@ -129,7 +129,17 @@ export function MuroAlbanileriaIsometric({ input }: MuroAlbanileriaIsometricProp
                 ];
                 const pts = corners.map((c) => screen(cx - peralteColumna / 2 + c.u, c.v, y));
                 const d = pts.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
-                return <path key={i} d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />;
+                const hookLen = input.considerarGanchoEstribo ? Math.min(peralteColumna, espesor) * 0.3 : 0;
+                const hookTip =
+                  hookLen > 0
+                    ? screen(cx - peralteColumna / 2 + corners[0].u - hookLen * 0.7, corners[0].v - hookLen * 0.7, y)
+                    : null;
+                return (
+                  <g key={i}>
+                    <path d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />
+                    {hookTip && <line x1={pts[0].x} y1={pts[0].y} x2={hookTip.x} y2={hookTip.y} stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />}
+                  </g>
+                );
               })}
               {columnaBarPos.map((p, i) => {
                 const a = screen(cx - peralteColumna / 2 + p.u, p.v, 0);
@@ -151,7 +161,14 @@ export function MuroAlbanileriaIsometric({ input }: MuroAlbanileriaIsometricProp
               ];
               const pts = corners.map((c) => screen(x, c.u, alturaCm + c.v));
               const d = pts.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
-              return <path key={i} d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />;
+              const hookLen = input.considerarGanchoEstribo ? Math.min(espesor, peralteSolera) * 0.3 : 0;
+              const hookTip = hookLen > 0 ? screen(x, corners[0].u - hookLen * 0.7, alturaCm + corners[0].v - hookLen * 0.7) : null;
+              return (
+                <g key={i}>
+                  <path d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />
+                  {hookTip && <line x1={pts[0].x} y1={pts[0].y} x2={hookTip.x} y2={hookTip.y} stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />}
+                </g>
+              );
             })}
             {soleraBarPos.map((p, i) => {
               const a = screen(0, p.u, alturaCm + p.v);

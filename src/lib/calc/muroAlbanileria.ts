@@ -10,6 +10,7 @@ export interface MuroAlbanileriaInput {
   alturaLibre: number; // m, altura libre entre arriostres horizontales
   espesor: number; // cm, espesor efectivo del muro "t"
 
+  ladrilloId: string; // id del catálogo (ladrillos.ts) o "personalizado"
   largoUnidad: number; // cm (unidad de albañilería, cara vista)
   alturaUnidad: number; // cm (unidad de albañilería, cara vista)
   juntaMortero: number; // cm, típico 1.5 cm
@@ -37,6 +38,7 @@ export interface MuroAlbanileriaResult {
   areaColumnas: number; // m2, área de columnas en la cara del muro (se descuenta de unidades/mortero)
   areaMuroNeta: number; // m2
   numeroUnidades: number;
+  unidadesPorM2: number; // rendimiento (sin desperdicio), unidades por m2 de muro
   volumenMuroNeto: number; // m3
   volumenUnidades: number; // m3
   volumenMortero: number; // m3
@@ -80,6 +82,7 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
   const areaUnidadEfectiva = (largoUnidadM + juntaM) * (alturaUnidadM + juntaM);
   const numeroUnidadesNeto = areaUnidadEfectiva > 0 ? areaMuroNeta / areaUnidadEfectiva : 0;
   const numeroUnidades = Math.ceil(numeroUnidadesNeto * (1 + input.desperdicioPct / 100));
+  const unidadesPorM2 = areaUnidadEfectiva > 0 ? 1 / areaUnidadEfectiva : 0;
 
   const volumenMuroNeto = areaMuroNeta * espesorM;
   const volumenUnidades = numeroUnidadesNeto * largoUnidadM * alturaUnidadM * espesorM;
@@ -207,6 +210,7 @@ export function calcularMuroAlbanileria(input: MuroAlbanileriaInput): MuroAlbani
     areaColumnas,
     areaMuroNeta,
     numeroUnidades,
+    unidadesPorM2,
     volumenMuroNeto,
     volumenUnidades,
     volumenMortero,

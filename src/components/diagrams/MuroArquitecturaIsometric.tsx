@@ -116,7 +116,17 @@ export function MuroArquitecturaIsometric({ input }: MuroArquitecturaIsometricPr
                 ];
                 const pts = corners.map((c) => screen(cx - peralteColumneta / 2 + c.u, c.v, y));
                 const d = pts.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
-                return <path key={i} d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />;
+                const hookLen = input.considerarGanchoEstribo ? Math.min(peralteColumneta, espesor) * 0.3 : 0;
+                const hookTip =
+                  hookLen > 0
+                    ? screen(cx - peralteColumneta / 2 + corners[0].u - hookLen * 0.7, corners[0].v - hookLen * 0.7, y)
+                    : null;
+                return (
+                  <g key={i}>
+                    <path d={d} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />
+                    {hookTip && <line x1={pts[0].x} y1={pts[0].y} x2={hookTip.x} y2={hookTip.y} stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />}
+                  </g>
+                );
               })}
               {columnetaBarPos.map((p, i) => {
                 const a = screen(cx - peralteColumneta / 2 + p.u, p.v, 0);

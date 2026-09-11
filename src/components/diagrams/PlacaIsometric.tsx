@@ -142,30 +142,22 @@ export function PlacaIsometric({ input }: PlacaIsometricProps) {
             })
           )}
         {input.incluirElementoBorde &&
-          estribosBordeY.map((y, i) => (
-            <g key={`estribo-${i}`}>
-              <path
-                d={pathForRingAtHeight(
-                  estriboBordeRing,
-                  y,
-                  true
-                )}
-                fill="none"
-                stroke={DIAGRAM_COLORS.stirrup}
-                strokeWidth={1.5}
-              />
-              <path
-                d={pathForRingAtHeight(
-                  estriboBordeRing.map((p) => ({ x: longitudCm - p.x, z: p.z })),
-                  y,
-                  true
-                )}
-                fill="none"
-                stroke={DIAGRAM_COLORS.stirrup}
-                strokeWidth={1.5}
-              />
-            </g>
-          ))}
+          estribosBordeY.map((y, i) => {
+            const hookLen = input.considerarGanchoEstribo ? Math.min(anchoBordeCm, espesor) * 0.3 : 0;
+            const ringDer = estriboBordeRing.map((p) => ({ x: longitudCm - p.x, z: p.z }));
+            const izqPt0 = screen(estriboBordeRing[0].x, estriboBordeRing[0].z, y);
+            const izqHook = hookLen > 0 ? screen(estriboBordeRing[0].x - hookLen * 0.7, estriboBordeRing[0].z - hookLen * 0.7, y) : null;
+            const derPt0 = screen(ringDer[0].x, ringDer[0].z, y);
+            const derHook = hookLen > 0 ? screen(ringDer[0].x + hookLen * 0.7, ringDer[0].z - hookLen * 0.7, y) : null;
+            return (
+              <g key={`estribo-${i}`}>
+                <path d={pathForRingAtHeight(estriboBordeRing, y, true)} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />
+                {izqHook && <line x1={izqPt0.x} y1={izqPt0.y} x2={izqHook.x} y2={izqHook.y} stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />}
+                <path d={pathForRingAtHeight(ringDer, y, true)} fill="none" stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />
+                {derHook && <line x1={derPt0.x} y1={derPt0.y} x2={derHook.x} y2={derHook.y} stroke={DIAGRAM_COLORS.stirrup} strokeWidth={1.5} />}
+              </g>
+            );
+          })}
       </svg>
       <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">

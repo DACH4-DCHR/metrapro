@@ -88,6 +88,33 @@ export function EscalerasPage() {
     setSaved(false);
   }
 
+  function ajustarPeldanos(alturaTramoM: number, contrahuellaObjetivo: number) {
+    const numeroPeldanos = Math.max(Math.round((alturaTramoM * 100) / Math.max(contrahuellaObjetivo, 1)), 1);
+    const contrahuella = (alturaTramoM * 100) / numeroPeldanos;
+    return { numeroPeldanos, contrahuella };
+  }
+
+  function handleTipoChange(nuevoTipo: TipoEscalera) {
+    const nuevoEsMultiTramo = nuevoTipo !== "un_tramo";
+    const alturaTramoM = nuevoEsMultiTramo ? input.alturaEntrePisos / 2 : input.alturaEntrePisos;
+    setInput((prev) => {
+      const ajusteTramo1 = ajustarPeldanos(alturaTramoM, prev.tramo1.contrahuella);
+      const tramo1 = { ...prev.tramo1, numeroPeldanos: ajusteTramo1.numeroPeldanos, contrahuella: ajusteTramo1.contrahuella };
+      let tramo2 = prev.tramo2;
+      if (nuevoEsMultiTramo) {
+        const contrahuellaBase = prev.tramo2?.contrahuella ?? prev.tramo1.contrahuella;
+        const ajusteTramo2 = ajustarPeldanos(alturaTramoM, contrahuellaBase);
+        tramo2 = {
+          huella: prev.tramo2?.huella ?? prev.tramo1.huella,
+          numeroPeldanos: ajusteTramo2.numeroPeldanos,
+          contrahuella: ajusteTramo2.contrahuella,
+        };
+      }
+      return { ...prev, tipo: nuevoTipo, tramo1, tramo2 };
+    });
+    setSaved(false);
+  }
+
   function handleSave() {
     const el: CalculatedElement = {
       id: crypto.randomUUID(),
@@ -150,8 +177,9 @@ export function EscalerasPage() {
                 <SelectField
                   label="Tipo de escalera"
                   value={input.tipo}
-                  onChange={(v) => updateRoot("tipo", v as TipoEscalera)}
+                  onChange={(v) => handleTipoChange(v as TipoEscalera)}
                   options={tipoOptions}
+                  helper="Al cambiar el tipo se recalculan los peldaños para que coincidan con la altura entre pisos"
                 />
               </div>
               <NumberField
