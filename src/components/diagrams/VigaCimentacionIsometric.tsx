@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getRebar } from "../../lib/materials";
 import type { VigaCimentacionInput } from "../../lib/calc/vigaCimentacion";
+import { longitudGanchoBarra90 } from "../../lib/calc/ganchos";
 import { DIAGRAM_COLORS, isoProjectAt, ISO_DEFAULT_AZIMUTH } from "./svgHelpers";
 import { RotationSlider } from "./RotationSlider";
 
@@ -45,8 +46,11 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
     const right = base - recub;
     return ids.map((_, i) => (ids.length > 1 ? left + (i * (right - left)) / (ids.length - 1) : (left + right) / 2));
   }
-  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: altura - recub, diametroId: bottomIds[i] }));
-  const topPos = rowZ(topIds).map((z, i) => ({ z, y: recub, diametroId: topIds[i] }));
+  // "bend": eje en el que dobla el gancho (hacia el centro de la sección) — "y" para
+  // barras de malla inf./sup. (doblan en altura), "z" para el acero lateral (doblan en
+  // el ancho de la base).
+  const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: altura - recub, diametroId: bottomIds[i], bend: "y" as const }));
+  const topPos = rowZ(topIds).map((z, i) => ({ z, y: recub, diametroId: topIds[i], bend: "y" as const }));
 
   // Acero lateral (piel): "cantidad" es el total en ambas caras del alma, repartido en
   // dos columnas (z=recub y z=base-recub) distribuidas verticalmente entre las mallas.
@@ -59,20 +63,37 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
     const bottom = altura - recub;
     return ids.map((_, i) => (ids.length > 1 ? top + (i * (bottom - top)) / (ids.length - 1) : (top + bottom) / 2));
   }
-  const lateralLeftPos = columnY(lateralLeftIds).map((y, i) => ({ z: recub, y, diametroId: lateralLeftIds[i] }));
-  const lateralRightPos = columnY(lateralRightIds).map((y, i) => ({ z: base - recub, y, diametroId: lateralRightIds[i] }));
+  const lateralLeftPos = columnY(lateralLeftIds).map((y, i) => ({ z: recub, y, diametroId: lateralLeftIds[i], bend: "z" as const }));
+  const lateralRightPos = columnY(lateralRightIds).map((y, i) => ({ z: base - recub, y, diametroId: lateralRightIds[i], bend: "z" as const }));
 
   const barPositions = [...bottomPos, ...topPos, ...lateralLeftPos, ...lateralRightPos];
 
+  // Ganchos a 90° en los extremos (doblan hacia el centro de la sección) y/o
+  // prolongación recta del acero dentro de una zapata contigua (esquemática, con línea
+  // discontinua), según las opciones activadas.
+  const extremosConGancho = input.considerarGanchoLongitudinal
+    ? Math.max(Math.min(input.extremosConGancho, 2), 0)
+    : 0;
+  const extremosConProlongacion = input.considerarProlongacionZapata
+    ? Math.max(Math.min(input.extremosConProlongacion, 2), 0)
+    : 0;
+  const ganchoEnInicio = extremosConGancho >= 2;
+  const ganchoEnFin = extremosConGancho >= 1;
+  const prolongacionEnInicio = extremosConProlongacion >= 2;
+  const prolongacionEnFin = extremosConProlongacion >= 1;
+  const prolongacionPx = lSeg * 0.18;
+  const xMinBound = prolongacionEnInicio ? -prolongacionPx : 0;
+  const xMaxBound = prolongacionEnFin ? lSeg + prolongacionPx : lSeg;
+
   const boundingRaw = [
-    { x: 0, z: 0, y: 0 },
-    { x: lSeg, z: 0, y: 0 },
-    { x: lSeg, z: base, y: 0 },
-    { x: 0, z: base, y: 0 },
-    { x: 0, z: 0, y: altura },
-    { x: lSeg, z: 0, y: altura },
-    { x: lSeg, z: base, y: altura },
-    { x: 0, z: base, y: altura },
+    { x: xMinBound, z: 0, y: 0 },
+    { x: xMaxBound, z: 0, y: 0 },
+    { x: xMaxBound, z: base, y: 0 },
+    { x: xMinBound, z: base, y: 0 },
+    { x: xMinBound, z: 0, y: altura },
+    { x: xMaxBound, z: 0, y: altura },
+    { x: xMaxBound, z: base, y: altura },
+    { x: xMinBound, z: base, y: altura },
   ];
   const projected = boundingRaw.map((p) => isoProjectAt(p.x, p.z, p.y, azimuth));
   const minX = Math.min(...projected.map((p) => p.x));
@@ -137,8 +158,42 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
           const a = screen(0, p.z, p.y);
           const b = screen(lSeg, p.z, p.y);
           const rebar = getRebar(p.diametroId);
+          const strokeWidth = Math.max(1.4, 1.4 * (rebar.diameterMm / 16));
+
+          const hookLenRaw = longitudGanchoBarra90(p.diametroId) * 100;
+          let hookEndInicio = a;
+          let hookEndFin = b;
+          if (p.bend === "y") {
+            const hookLen = Math.min(hookLenRaw, Math.max(altura - 2 * recub, 0));
+            const dirY = p.y < altura / 2 ? 1 : -1;
+            hookEndInicio = screen(0, p.z, p.y + dirY * hookLen);
+            hookEndFin = screen(lSeg, p.z, p.y + dirY * hookLen);
+          } else {
+            const hookLen = Math.min(hookLenRaw, Math.max(base - 2 * recub, 0));
+            const dirZ = p.z < base / 2 ? 1 : -1;
+            hookEndInicio = screen(0, p.z + dirZ * hookLen, p.y);
+            hookEndFin = screen(lSeg, p.z + dirZ * hookLen, p.y);
+          }
+
+          const prolongInicio = screen(-prolongacionPx, p.z, p.y);
+          const prolongFin = screen(lSeg + prolongacionPx, p.z, p.y);
+
           return (
-            <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebar.color} strokeWidth={Math.max(1.4, 1.4 * (rebar.diameterMm / 16))} strokeLinecap="round" />
+            <g key={i}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
+              {ganchoEnInicio && (
+                <line x1={a.x} y1={a.y} x2={hookEndInicio.x} y2={hookEndInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
+              )}
+              {ganchoEnFin && (
+                <line x1={b.x} y1={b.y} x2={hookEndFin.x} y2={hookEndFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeLinecap="round" />
+              )}
+              {prolongacionEnInicio && (
+                <line x1={a.x} y1={a.y} x2={prolongInicio.x} y2={prolongInicio.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.65} strokeLinecap="round" />
+              )}
+              {prolongacionEnFin && (
+                <line x1={b.x} y1={b.y} x2={prolongFin.x} y2={prolongFin.y} stroke={rebar.color} strokeWidth={strokeWidth} strokeDasharray="4 3" opacity={0.65} strokeLinecap="round" />
+              )}
+            </g>
           );
         })}
       </svg>
@@ -150,6 +205,11 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
         {totalBars} barras ({bottomIds.length} inf. / {topIds.length} sup. / {lateralIds.length} lat.) ·{" "}
         {numeroEstribosPorViga} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por viga
       </p>
+      {(prolongacionEnInicio || prolongacionEnFin) && (
+        <p className="text-center text-xs text-steel-500">
+          Línea discontinua: prolongación del acero dentro de la zapata, hacia la columna
+        </p>
+      )}
     </div>
   );
 }

@@ -56,6 +56,9 @@ export function VigasCimentacionPage() {
     considerarGanchoEstribo: true,
     considerarGanchoLongitudinal: false,
     extremosConGancho: 2,
+    considerarProlongacionZapata: false,
+    longitudProlongacionZapata: 0.5,
+    extremosConProlongacion: 2,
   });
 
   const result = useMemo(() => calcularVigaCimentacion(input), [input]);
@@ -233,6 +236,40 @@ export function VigasCimentacionPage() {
                     max={2}
                     value={input.extremosConGancho}
                     onChange={(v) => update("extremosConGancho", Math.max(0, Math.min(2, v)))}
+                    helper="Por barra: 0, 1 ó 2"
+                  />
+                </div>
+              )}
+
+              <label className="mt-1 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={input.considerarProlongacionZapata}
+                  onChange={(e) => update("considerarProlongacionZapata", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                />
+                <span className="text-sm font-medium text-navy-800">
+                  Prolongar acero dentro de la zapata hasta la columna (viga al mismo nivel que el fondo de zapata;
+                  el concreto se metra solo hasta luzLibre, pero el acero continúa recto)
+                </span>
+              </label>
+              {input.considerarProlongacionZapata && (
+                <div className="grid grid-cols-2 gap-4">
+                  <NumberField
+                    label="Longitud por extremo"
+                    unit="m"
+                    value={input.longitudProlongacionZapata}
+                    onChange={(v) => update("longitudProlongacionZapata", v)}
+                    helper="Distancia desde el encuentro con la zapata hasta la columna"
+                  />
+                  <NumberField
+                    label="Extremos con prolongación"
+                    unit="und"
+                    step={1}
+                    min={0}
+                    max={2}
+                    value={input.extremosConProlongacion}
+                    onChange={(v) => update("extremosConProlongacion", Math.max(0, Math.min(2, v)))}
                     helper="Por barra: 0, 1 ó 2"
                   />
                 </div>

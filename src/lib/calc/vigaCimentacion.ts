@@ -20,6 +20,14 @@ export interface VigaCimentacionInput {
   considerarGanchoEstribo: boolean;
   considerarGanchoLongitudinal: boolean;
   extremosConGancho: number; // 0, 1 ó 2 extremos por barra longitudinal, si se considera
+
+  // Cuando la viga de cimentación llega al mismo nivel que el fondo de una zapata, el
+  // concreto solo se metra hasta el encuentro entre ambos (luzLibre), pero el acero
+  // longitudinal normalmente continúa recto dentro de la zapata hasta anclar en la
+  // columna. Esta prolongación es solo de acero, no de concreto.
+  considerarProlongacionZapata: boolean;
+  longitudProlongacionZapata: number; // m, por extremo que ingresa a una zapata
+  extremosConProlongacion: number; // 0, 1 ó 2 extremos por barra longitudinal, si se considera
 }
 
 export interface VigaCimentacionResult {
@@ -81,8 +89,15 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   const numeroBarrasLaterales = input.barrasLaterales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
   const numeroBarrasLongitudinales = numeroBarrasInferiores + numeroBarrasSuperiores + numeroBarrasLaterales;
   const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
+  const extremosConProlongacion = input.considerarProlongacionZapata
+    ? Math.max(Math.min(input.extremosConProlongacion, 2), 0)
+    : 0;
   function longitudBarraLongitudinal(diametroId: string): number {
-    return input.luzLibre + extremosConGancho * longitudGanchoBarra90(diametroId);
+    return (
+      input.luzLibre +
+      extremosConGancho * longitudGanchoBarra90(diametroId) +
+      extremosConProlongacion * input.longitudProlongacionZapata
+    );
   }
   const longitudTotalBarrasLongitudinales = grupos.reduce(
     (acc, g) => acc + Math.max(g.cantidad, 0) * longitudBarraLongitudinal(g.diametroId) * input.numeroVigas,
@@ -124,6 +139,9 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   }
   if (input.recubrimiento * 2 >= Math.min(input.base, input.altura)) {
     warnings.push("El recubrimiento indicado es demasiado grande respecto a la sección de la viga.");
+  }
+  if (input.considerarProlongacionZapata && input.longitudProlongacionZapata <= 0) {
+    warnings.push("Indica la longitud de prolongación del acero dentro de la zapata (distancia hasta la columna).");
   }
 
   const desgloseAcero: AceroItem[] = [
