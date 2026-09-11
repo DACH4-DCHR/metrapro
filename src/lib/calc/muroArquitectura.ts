@@ -11,6 +11,7 @@ export interface MuroArquitecturaInput {
   espesor: number; // cm, espesor efectivo del tabique
   areaVanos: number; // m2, puertas/ventanas a descontar
 
+  ladrilloId: string; // id del catálogo (ladrillos.ts) o "personalizado"
   largoUnidad: number; // cm
   alturaUnidad: number; // cm
   juntaMortero: number; // cm

@@ -14,10 +14,15 @@ import { MuroArquitecturaIsometric } from "../components/diagrams/MuroArquitectu
 import { calcularMuroArquitectura, type MuroArquitecturaInput, type BarraGrupo } from "../lib/calc/muroArquitectura";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
 import { REBAR_SIZES, getRebar } from "../lib/materials";
+import { LADRILLOS_PERU, LADRILLO_PERSONALIZADO_ID, getLadrillo } from "../lib/ladrillos";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
 const rebarOptions = REBAR_SIZES.map((r) => ({ value: r.id, label: r.label }));
+const ladrilloOptions = [
+  ...LADRILLOS_PERU.map((l) => ({ value: l.id, label: l.label })),
+  { value: LADRILLO_PERSONALIZADO_ID, label: "Personalizado (ingresar dimensiones)" },
+];
 
 function nextName() {
   const count = useProjectStore.getState().elements.filter((e) => e.module === "muroArquitectura").length;
@@ -39,10 +44,11 @@ export function MurosArquitecturaPage() {
   const [input, setInput] = useState<MuroArquitecturaInput>({
     longitud: 4,
     alturaLibre: 2.6,
-    espesor: 10,
+    espesor: 11,
     areaVanos: 0,
+    ladrilloId: "pandereta",
     largoUnidad: 24,
-    alturaUnidad: 24,
+    alturaUnidad: 9,
     juntaMortero: 1.5,
     desperdicioPct: 5,
     incluirArriostres: false,
@@ -56,10 +62,12 @@ export function MurosArquitecturaPage() {
   });
 
   const result = useMemo(() => calcularMuroArquitectura(input), [input]);
+  const ladrilloActual = getLadrillo(input.ladrilloId);
+  const ladrilloLabel = ladrilloActual?.label ?? "ladrillo";
 
   const lines: MetradoLine[] = [
-    { partida: "Tabique de albañilería (pandereta)", unidad: "m²", cantidad: result.areaMuroNeta },
-    { partida: "Ladrillo pandereta para tabique", unidad: "und", cantidad: result.numeroUnidades },
+    { partida: `Tabique de albañilería (${ladrilloLabel.toLowerCase()})`, unidad: "m²", cantidad: result.areaMuroNeta },
+    { partida: `Ladrillo ${ladrilloLabel.toLowerCase()} para tabique`, unidad: "und", cantidad: result.numeroUnidades },
     { partida: "Mortero para asentado (cemento-arena 1:5)", unidad: "m³", cantidad: result.volumenMortero },
     ...(input.incluirArriostres
       ? [
@@ -76,6 +84,18 @@ export function MurosArquitecturaPage() {
 
   function update<K extends keyof MuroArquitecturaInput>(key: K, value: MuroArquitecturaInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function handleSelectLadrillo(id: string) {
+    const catalogo = getLadrillo(id);
+    setInput((prev) => ({
+      ...prev,
+      ladrilloId: id,
+      ...(catalogo
+        ? { largoUnidad: catalogo.largoCm, alturaUnidad: catalogo.altoCm, espesor: catalogo.anchoCm }
+        : {}),
+    }));
     setSaved(false);
   }
 
@@ -108,6 +128,7 @@ export function MurosArquitecturaPage() {
       steelByDiameter: result.desgloseAcero,
       inputsSummary: {
         Dimensiones: `${input.longitud} m x ${input.alturaLibre} m x ${input.espesor} cm`,
+        Ladrillo: ladrilloLabel,
         Unidades: `${result.numeroUnidades} und`,
         ...(input.incluirArriostres
           ? { "Columnetas de arriostre": `${input.numeroColumnetas} de ${grupoLabel(input.barrasColumneta) || "-"}` }
@@ -172,7 +193,7 @@ export function MurosArquitecturaPage() {
                 unit="cm"
                 value={input.espesor}
                 onChange={(v) => update("espesor", v)}
-                helper="Típico: 10 cm (pandereta) o 15 cm"
+                helper="Se autocompleta según el ladrillo elegido abajo"
               />
               <NumberField
                 label="Área de vanos"
@@ -185,21 +206,30 @@ export function MurosArquitecturaPage() {
           </SectionCard>
 
           <SectionCard title="Unidad de albañilería" icon={<Package size={16} className="text-navy-700" />}>
-            <div className="grid grid-cols-2 gap-4">
-              <NumberField label="Largo" unit="cm" value={input.largoUnidad} onChange={(v) => update("largoUnidad", v)} />
-              <NumberField label="Alto" unit="cm" value={input.alturaUnidad} onChange={(v) => update("alturaUnidad", v)} />
-              <NumberField
-                label="Junta de mortero"
-                unit="cm"
-                value={input.juntaMortero}
-                onChange={(v) => update("juntaMortero", v)}
+            <div className="flex flex-col gap-4">
+              <SelectField
+                label="Tipo de ladrillo"
+                value={input.ladrilloId}
+                onChange={handleSelectLadrillo}
+                options={ladrilloOptions}
+                helper={ladrilloActual?.usoTipico ?? "Ingresa las dimensiones de tu proveedor"}
               />
-              <NumberField
-                label="Desperdicio"
-                unit="%"
-                value={input.desperdicioPct}
-                onChange={(v) => update("desperdicioPct", v)}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField label="Largo" unit="cm" value={input.largoUnidad} onChange={(v) => update("largoUnidad", v)} />
+                <NumberField label="Alto" unit="cm" value={input.alturaUnidad} onChange={(v) => update("alturaUnidad", v)} />
+                <NumberField
+                  label="Junta de mortero"
+                  unit="cm"
+                  value={input.juntaMortero}
+                  onChange={(v) => update("juntaMortero", v)}
+                />
+                <NumberField
+                  label="Desperdicio"
+                  unit="%"
+                  value={input.desperdicioPct}
+                  onChange={(v) => update("desperdicioPct", v)}
+                />
+              </div>
             </div>
           </SectionCard>
 
