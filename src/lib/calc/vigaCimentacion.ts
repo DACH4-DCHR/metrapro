@@ -10,7 +10,9 @@ export interface VigaCimentacionInput {
   luzLibre: number; // m, espacio libre entre columnas o cabezales conectados
   base: number; // cm
   altura: number; // cm
-  barrasLongitudinales: BarraGrupo[];
+  barrasInferiores: BarraGrupo[];
+  barrasSuperiores: BarraGrupo[];
+  barrasLaterales: BarraGrupo[]; // acero de piel, caras laterales del alma
   diametroEstribosId: string;
   separacionEstribos: number; // cm, estribos cerrados uniformes en toda la longitud
   recubrimiento: number; // cm
@@ -24,6 +26,9 @@ export interface VigaCimentacionResult {
   areaSeccion: number; // m2
   volumenConcreto: number; // m3
   areaEncofrado: number; // m2 (caras laterales, fondo apoyado en solado/terreno)
+  numeroBarrasInferiores: number;
+  numeroBarrasSuperiores: number;
+  numeroBarrasLaterales: number;
   numeroBarrasLongitudinales: number;
   longitudTotalBarrasLongitudinales: number; // m
   pesoAceroLongitudinal: number; // kg
@@ -67,11 +72,14 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   const volumenConcreto = areaSeccion * input.luzLibre * input.numeroVigas;
   const areaEncofrado = 2 * alturaM * input.luzLibre * input.numeroVigas;
 
-  const grupos = input.barrasLongitudinales;
+  const grupos = [...input.barrasInferiores, ...input.barrasSuperiores, ...input.barrasLaterales];
   if (grupos.length === 0 || grupos.every((g) => g.cantidad <= 0)) {
     warnings.push("Debe indicar al menos un grupo de acero longitudinal.");
   }
-  const numeroBarrasLongitudinales = grupos.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const numeroBarrasInferiores = input.barrasInferiores.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const numeroBarrasSuperiores = input.barrasSuperiores.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const numeroBarrasLaterales = input.barrasLaterales.reduce((acc, g) => acc + Math.max(g.cantidad, 0), 0);
+  const numeroBarrasLongitudinales = numeroBarrasInferiores + numeroBarrasSuperiores + numeroBarrasLaterales;
   const extremosConGancho = input.considerarGanchoLongitudinal ? Math.max(Math.min(input.extremosConGancho, 2), 0) : 0;
   function longitudBarraLongitudinal(diametroId: string): number {
     return input.luzLibre + extremosConGancho * longitudGanchoBarra90(diametroId);
@@ -100,11 +108,7 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
   const longitudTotalFierro = longitudTotalBarrasLongitudinales + longitudTotalEstribos;
 
   const dimensionMinimaSugeridaCm = Math.min((input.luzLibre * 100) / 20, 45);
-  const separacionMaximaSugeridaCm = sugerirSeparacionEstribosCimentacion(
-    input.base,
-    input.altura,
-    input.barrasLongitudinales
-  );
+  const separacionMaximaSugeridaCm = sugerirSeparacionEstribosCimentacion(input.base, input.altura, grupos);
 
   if (Math.min(input.base, input.altura) < dimensionMinimaSugeridaCm) {
     warnings.push(
@@ -134,6 +138,9 @@ export function calcularVigaCimentacion(input: VigaCimentacionInput): VigaCiment
     areaSeccion,
     volumenConcreto,
     areaEncofrado,
+    numeroBarrasInferiores,
+    numeroBarrasSuperiores,
+    numeroBarrasLaterales,
     numeroBarrasLongitudinales,
     longitudTotalBarrasLongitudinales,
     pesoAceroLongitudinal,

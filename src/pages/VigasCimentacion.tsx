@@ -47,7 +47,9 @@ export function VigasCimentacionPage() {
     luzLibre: 4,
     base: 30,
     altura: 40,
-    barrasLongitudinales: [{ diametroId: "16", cantidad: 4 }],
+    barrasInferiores: [{ diametroId: "16", cantidad: 4 }],
+    barrasSuperiores: [{ diametroId: "12", cantidad: 2 }],
+    barrasLaterales: [],
     diametroEstribosId: "8",
     separacionEstribos: 20,
     recubrimiento: 4,
@@ -69,32 +71,35 @@ export function VigasCimentacionPage() {
     setSaved(false);
   }
 
-  function updateGrupo(index: number, patch: Partial<BarraGrupo>) {
+  type GrupoKey = "barrasInferiores" | "barrasSuperiores" | "barrasLaterales";
+
+  function updateGrupo(key: GrupoKey, index: number, patch: Partial<BarraGrupo>) {
     setInput((prev) => ({
       ...prev,
-      barrasLongitudinales: prev.barrasLongitudinales.map((g, i) => (i === index ? { ...g, ...patch } : g)),
+      [key]: prev[key].map((g, i) => (i === index ? { ...g, ...patch } : g)),
     }));
     setSaved(false);
   }
 
-  function addGrupo() {
+  function addGrupo(key: GrupoKey) {
     setInput((prev) => ({
       ...prev,
-      barrasLongitudinales: [...prev.barrasLongitudinales, { diametroId: "12", cantidad: 2 }],
+      [key]: [...prev[key], { diametroId: "12", cantidad: 2 }],
     }));
     setSaved(false);
   }
 
-  function removeGrupo(index: number) {
+  function removeGrupo(key: GrupoKey, index: number) {
     setInput((prev) => ({
       ...prev,
-      barrasLongitudinales: prev.barrasLongitudinales.filter((_, i) => i !== index),
+      [key]: prev[key].filter((_, i) => i !== index),
     }));
     setSaved(false);
   }
 
   function handleSugerirSeparacion() {
-    const sugerida = sugerirSeparacionEstribosCimentacion(input.base, input.altura, input.barrasLongitudinales);
+    const todasLasBarras = [...input.barrasInferiores, ...input.barrasSuperiores, ...input.barrasLaterales];
+    const sugerida = sugerirSeparacionEstribosCimentacion(input.base, input.altura, todasLasBarras);
     update("separacionEstribos", sugerida);
   }
 
@@ -113,7 +118,9 @@ export function VigasCimentacionPage() {
         Cantidad: `${input.numeroVigas} vigas`,
         Sección: `${input.base} x ${input.altura} cm`,
         "Luz libre": `${input.luzLibre} m`,
-        "Acero longitudinal": grupoLabel(input.barrasLongitudinales) || "-",
+        "Acero inferior": grupoLabel(input.barrasInferiores) || "-",
+        "Acero superior": grupoLabel(input.barrasSuperiores) || "-",
+        ...(input.barrasLaterales.length > 0 ? { "Acero lateral": grupoLabel(input.barrasLaterales) } : {}),
       },
     };
     addElement(el);
@@ -181,46 +188,29 @@ export function VigasCimentacionPage() {
           </SectionCard>
 
           <SectionCard title="Acero de refuerzo" icon={<Grid3x3 size={16} className="text-navy-700" />}>
-            <div className="flex flex-col gap-3">
-              <span className="text-sm font-medium text-navy-800">
-                Barras longitudinales (refuerzo continuo, superior e inferior)
-              </span>
-              {input.barrasLongitudinales.map((grupo, i) => (
-                <div key={i} className="flex items-end gap-2">
-                  <div className="w-28">
-                    <NumberField
-                      label={i === 0 ? "Cantidad" : ""}
-                      unit="und"
-                      step={1}
-                      value={grupo.cantidad}
-                      onChange={(v) => updateGrupo(i, { cantidad: v })}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <SelectField
-                      label={i === 0 ? "Diámetro" : ""}
-                      value={grupo.diametroId}
-                      onChange={(v) => updateGrupo(i, { diametroId: v })}
-                      options={rebarOptions}
-                    />
-                  </div>
-                  <button
-                    onClick={() => removeGrupo(i)}
-                    disabled={input.barrasLongitudinales.length <= 1}
-                    aria-label="Quitar grupo"
-                    className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={addGrupo}
-                className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
-              >
-                <Plus size={14} />
-                Agregar grupo
-              </button>
+            <div className="flex flex-col gap-5">
+              <GrupoBarrasFields
+                titulo="Barras inferiores"
+                grupos={input.barrasInferiores}
+                onUpdate={(i, patch) => updateGrupo("barrasInferiores", i, patch)}
+                onAdd={() => addGrupo("barrasInferiores")}
+                onRemove={(i) => removeGrupo("barrasInferiores", i)}
+              />
+              <GrupoBarrasFields
+                titulo="Barras superiores"
+                grupos={input.barrasSuperiores}
+                onUpdate={(i, patch) => updateGrupo("barrasSuperiores", i, patch)}
+                onAdd={() => addGrupo("barrasSuperiores")}
+                onRemove={(i) => removeGrupo("barrasSuperiores", i)}
+              />
+              <GrupoBarrasFields
+                titulo="Barras laterales (piel, ambas caras del alma)"
+                grupos={input.barrasLaterales}
+                onUpdate={(i, patch) => updateGrupo("barrasLaterales", i, patch)}
+                onAdd={() => addGrupo("barrasLaterales")}
+                onRemove={(i) => removeGrupo("barrasLaterales", i)}
+                permitirVacio
+              />
 
               <label className="mt-1 flex items-start gap-2">
                 <input
@@ -318,6 +308,64 @@ export function VigasCimentacionPage() {
         </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function GrupoBarrasFields({
+  titulo,
+  grupos,
+  onUpdate,
+  onAdd,
+  onRemove,
+  permitirVacio = false,
+}: {
+  titulo: string;
+  grupos: BarraGrupo[];
+  onUpdate: (index: number, patch: Partial<BarraGrupo>) => void;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+  permitirVacio?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <span className="text-sm font-medium text-navy-800">{titulo}</span>
+      {grupos.map((grupo, i) => (
+        <div key={i} className="flex items-end gap-2">
+          <div className="w-28">
+            <NumberField
+              label={i === 0 ? "Cantidad" : ""}
+              unit="und"
+              step={1}
+              value={grupo.cantidad}
+              onChange={(v) => onUpdate(i, { cantidad: v })}
+            />
+          </div>
+          <div className="flex-1">
+            <SelectField
+              label={i === 0 ? "Diámetro" : ""}
+              value={grupo.diametroId}
+              onChange={(v) => onUpdate(i, { diametroId: v })}
+              options={rebarOptions}
+            />
+          </div>
+          <button
+            onClick={() => onRemove(i)}
+            disabled={!permitirVacio && grupos.length <= 1}
+            aria-label="Quitar grupo"
+            className="mb-0.5 rounded p-2 text-steel-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={onAdd}
+        className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-steel-300 px-3 py-1.5 text-xs font-semibold text-navy-800 hover:bg-steel-50"
+      >
+        <Plus size={14} />
+        Agregar grupo
+      </button>
     </div>
   );
 }

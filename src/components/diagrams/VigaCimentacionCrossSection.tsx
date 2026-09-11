@@ -1,5 +1,6 @@
 import { getRebar } from "../../lib/materials";
 import type { VigaCimentacionInput } from "../../lib/calc/vigaCimentacion";
+import type { BarraGrupo } from "../../lib/calc/viga";
 import { HDim, VDim, DIAGRAM_COLORS, fmt, BlueprintGrid } from "./svgHelpers";
 
 interface VigaCimentacionCrossSectionProps {
@@ -13,17 +14,16 @@ const MARGIN_R = 30;
 const MARGIN_TOP = 30;
 const MARGIN_BOTTOM = 50;
 
-function flattenBarras(input: VigaCimentacionInput): number[] {
-  const dbs: number[] = [];
-  for (const grupo of input.barrasLongitudinales) {
-    const db = getRebar(grupo.diametroId).diameterMm;
-    for (let i = 0; i < Math.max(grupo.cantidad, 0); i++) dbs.push(db);
+function flattenBarras(grupos: BarraGrupo[]): string[] {
+  const ids: string[] = [];
+  for (const g of grupos) {
+    for (let i = 0; i < Math.max(g.cantidad, 0); i++) ids.push(g.diametroId);
   }
-  return dbs;
+  return ids;
 }
 
-function grupoLabel(input: VigaCimentacionInput): string {
-  return input.barrasLongitudinales
+function grupoLabel(grupos: BarraGrupo[]): string {
+  return grupos
     .filter((g) => g.cantidad > 0)
     .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
     .join(" + ");
@@ -45,25 +45,62 @@ export function VigaCimentacionCrossSection({ input }: VigaCimentacionCrossSecti
   const h = altura * scale;
   const recubPx = recub * scale;
 
-  const bars = flattenBarras(input);
-  const bottomCount = Math.ceil(bars.length / 2);
-  const bottomBars = bars.slice(0, bottomCount);
-  const topBars = bars.slice(bottomCount);
+  const bottomIds = flattenBarras(input.barrasInferiores);
+  const topIds = flattenBarras(input.barrasSuperiores);
+  const lateralIds = flattenBarras(input.barrasLaterales);
 
-  function rowCircles(dbs: number[], y: number) {
-    if (dbs.length === 0) return null;
+  function rowCircles(ids: string[], y: number, keyPrefix: string) {
+    if (ids.length === 0) return null;
     const usableLeft = xLeft + recubPx + 4;
     const usableRight = xLeft + w - recubPx - 4;
-    const step = dbs.length > 1 ? (usableRight - usableLeft) / (dbs.length - 1) : 0;
-    return dbs.map((db, i) => (
-      <circle
-        key={i}
-        cx={dbs.length > 1 ? usableLeft + i * step : (usableLeft + usableRight) / 2}
-        cy={y}
-        r={Math.max((db / 10) * scale * 0.5, 3)}
-        fill={DIAGRAM_COLORS.rebar}
-      />
-    ));
+    const step = ids.length > 1 ? (usableRight - usableLeft) / (ids.length - 1) : 0;
+    return ids.map((diametroId, i) => {
+      const rebar = getRebar(diametroId);
+      return (
+        <circle
+          key={`${keyPrefix}-${i}`}
+          cx={ids.length > 1 ? usableLeft + i * step : (usableLeft + usableRight) / 2}
+          cy={y}
+          r={Math.max((rebar.diameterMm / 10) * scale * 0.5, 3)}
+          fill={rebar.color}
+        />
+      );
+    });
+  }
+
+  // "cantidad" en barrasLaterales es el total de barras (ambas caras del alma), igual
+  // que en las mallas inf./sup. — se reparte en dos columnas (izquierda/derecha).
+  function columnCircles(ids: string[]) {
+    if (ids.length === 0) return null;
+    const leftCount = Math.ceil(ids.length / 2);
+    const leftIds = ids.slice(0, leftCount);
+    const rightIds = ids.slice(leftCount);
+
+    function column(colIds: string[], x: number, keyPrefix: string) {
+      const usableTop = yTop + recubPx + 4;
+      const usableBottom = yTop + h - recubPx - 4;
+      const step = colIds.length > 1 ? (usableBottom - usableTop) / (colIds.length - 1) : 0;
+      return colIds.map((diametroId, i) => {
+        const rebar = getRebar(diametroId);
+        const cy = colIds.length > 1 ? usableTop + i * step : (usableTop + usableBottom) / 2;
+        return (
+          <circle
+            key={`${keyPrefix}-${i}`}
+            cx={x}
+            cy={cy}
+            r={Math.max((rebar.diameterMm / 10) * scale * 0.5, 3)}
+            fill={rebar.color}
+          />
+        );
+      });
+    }
+
+    return (
+      <>
+        {column(leftIds, xLeft + recubPx, "lat-l")}
+        {column(rightIds, xLeft + w - recubPx, "lat-r")}
+      </>
+    );
   }
 
   return (
@@ -88,15 +125,17 @@ export function VigaCimentacionCrossSection({ input }: VigaCimentacionCrossSecti
           strokeWidth={2}
         />
 
-        {rowCircles(topBars, yTop + recubPx + 2)}
-        {rowCircles(bottomBars, yTop + h - recubPx - 2)}
+        {rowCircles(topIds, yTop + recubPx + 2, "top")}
+        {rowCircles(bottomIds, yTop + h - recubPx - 2, "bottom")}
+        {columnCircles(lateralIds)}
 
         <HDim x1={xLeft} x2={xLeft + w} y={yTop + h + 20} label={`b=${fmt(base)}cm`} labelBelow />
         <VDim y1={yTop} y2={yTop + h} x={xLeft - 20} label={`h=${fmt(altura)}cm`} />
       </svg>
       <p className="mt-1 text-xs text-steel-500">
-        {grupoLabel(input) || "sin barras"} ({bottomBars.length} inf. / {topBars.length} sup., continuo) · estribo
-        cerrado Ø{getRebar(input.diametroEstribosId).diameterMm}mm @ {fmt(input.separacionEstribos)}cm
+        {grupoLabel(input.barrasInferiores) || "sin barras"} inf. + {grupoLabel(input.barrasSuperiores) || "sin barras"} sup.
+        {lateralIds.length > 0 && ` + ${grupoLabel(input.barrasLaterales)} lat.`} · estribo cerrado Ø
+        {getRebar(input.diametroEstribosId).diameterMm}mm @ {fmt(input.separacionEstribos)}cm
       </p>
     </div>
   );

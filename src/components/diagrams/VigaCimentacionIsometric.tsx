@@ -12,9 +12,9 @@ const VIEW_W = 300;
 const VIEW_H = 240;
 const MARGIN = 22;
 
-function flattenBarras(input: VigaCimentacionInput): string[] {
+function flattenBarras(grupos: { diametroId: string; cantidad: number }[]): string[] {
   const ids: string[] = [];
-  for (const g of input.barrasLongitudinales) {
+  for (const g of grupos) {
     for (let i = 0; i < Math.max(g.cantidad, 0); i++) ids.push(g.diametroId);
   }
   return ids;
@@ -28,17 +28,17 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
   if (base <= 0 || altura <= 0) {
     return <p className="text-sm text-steel-500">Ingresa una base y altura válidas para ver la vista isométrica.</p>;
   }
-  const bars = flattenBarras(input);
-  if (bars.length === 0) {
+  const bottomIds = flattenBarras(input.barrasInferiores);
+  const topIds = flattenBarras(input.barrasSuperiores);
+  const lateralIds = flattenBarras(input.barrasLaterales);
+  if (bottomIds.length === 0 && topIds.length === 0 && lateralIds.length === 0) {
     return <p className="text-sm text-steel-500">Ingresa al menos una barra longitudinal para ver la vista isométrica.</p>;
   }
+  const totalBars = bottomIds.length + topIds.length + lateralIds.length;
 
   const maxDim = Math.max(base, altura);
   const lSeg = Math.min(Math.max(3.2 * maxDim, 90), 360);
 
-  const bottomCount = Math.ceil(bars.length / 2);
-  const bottomIds = bars.slice(0, bottomCount);
-  const topIds = bars.slice(bottomCount);
   function rowZ(ids: string[]): number[] {
     if (ids.length === 0) return [];
     const left = recub;
@@ -47,7 +47,22 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
   }
   const bottomPos = rowZ(bottomIds).map((z, i) => ({ z, y: altura - recub, diametroId: bottomIds[i] }));
   const topPos = rowZ(topIds).map((z, i) => ({ z, y: recub, diametroId: topIds[i] }));
-  const barPositions = [...bottomPos, ...topPos];
+
+  // Acero lateral (piel): "cantidad" es el total en ambas caras del alma, repartido en
+  // dos columnas (z=recub y z=base-recub) distribuidas verticalmente entre las mallas.
+  const lateralLeftCount = Math.ceil(lateralIds.length / 2);
+  const lateralLeftIds = lateralIds.slice(0, lateralLeftCount);
+  const lateralRightIds = lateralIds.slice(lateralLeftCount);
+  function columnY(ids: string[]): number[] {
+    if (ids.length === 0) return [];
+    const top = recub;
+    const bottom = altura - recub;
+    return ids.map((_, i) => (ids.length > 1 ? top + (i * (bottom - top)) / (ids.length - 1) : (top + bottom) / 2));
+  }
+  const lateralLeftPos = columnY(lateralLeftIds).map((y, i) => ({ z: recub, y, diametroId: lateralLeftIds[i] }));
+  const lateralRightPos = columnY(lateralRightIds).map((y, i) => ({ z: base - recub, y, diametroId: lateralRightIds[i] }));
+
+  const barPositions = [...bottomPos, ...topPos, ...lateralLeftPos, ...lateralRightPos];
 
   const boundingRaw = [
     { x: 0, z: 0, y: 0 },
@@ -132,7 +147,8 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
         Vista isométrica esquemática (segmento representativo, no a escala real)
       </p>
       <p className="text-center text-xs text-steel-500">
-        {bars.length} barras · {numeroEstribosPorViga} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por viga
+        {totalBars} barras ({bottomIds.length} inf. / {topIds.length} sup. / {lateralIds.length} lat.) ·{" "}
+        {numeroEstribosPorViga} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por viga
       </p>
     </div>
   );
