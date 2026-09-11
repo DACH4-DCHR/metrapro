@@ -142,8 +142,14 @@ export function calcularLosaAligerada(input: LosaAligeradaInput): LosaAligeradaR
       ? longitudBarrasVigueta * getRebar(input.diametroVarillaViguetaId).weightKgPerM
       : input.ratioAceroViguetasKgM2 * areaLosa;
 
+  // El bastón de negativo solo tiene un extremo realmente discontinuo (el otro queda
+  // sobre el apoyo), así que el gancho —si se considera— se suma una sola vez por
+  // bastón, sin depender de "extremosConGancho" (pensado para barras de tramo completo).
+  const longitudGanchoNegativo = input.considerarGanchoLongitudinal
+    ? longitudGanchoBarra90(input.diametroNegativoId)
+    : 0;
   const longitudTotalAceroNegativo = input.incluirAceroNegativo
-    ? Math.max(input.numeroBastonesPorVigueta, 0) * Math.max(input.longitudBaston, 0) * numeroViguetas
+    ? Math.max(input.numeroBastonesPorVigueta, 0) * (Math.max(input.longitudBaston, 0) + longitudGanchoNegativo) * numeroViguetas
     : 0;
   const aceroNegativoKg = longitudTotalAceroNegativo * getRebar(input.diametroNegativoId).weightKgPerM;
 

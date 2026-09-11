@@ -89,7 +89,13 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
 
   const rebarNegativo = getRebar(input.diametroNegativoId);
   const bastonLenCm = Math.min(Math.max(input.longitudBaston * 100, 0), largoCm * 0.35) || largoCm * 0.2;
-  const negativoY = capaCompresion;
+  // El bastón va en la parte superior del nervio, justo debajo de la capa de
+  // compresión — es decir, a la altura "alturaLadrillo" (= espesor - capaCompresion),
+  // no a la altura "capaCompresion" (eso lo dejaba junto al acero de vigueta, abajo).
+  const negativoY = espesor - capaCompresion;
+  const negativoHookLen = input.considerarGanchoLongitudinal
+    ? Math.min(longitudGanchoBarra90(input.diametroNegativoId) * 100, negativoY)
+    : 0;
 
   return (
     <div className="overflow-x-auto">
@@ -164,7 +170,9 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
           })}
 
         {/* Acero negativo (bastones sobre apoyos): tramos cortos junto a cada extremo del
-            segmento esquemático, en la parte superior del nervio */}
+            segmento esquemático, en la parte superior del nervio. El gancho (si se
+            considera) va en la punta que entra al tramo — el otro extremo sigue sobre
+            el apoyo y no es un extremo discontinuo. */}
         {input.incluirAceroNegativo &&
           nerviosCenterX.map((cx, i) => {
             const n = Math.max(input.numeroBastonesPorVigueta, 1);
@@ -172,12 +180,20 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
               const offset = n > 1 ? (j - (n - 1) / 2) * (b0 * 0.3) : 0;
               const aStart = screen(cx + offset, 0, negativoY);
               const aEnd = screen(cx + offset, bastonLenCm, negativoY);
+              const aHook = screen(cx + offset, bastonLenCm, negativoY - negativoHookLen);
               const bStart = screen(cx + offset, largoCm, negativoY);
               const bEnd = screen(cx + offset, largoCm - bastonLenCm, negativoY);
+              const bHook = screen(cx + offset, largoCm - bastonLenCm, negativoY - negativoHookLen);
               return (
                 <g key={`neg-${i}-${j}`}>
                   <line x1={aStart.x} y1={aStart.y} x2={aEnd.x} y2={aEnd.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
                   <line x1={bStart.x} y1={bStart.y} x2={bEnd.x} y2={bEnd.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
+                  {negativoHookLen > 0 && (
+                    <>
+                      <line x1={aEnd.x} y1={aEnd.y} x2={aHook.x} y2={aHook.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
+                      <line x1={bEnd.x} y1={bEnd.y} x2={bHook.x} y2={bHook.y} stroke={rebarNegativo.color} strokeWidth={1.6} strokeLinecap="round" />
+                    </>
+                  )}
                 </g>
               );
             });
