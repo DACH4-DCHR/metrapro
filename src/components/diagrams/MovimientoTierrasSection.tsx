@@ -7,10 +7,10 @@ interface MovimientoTierrasSectionProps {
   volumenExcavacion: number; // m3, ya calculado (evita repetir la fórmula aquí)
 }
 
-const VIEW_W = 280;
+const VIEW_W = 300;
 const VIEW_H = 300;
 const MARGIN_L = 55;
-const MARGIN_R = 30;
+const MARGIN_R = 55;
 const MARGIN_TOP = 40;
 const MARGIN_BOTTOM = 55;
 
@@ -29,12 +29,14 @@ export function MovimientoTierrasSection({ input, anchoExcavacion, volumenExcava
   const w = anchoExcavacion * scale;
   const h = profundidad * scale;
 
-  // Bloque de cimentación esquemático: mismo ancho de la excavación, altura
-  // proporcional al volumen que ocupará dentro del volumen total excavado (no a
-  // escala real, solo para mostrar relleno arriba/alrededor vs. concreto abajo).
+  // Bloque de cimentación: mismo ancho de la excavación (área de fondo constante),
+  // así que su altura real es exactamente volumenOcupado / áreaDeFondo — no es un
+  // valor inventado para el dibujo, por eso se acota igual que la profundidad.
   const fraccionOcupada =
     volumenExcavacion > 0 ? Math.min(Math.max(volumenOcupadoCimentacion, 0) / volumenExcavacion, 1) : 0;
   const hCimentacion = h * fraccionOcupada;
+  const alturaCimentacionM = profundidad * fraccionOcupada;
+  const alturaRellenoM = profundidad - alturaCimentacionM;
 
   return (
     <div className="overflow-x-auto">
@@ -71,9 +73,21 @@ export function MovimientoTierrasSection({ input, anchoExcavacion, volumenExcava
 
         <HDim x1={x0} x2={x0 + w} y={y0 + h + 20} label={`${fmt(anchoExcavacion, 2)}m`} labelBelow />
         <VDim y1={y0} y2={y0 + h} x={x0 - 20} label={`${fmt(profundidad, 2)}m`} />
+        {hCimentacion > 0 && (
+          <VDim
+            y1={y0 + h - hCimentacion}
+            y2={y0 + h}
+            x={x0 + w + 18}
+            label={`${fmt(alturaCimentacionM, 2)}m`}
+            labelLeft={false}
+          />
+        )}
+        {hCimentacion > 0 && hCimentacion < h && (
+          <VDim y1={y0} y2={y0 + h - hCimentacion} x={x0 + w + 18} label={`${fmt(alturaRellenoM, 2)}m`} labelLeft={false} />
+        )}
       </svg>
       <p className="mt-1 text-xs text-steel-500">
-        Excavación (tono tierra) + cimentación esquemática (gris) — no a escala real
+        Excavación (tono tierra) + cimentación (gris, altura según volumen ocupado ingresado) — no a escala real
       </p>
     </div>
   );

@@ -64,9 +64,9 @@ export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcava
     { x: 0, z: anchoExcavacion },
   ];
 
-  // Bloque de cimentación esquemático: mismo footprint de la excavación, altura
-  // proporcional al volumen que ocupará dentro del volumen total excavado, apoyado
-  // en el fondo (no a escala real, solo ilustra relleno vs. concreto).
+  // Bloque de cimentación: mismo footprint de la excavación (área de fondo
+  // constante), así que su altura real es exactamente volumenOcupado / áreaDeFondo,
+  // apoyado en el fondo — no es un valor inventado para el dibujo.
   const fraccionOcupada =
     volumenExcavacion > 0 ? Math.min(Math.max(input.volumenOcupadoCimentacion, 0) / volumenExcavacion, 1) : 0;
   const hCimentacion = profundidad * fraccionOcupada;
@@ -112,6 +112,7 @@ export function MovimientoTierrasIsometric({ input, largoExcavacion, anchoExcava
       </p>
       <p className="text-center text-xs text-steel-500">
         Excavación {fmt(largo, 2)}m x {fmt(anchoExcavacion, 2)}m x {fmt(profundidad, 2)}m
+        {hCimentacion > 0 && <> · cimentación (gris) {fmt(hCimentacion, 2)}m de altura</>}
       </p>
     </div>
   );
