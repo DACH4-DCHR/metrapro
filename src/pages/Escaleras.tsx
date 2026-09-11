@@ -296,6 +296,9 @@ export function EscalerasPage() {
               <ResultMetric label="Encofrado total" value={result.encofradoTotal} unit="m²" accent="amber" />
               <ResultMetric label="Acero principal" value={result.aceroPrincipalKg} unit="kg" accent="steel" />
               <ResultMetric label="Acero distribución" value={result.aceroDistribucionKg} unit="kg" accent="steel" />
+              {result.aceroDescansoKg > 0 && (
+                <ResultMetric label="Acero en descanso" value={result.aceroDescansoKg} unit="kg" accent="steel" />
+              )}
               <ResultMetric label="Acero total" value={result.aceroTotalKg} unit="kg" accent="steel" />
             </div>
           </SectionCard>

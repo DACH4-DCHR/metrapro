@@ -219,6 +219,39 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
     );
   }
 
+  // Malla del descanso: barras paralelas a "z" (mismo sentido que el Tramo 1, con el
+  // diámetro/separación del acero principal) y barras paralelas a "x" (transversales,
+  // con el de distribución) — así el acero del Tramo 1 se ve continuar dentro del
+  // descanso en vez de quedar cortado, y el Tramo 2 arranca desde una losa ya armada.
+  function renderLandingMesh(corners: { x: number; z: number }[], y: number) {
+    const xs = corners.map((c) => c.x);
+    const zs = corners.map((c) => c.z);
+    const xMin = Math.min(...xs);
+    const xMax = Math.max(...xs);
+    const zMin = Math.min(...zs);
+    const zMax = Math.max(...zs);
+
+    const barsZ: number[] = [];
+    for (let x = xMin + sepPrincipalCm / 2; x < xMax; x += sepPrincipalCm) barsZ.push(x);
+    const barsX: number[] = [];
+    for (let z = zMin + sepDistribucionCm / 2; z < zMax; z += sepDistribucionCm) barsX.push(z);
+
+    return (
+      <>
+        {barsZ.map((x, i) => {
+          const a = screen(x, zMin, y + landingEspesorM / 2);
+          const b = screen(x, zMax, y + landingEspesorM / 2);
+          return <line key={`lz-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarPrincipal.color} strokeWidth={1.6} strokeLinecap="round" />;
+        })}
+        {barsX.map((z, i) => {
+          const a = screen(xMin, z, y + landingEspesorM / 2);
+          const b = screen(xMax, z, y + landingEspesorM / 2);
+          return <line key={`lx-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={rebarDistribucion.color} strokeWidth={1.3} opacity={0.9} />;
+        })}
+      </>
+    );
+  }
+
   const tipoLabel: Record<string, string> = {
     un_tramo: "un tramo",
     dos_tramos: "dos tramos rectos",
@@ -245,6 +278,7 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
               const b = screen(c.x, c.z, landingY + landingEspesorM);
               return <line key={`land-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={DIAGRAM_COLORS.concreteStroke} strokeWidth={1} opacity={0.6} />;
             })}
+            {renderLandingMesh(landingCorners, landingY)}
           </>
         )}
 

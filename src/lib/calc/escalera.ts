@@ -53,6 +53,7 @@ export interface EscaleraResult {
   encofradoTotal: number;
   aceroPrincipalKg: number;
   aceroDistribucionKg: number;
+  aceroDescansoKg: number;
   aceroTotalKg: number;
   desgloseAcero: AceroItem[];
   warnings: string[];
@@ -164,11 +165,28 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
     separacionDistribucionM > 0 ? Math.ceil(longitudInclinadaTotal / separacionDistribucionM) : 0;
   const aceroDistribucionKg = numeroBarrasDistribucion * input.anchoEscalera * rebarDistribucion.weightKgPerM;
 
-  const aceroTotalKg = aceroPrincipalKg + aceroDistribucionKg;
+  // Malla del descanso: igual criterio que una losa maciza pequeña — barras "largas"
+  // (paralelas al sentido de avance) con el diámetro/separación del acero principal,
+  // y barras "cortas" (transversales) con el de distribución. Sin esto, el descanso
+  // quedaba sin acero propio entre ambos tramos.
+  let longitudDescansoPrincipal = 0;
+  let longitudDescansoDistribucion = 0;
+  if (esMultiTramo && input.descanso) {
+    const anchoDescM = input.descanso.ancho;
+    const largoDescM = input.descanso.largo;
+    const numeroBarrasLargoDescanso = separacionPrincipalM > 0 ? Math.ceil(anchoDescM / separacionPrincipalM) + 1 : 0;
+    longitudDescansoPrincipal = numeroBarrasLargoDescanso * largoDescM;
+    const numeroBarrasAnchoDescanso = separacionDistribucionM > 0 ? Math.ceil(largoDescM / separacionDistribucionM) + 1 : 0;
+    longitudDescansoDistribucion = numeroBarrasAnchoDescanso * anchoDescM;
+  }
+  const aceroDescansoKg =
+    longitudDescansoPrincipal * rebarPrincipal.weightKgPerM + longitudDescansoDistribucion * rebarDistribucion.weightKgPerM;
+
+  const aceroTotalKg = aceroPrincipalKg + aceroDistribucionKg + aceroDescansoKg;
 
   const desgloseAcero: AceroItem[] = [
-    { diametroId: input.aceroPrincipalDiametroId, longitudM: numeroBarrasPrincipal * longitudInclinadaTotal },
-    { diametroId: input.aceroDistribucionDiametroId, longitudM: numeroBarrasDistribucion * input.anchoEscalera },
+    { diametroId: input.aceroPrincipalDiametroId, longitudM: numeroBarrasPrincipal * longitudInclinadaTotal + longitudDescansoPrincipal },
+    { diametroId: input.aceroDistribucionDiametroId, longitudM: numeroBarrasDistribucion * input.anchoEscalera + longitudDescansoDistribucion },
   ];
 
   return {
@@ -181,6 +199,7 @@ export function calcularEscalera(input: EscaleraInput): EscaleraResult {
     encofradoTotal,
     aceroPrincipalKg,
     aceroDistribucionKg,
+    aceroDescansoKg,
     aceroTotalKg,
     desgloseAcero,
     warnings,
