@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
+import { useHelpStore } from "../store/helpStore";
+import { HELP_CONTENT } from "../lib/helpContent";
+import { HelpPanel } from "./ui/HelpPanel";
 
 // Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
 // cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
@@ -82,6 +85,8 @@ export function Layout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [menuOpen, setMenuOpen] = useState(false);
+  const helpKey = useHelpStore((s) => s.openKey);
+  const closeHelp = useHelpStore((s) => s.close);
   const location = useLocation();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -100,7 +105,8 @@ export function Layout() {
 
   useEffect(() => {
     setMenuOpen(false);
-  }, [location.pathname]);
+    closeHelp();
+  }, [location.pathname, closeHelp]);
 
   async function handleLogout() {
     await logout();
@@ -253,20 +259,25 @@ export function Layout() {
           <p className="text-sm font-bold">MetraPro</p>
         </div>
 
-        <main className="min-w-0 flex-1">
-          {error && (
-            <div className="no-print flex items-center justify-between gap-3 bg-red-50 px-6 py-2 text-sm text-red-700">
-              <span className="flex items-center gap-2">
-                <AlertTriangle size={16} />
-                {error}
-              </span>
-              <button onClick={clearError} aria-label="Cerrar aviso" className="rounded p-1 hover:bg-red-100">
-                <X size={14} />
-              </button>
-            </div>
+        <div className="flex min-w-0 flex-1">
+          <main className="min-w-0 flex-1">
+            {error && (
+              <div className="no-print flex items-center justify-between gap-3 bg-red-50 px-6 py-2 text-sm text-red-700">
+                <span className="flex items-center gap-2">
+                  <AlertTriangle size={16} />
+                  {error}
+                </span>
+                <button onClick={clearError} aria-label="Cerrar aviso" className="rounded p-1 hover:bg-red-100">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            <Outlet />
+          </main>
+          {helpKey && HELP_CONTENT[helpKey] && (
+            <HelpPanel content={HELP_CONTENT[helpKey]} onClose={closeHelp} />
           )}
-          <Outlet />
-        </main>
+        </div>
       </div>
     </div>
   );

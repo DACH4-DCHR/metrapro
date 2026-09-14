@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { CircleHelp } from "lucide-react";
 import { HELP_CONTENT, type HelpKey } from "../lib/helpContent";
-import { HelpPanel } from "./ui/HelpPanel";
+import { useHelpStore } from "../store/helpStore";
 
 interface PageHeaderProps {
   title: string;
@@ -12,8 +12,8 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHeaderProps) {
-  const [helpOpen, setHelpOpen] = useState(false);
-  const helpContent = helpKey ? HELP_CONTENT[helpKey] : undefined;
+  const openHelp = useHelpStore((s) => s.open);
+  const hasHelp = Boolean(helpKey && HELP_CONTENT[helpKey]);
 
   return (
     <div className="no-print sticky top-0 z-10 flex flex-col gap-2 bg-navy-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
@@ -26,11 +26,11 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
           {subtitle && <p className="hidden text-sm text-steel-400 sm:block">{subtitle}</p>}
         </div>
       </div>
-      {(helpContent || actions) && (
+      {(hasHelp || actions) && (
         <div className="flex flex-wrap items-center gap-2">
-          {helpContent && (
+          {hasHelp && (
             <button
-              onClick={() => setHelpOpen(true)}
+              onClick={() => openHelp(helpKey!)}
               aria-label="Ayuda: cómo llenar este módulo"
               title="Ayuda: cómo llenar este módulo"
               className="flex items-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
@@ -42,7 +42,6 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
           {actions}
         </div>
       )}
-      {helpContent && helpOpen && <HelpPanel content={helpContent} onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }
