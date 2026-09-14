@@ -60,3 +60,23 @@ body {
     display: none !important;
   }
 }
+
+/* Anillo de brillo sutil para el botón de ayuda "Guía rápida": llama la
+   atención sin ser molesto (lento, suave, se repite indefinidamente). */
+@keyframes help-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 140, 43, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(217, 140, 43, 0);
+  }
+}
+.help-button-glow {
+  animation: help-glow 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .help-button-glow {
+    animation: none;
+  }
+}

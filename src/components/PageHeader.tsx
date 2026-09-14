@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CircleHelp } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { HELP_CONTENT, type HelpKey } from "../lib/helpContent";
 import { useHelpStore } from "../store/helpStore";
 
@@ -31,12 +31,12 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
           {hasHelp && (
             <button
               onClick={() => openHelp(helpKey!)}
-              aria-label="Ayuda: cómo llenar este módulo"
-              title="Ayuda: cómo llenar este módulo"
-              className="flex items-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+              aria-label="Guía rápida: cómo llenar este módulo"
+              title="Guía rápida: cómo llenar este módulo"
+              className="help-button-glow flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-amber-400"
             >
-              <CircleHelp size={16} />
-              <span className="hidden sm:inline">Ayuda</span>
+              <Sparkles size={16} />
+              <span className="hidden sm:inline">Guía rápida</span>
             </button>
           )}
           {actions}
