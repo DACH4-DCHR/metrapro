@@ -3,7 +3,7 @@
 // en su parser; como aquí solo generamos archivos (no leemos xlsx de terceros),
 // este formato XML simple es seguro, no requiere dependencias y Excel lo abre nativamente.
 import type { CalculatedElement, MetradoLine } from "../types";
-import { defaultUnitPrice, priceKey } from "../pricing";
+import { calcularPresupuesto } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 
@@ -143,15 +143,25 @@ export function generateExcelReport(
     numericCols: [2, 3, 4],
   };
 
-  let totalPresupuesto = 0;
-  const presupuestoRows = consolidated.map((l) => {
-    const key = priceKey(l.partida, l.unidad);
-    const price = prices[key] ?? defaultUnitPrice(l.unidad);
-    const subtotal = price * l.cantidad;
-    totalPresupuesto += subtotal;
-    return [l.partida, l.unidad, Number(l.cantidad.toFixed(3)), Number(price.toFixed(2)), Number(subtotal.toFixed(2))];
-  });
-  presupuestoRows.push(["", "", "", "TOTAL", Number(totalPresupuesto.toFixed(2))]);
+  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const presupuestoRows: (string | number)[][] = presupuesto.rows.map((r) => [
+    r.line.partida,
+    r.line.unidad,
+    Number(r.line.cantidad.toFixed(3)),
+    Number(r.price.toFixed(2)),
+    Number(r.subtotal.toFixed(2)),
+  ]);
+  presupuestoRows.push(["", "", "", "Costo directo (S/.)", Number(presupuesto.costoDirecto.toFixed(2))]);
+  if (presupuesto.ggOn) {
+    presupuestoRows.push(["", "", "", `Gastos Generales (${presupuesto.ggPct}%)`, Number(presupuesto.montoGG.toFixed(2))]);
+  }
+  if (presupuesto.utOn) {
+    presupuestoRows.push(["", "", "", `Utilidad (${presupuesto.utPct}%)`, Number(presupuesto.montoUT.toFixed(2))]);
+  }
+  if (presupuesto.igvOn) {
+    presupuestoRows.push(["", "", "", `IGV (${presupuesto.igvPct}%)`, Number(presupuesto.montoIGV.toFixed(2))]);
+  }
+  presupuestoRows.push(["", "", "", "TOTAL GENERAL (S/.)", Number(presupuesto.totalGeneral.toFixed(2))]);
 
   const presupuestoSheet: ExcelSheet = {
     name: "Presupuesto Referencial",

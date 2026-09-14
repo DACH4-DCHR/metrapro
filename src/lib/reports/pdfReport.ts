@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CalculatedElement, MetradoLine } from "../types";
-import { defaultUnitPrice, priceKey } from "../pricing";
+import { calcularPresupuesto } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 
@@ -144,14 +144,26 @@ export function generatePdfReport(
     cursorY += 4;
   }
 
-  let totalPresupuesto = 0;
-  const presupuestoRows = consolidated.map((l) => {
-    const key = priceKey(l.partida, l.unidad);
-    const price = prices[key] ?? defaultUnitPrice(l.unidad);
-    const subtotal = price * l.cantidad;
-    totalPresupuesto += subtotal;
-    return [l.partida, l.unidad, numberFormatter.format(l.cantidad), currencyFormatter.format(price), currencyFormatter.format(subtotal)];
-  });
+  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const presupuestoRows = presupuesto.rows.map((r) => [
+    r.line.partida,
+    r.line.unidad,
+    numberFormatter.format(r.line.cantidad),
+    currencyFormatter.format(r.price),
+    currencyFormatter.format(r.subtotal),
+  ]);
+
+  const footRows: (string | number)[][] = [["", "", "", "Costo directo (S/.)", currencyFormatter.format(presupuesto.costoDirecto)]];
+  if (presupuesto.ggOn) {
+    footRows.push(["", "", "", `Gastos Generales (${presupuesto.ggPct}%)`, currencyFormatter.format(presupuesto.montoGG)]);
+  }
+  if (presupuesto.utOn) {
+    footRows.push(["", "", "", `Utilidad (${presupuesto.utPct}%)`, currencyFormatter.format(presupuesto.montoUT)]);
+  }
+  if (presupuesto.igvOn) {
+    footRows.push(["", "", "", `IGV (${presupuesto.igvPct}%)`, currencyFormatter.format(presupuesto.montoIGV)]);
+  }
+  footRows.push(["", "", "", "TOTAL GENERAL (S/.)", currencyFormatter.format(presupuesto.totalGeneral)]);
 
   if (cursorY > 250) {
     doc.addPage();
@@ -168,7 +180,7 @@ export function generatePdfReport(
     margin: { left: marginX, right: marginX },
     head: [["Partida", "Unidad", "Cantidad", "P. Unit.", "Parcial"]],
     body: presupuestoRows,
-    foot: [["", "", "", "TOTAL", currencyFormatter.format(totalPresupuesto)]],
+    foot: footRows,
     headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
     footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
     styles: { fontSize: 9, cellPadding: 2 },

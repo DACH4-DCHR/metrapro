@@ -32,7 +32,7 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { useProjectStore } from "../store/projectStore";
-import { defaultUnitPrice, priceKey } from "../lib/pricing";
+import { calcularPresupuesto, GG_PCT_KEY, UT_PCT_KEY, IGV_PCT_KEY, GG_ON_KEY, UT_ON_KEY, IGV_ON_KEY } from "../lib/presupuesto";
 import { generateExcelReport } from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
@@ -110,17 +110,17 @@ export function DashboardPage() {
     [elements]
   );
 
-  const presupuesto = useMemo(() => {
-    let total = 0;
-    const rows = consolidated.map((line) => {
-      const key = priceKey(line.partida, line.unidad);
-      const price = prices[key] ?? defaultUnitPrice(line.unidad);
-      const subtotal = price * line.cantidad;
-      total += subtotal;
-      return { key, line, price, subtotal };
-    });
-    return { rows, total };
-  }, [consolidated, prices]);
+  const presupuesto = useMemo(() => calcularPresupuesto(consolidated, prices), [consolidated, prices]);
+
+  function setGGOn(on: boolean) {
+    setPrice(GG_ON_KEY, on ? 1 : 0);
+  }
+  function setUTOn(on: boolean) {
+    setPrice(UT_ON_KEY, on ? 1 : 0);
+  }
+  function setIGVOn(on: boolean) {
+    setPrice(IGV_ON_KEY, on ? 1 : 0);
+  }
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -413,14 +413,7 @@ export function DashboardPage() {
                       <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
                       <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
                       <td className="px-4 py-2 text-right">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          value={row.price}
-                          onChange={(e) => setPrice(row.key, Number(e.target.value) || 0)}
-                          className="w-24 rounded border border-steel-200 px-2 py-1 text-right font-mono text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
-                        />
+                        <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
                       </td>
                       <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
                         {currencyFormatter.format(row.subtotal)}
@@ -431,15 +424,131 @@ export function DashboardPage() {
                 <tfoot>
                   <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
                     <td className="px-4 py-2" colSpan={4}>
-                      Total presupuesto referencial
+                      Costo directo (S/.)
                     </td>
-                    <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(presupuesto.total)}</td>
+                    <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(presupuesto.costoDirecto)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
+
+            <div className="mt-4 flex flex-col gap-2 border-t border-steel-200 pt-4">
+              <BudgetLineRow
+                label="Gastos Generales"
+                checked={presupuesto.ggOn}
+                onCheckedChange={setGGOn}
+                pct={presupuesto.ggPct}
+                onPctChange={(v) => setPrice(GG_PCT_KEY, v)}
+                monto={presupuesto.montoGG}
+                currencyFormatter={currencyFormatter}
+              />
+              <BudgetLineRow
+                label="Utilidad"
+                checked={presupuesto.utOn}
+                onCheckedChange={setUTOn}
+                pct={presupuesto.utPct}
+                onPctChange={(v) => setPrice(UT_PCT_KEY, v)}
+                monto={presupuesto.montoUT}
+                currencyFormatter={currencyFormatter}
+              />
+              <BudgetLineRow
+                label="IGV"
+                checked={presupuesto.igvOn}
+                onCheckedChange={setIGVOn}
+                pct={presupuesto.igvPct}
+                onPctChange={(v) => setPrice(IGV_PCT_KEY, v)}
+                monto={presupuesto.montoIGV}
+                currencyFormatter={currencyFormatter}
+              />
+              <div className="mt-2 flex items-center justify-between border-t-2 border-navy-900 pt-3 text-base font-bold text-navy-900">
+                <span>Total general (S/.)</span>
+                <span className="font-mono">{currencyFormatter.format(presupuesto.totalGeneral)}</span>
+              </div>
+            </div>
           </SectionCard>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Precio unitario con prefijo "S/" y 2 decimales siempre visibles. Un <input
+// type="number"> nativo no puede mostrar el cero final (4.8 y 4.80 son el mismo
+// número para el navegador), así que mientras el campo tiene foco se edita como
+// texto libre, y al salir se formatea a 2 decimales y recién ahí se guarda.
+function PriceInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState(value.toFixed(2));
+
+  return (
+    <div className="ml-auto flex w-28 items-center gap-1 rounded border border-steel-200 bg-white px-2 py-1 focus-within:border-navy-600 focus-within:ring-2 focus-within:ring-navy-600/20">
+      <span className="text-xs text-steel-500">S/</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={focused ? text : value.toFixed(2)}
+        onFocus={() => {
+          setText(value.toFixed(2));
+          setFocused(true);
+        }}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          const parsed = Math.max(parseFloat(text.replace(",", ".")) || 0, 0);
+          setFocused(false);
+          onChange(parsed);
+        }}
+        className="w-full min-w-0 flex-1 bg-transparent text-right font-mono text-navy-900 outline-none"
+      />
+    </div>
+  );
+}
+
+// Fila de Gastos Generales / Utilidad / IGV del presupuesto: checkbox para
+// incluirla o dejarla de lado, porcentaje editable, y el monto resultante.
+function BudgetLineRow({
+  label,
+  checked,
+  onCheckedChange,
+  pct,
+  onPctChange,
+  monto,
+  currencyFormatter,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  pct: number;
+  onPctChange: (pct: number) => void;
+  monto: number;
+  currencyFormatter: Intl.NumberFormat;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label className="flex items-center gap-2 text-sm text-navy-800">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onCheckedChange(e.target.checked)}
+          className="h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+        />
+        {label}
+      </label>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            step="0.1"
+            min={0}
+            value={pct}
+            disabled={!checked}
+            onChange={(e) => onPctChange(Number(e.target.value) || 0)}
+            className="w-16 rounded border border-steel-200 px-2 py-1 text-right font-mono text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 disabled:bg-steel-50 disabled:text-steel-400"
+          />
+          <span className="text-xs text-steel-500">%</span>
+        </div>
+        <span className={`w-28 text-right font-mono text-sm ${checked ? "text-navy-900" : "text-steel-400"}`}>
+          {currencyFormatter.format(monto)}
+        </span>
       </div>
     </div>
   );
