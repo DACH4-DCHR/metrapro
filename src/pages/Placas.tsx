@@ -134,6 +134,7 @@ export function PlacasPage() {
         title="Metrado de Placas (Muros Estructurales)"
         subtitle="Muros de concreto armado que resisten fuerzas sísmicas en su plano (NTE E.060 Art. 21.9)"
         icon={<PanelLeft size={20} />}
+        helpKey="placa"
         actions={
           <button
             onClick={handleSave}

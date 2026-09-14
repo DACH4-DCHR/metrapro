@@ -115,6 +115,7 @@ export function LosaAligeradaPage() {
         title="Metrado de Losa Aligerada"
         subtitle="Losas de concreto armado con ladrillo aligerante y viguetas"
         icon={<Layers3 size={20} />}
+        helpKey="losa"
         actions={
           <button
             onClick={handleSave}

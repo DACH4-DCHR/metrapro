@@ -108,6 +108,7 @@ export function ZapatasPage() {
         title="Metrado de Zapatas Aisladas"
         subtitle="Zapatas rectangulares de concreto armado con malla de acero inferior y superior"
         icon={<Square size={20} />}
+        helpKey="zapata"
         actions={
           <button
             onClick={handleSave}

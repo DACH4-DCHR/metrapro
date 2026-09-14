@@ -74,6 +74,7 @@ export function SobrecimientoPage() {
         title="Metrado de Sobrecimientos"
         subtitle="Concreto ciclópeo entre el cimiento corrido y el nivel de piso terminado (NTE E.060 Art. 22.10)"
         icon={<Rows3 size={20} />}
+        helpKey="sobrecimiento"
         actions={
           <button
             onClick={handleSave}

@@ -172,6 +172,7 @@ export function MurosAlbanileriaPage() {
         title="Metrado de Muros de Albañilería Confinada"
         subtitle="Muros portantes de unidades de arcilla con columnas y soleras de confinamiento (NTE E.070)"
         icon={<BrickWall size={20} />}
+        helpKey="muroAlbanileria"
         actions={
           <button
             onClick={handleSave}

@@ -143,6 +143,7 @@ export function EscalerasPage() {
         title="Metrado de Escaleras"
         subtitle="Escaleras de concreto armado: un tramo, dos tramos, L o U"
         icon={<MoveUpRight size={20} />}
+        helpKey="escalera"
         actions={
           <button
             onClick={handleSave}

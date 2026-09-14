@@ -153,6 +153,7 @@ export function VigasCimentacionPage() {
         title="Metrado de Vigas de Cimentación"
         subtitle="Acoples horizontales entre zapatas o cabezales de pilotes (NTE E.060 Art. 21.12.3)"
         icon={<GitCommitHorizontal size={20} />}
+        helpKey="vigaCimentacion"
         actions={
           <button
             onClick={handleSave}

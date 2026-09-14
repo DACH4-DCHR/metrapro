@@ -188,6 +188,7 @@ export function VigasPage() {
         title="Metrado de Vigas de Concreto Armado"
         subtitle="Vigas rectangulares, T invertida o sección personalizada"
         icon={<RectangleHorizontal size={20} />}
+        helpKey="viga"
         actions={
           <button
             onClick={handleSave}

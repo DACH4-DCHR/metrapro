@@ -243,6 +243,7 @@ export function ColumnasPage() {
         title="Metrado de Columnas de Concreto Armado"
         subtitle="Columnas rectangulares o circulares con confinamiento sismorresistente (NTE E.060 Cap. 21)"
         icon={<RectangleVertical size={20} />}
+        helpKey="columna"
         actions={
           <button
             onClick={handleSave}

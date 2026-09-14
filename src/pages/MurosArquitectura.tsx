@@ -146,6 +146,7 @@ export function MurosArquitecturaPage() {
         title="Metrado de Muros de Arquitectura (Tabiquería)"
         subtitle="Muros no portantes de subdivisión, sin función estructural (NTE E.070 Art. 71)"
         icon={<Grid2x2 size={20} />}
+        helpKey="muroArquitectura"
         actions={
           <button
             onClick={handleSave}

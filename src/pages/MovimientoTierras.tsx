@@ -100,6 +100,7 @@ export function MovimientoTierrasPage() {
         title="Metrado de Movimiento de Tierras"
         subtitle="Excavación, relleno compactado y eliminación de material excedente para cimentaciones"
         icon={<Shovel size={20} />}
+        helpKey="movimientoTierras"
         actions={
           <button
             onClick={handleSave}

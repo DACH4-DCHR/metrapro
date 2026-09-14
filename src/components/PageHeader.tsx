@@ -1,13 +1,20 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { CircleHelp } from "lucide-react";
+import { HELP_CONTENT, type HelpKey } from "../lib/helpContent";
+import { HelpPanel } from "./ui/HelpPanel";
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
   icon: ReactNode;
   actions?: ReactNode;
+  helpKey?: HelpKey;
 }
 
-export function PageHeader({ title, subtitle, icon, actions }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHeaderProps) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpContent = helpKey ? HELP_CONTENT[helpKey] : undefined;
+
   return (
     <div className="no-print sticky top-0 z-10 flex flex-col gap-2 bg-navy-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
       <div className="flex items-center gap-2 sm:gap-3">
@@ -19,7 +26,23 @@ export function PageHeader({ title, subtitle, icon, actions }: PageHeaderProps) 
           {subtitle && <p className="hidden text-sm text-steel-400 sm:block">{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {(helpContent || actions) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {helpContent && (
+            <button
+              onClick={() => setHelpOpen(true)}
+              aria-label="Ayuda: cómo llenar este módulo"
+              title="Ayuda: cómo llenar este módulo"
+              className="flex items-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+            >
+              <CircleHelp size={16} />
+              <span className="hidden sm:inline">Ayuda</span>
+            </button>
+          )}
+          {actions}
+        </div>
+      )}
+      {helpContent && helpOpen && <HelpPanel content={helpContent} onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

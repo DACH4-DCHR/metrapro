@@ -151,6 +151,7 @@ export function DashboardPage() {
         title="Dashboard del Proyecto"
         subtitle="Resumen general de metrados calculados"
         icon={<LayoutDashboard size={20} />}
+        helpKey="dashboard"
         actions={
           <div className="flex items-center gap-2">
             <button

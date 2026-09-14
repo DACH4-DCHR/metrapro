@@ -97,6 +97,7 @@ export function LosaMacizaPage() {
         title="Metrado de Losa Maciza"
         subtitle="Losa de concreto armado de espesor uniforme, sin ladrillo aligerante"
         icon={<LayoutPanelTop size={20} />}
+        helpKey="losaMaciza"
         actions={
           <button
             onClick={handleSave}

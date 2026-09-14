@@ -89,6 +89,7 @@ export function CimientoCorridoPage() {
         title="Metrado de Cimientos Corridos"
         subtitle="Concreto ciclópeo en cimentación continua para muros portantes (NTE E.060 Art. 22.10)"
         icon={<StretchHorizontal size={20} />}
+        helpKey="cimientoCorrido"
         actions={
           <button
             onClick={handleSave}
