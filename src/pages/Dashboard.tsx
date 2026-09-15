@@ -26,6 +26,8 @@ import {
   ClipboardList,
   Wallet,
   ListChecks,
+  ShoppingCart,
+  Download,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -33,7 +35,8 @@ import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { useProjectStore } from "../store/projectStore";
 import { calcularPresupuesto, GG_PCT_KEY, UT_PCT_KEY, IGV_PCT_KEY, GG_ON_KEY, UT_ON_KEY, IGV_ON_KEY } from "../lib/presupuesto";
-import { generateExcelReport } from "../lib/reports/excelReport";
+import { calcularMetradoMateriales, materialesALineas } from "../lib/materiales";
+import { generateExcelReport, downloadExcelWorkbook, buildMetradoLineasSheet, buildPresupuestoSheet } from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
 import type { MetradoLine, ModuleType } from "../lib/types";
@@ -112,6 +115,11 @@ export function DashboardPage() {
 
   const presupuesto = useMemo(() => calcularPresupuesto(consolidated, prices), [consolidated, prices]);
 
+  const materiales = useMemo(() => calcularMetradoMateriales(consolidated, elements), [consolidated, elements]);
+  const materialesLines = useMemo(() => materialesALineas(materiales), [materiales]);
+
+  const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
+
   function setGGOn(on: boolean) {
     setPrice(GG_ON_KEY, on ? 1 : 0);
   }
@@ -139,7 +147,7 @@ export function DashboardPage() {
     setGeneratingPdf(true);
     try {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
-      generatePdfReport(projectInfo, elements, consolidated, prices);
+      generatePdfReport(projectInfo, elements, consolidated, prices, materialesLines);
     } finally {
       setGeneratingPdf(false);
     }
@@ -155,7 +163,7 @@ export function DashboardPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => generateExcelReport(projectInfo, elements, consolidated, prices)}
+              onClick={() => generateExcelReport(projectInfo, elements, consolidated, prices, materialesLines)}
               disabled={consolidated.length === 0}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -306,6 +314,15 @@ export function DashboardPage() {
             title="Cuadro de metrados consolidado"
             icon={<ClipboardList size={16} className="text-navy-700" />}
             collapsible
+            headerActions={
+              <ExportSectionButton
+                onClick={() =>
+                  downloadExcelWorkbook(`metrados_${safeProjectName}`, [
+                    buildMetradoLineasSheet("Metrados Consolidado", consolidated),
+                  ])
+                }
+              />
+            }
           >
             <ResultTable lines={consolidated} />
           </SectionCard>
@@ -391,6 +408,11 @@ export function DashboardPage() {
             title="Presupuesto referencial"
             icon={<Wallet size={16} className="text-navy-700" />}
             collapsible
+            headerActions={
+              <ExportSectionButton
+                onClick={() => downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [buildPresupuestoSheet(presupuesto)])}
+              />
+            }
           >
             <div className="mb-3 text-xs text-steel-500">
               Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu
@@ -468,8 +490,53 @@ export function DashboardPage() {
             </div>
           </SectionCard>
         )}
+
+        {materialesLines.length > 0 && (
+          <SectionCard
+            title="Metrado de materiales"
+            icon={<ShoppingCart size={16} className="text-navy-700" />}
+            collapsible
+            headerActions={
+              <ExportSectionButton
+                onClick={() =>
+                  downloadExcelWorkbook(`materiales_${safeProjectName}`, [
+                    buildMetradoLineasSheet("Metrado de Materiales", materialesLines),
+                  ])
+                }
+              />
+            }
+          >
+            <div className="mb-3 text-xs text-steel-500">
+              Lista de materiales a comprar, lista para enviar al cliente. El cemento, arena, piedra y agua se
+              calculan a partir del concreto usando una dosificación referencial por f'c — ajústala si tu diseño de
+              mezcla real difiere.
+            </div>
+            {materiales.fcNoReconocidos.length > 0 && (
+              <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                No se reconoce una dosificación referencial para f'c={materiales.fcNoReconocidos.join(", ")} kg/cm²;
+                esas partidas de concreto no están incluidas en el cemento/arena/piedra/agua de esta lista.
+              </div>
+            )}
+            <ResultTable lines={materialesLines} />
+          </SectionCard>
+        )}
       </div>
     </div>
+  );
+}
+
+// Botón pequeño y discreto en el encabezado de una SectionCard para exportar
+// solo esa tabla a Excel, sin tener que descargar el reporte completo.
+function ExportSectionButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Exportar esta sección a Excel"
+      title="Exportar esta sección a Excel"
+      className="rounded p-1 text-steel-500 hover:bg-steel-100 hover:text-navy-800"
+    >
+      <Download size={14} />
+    </button>
   );
 }
 

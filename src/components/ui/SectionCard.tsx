@@ -8,6 +8,7 @@ interface SectionCardProps {
   className?: string;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  headerActions?: ReactNode;
 }
 
 export function SectionCard({
@@ -17,6 +18,7 @@ export function SectionCard({
   className = "",
   collapsible = false,
   defaultCollapsed = false,
+  headerActions,
 }: SectionCardProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
@@ -31,6 +33,7 @@ export function SectionCard({
           </span>
         )}
         <h3 className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-navy-900 sm:text-sm">{title}</h3>
+        {headerActions}
         {collapsible && (
           <button
             type="button"

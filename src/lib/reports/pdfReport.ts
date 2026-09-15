@@ -28,7 +28,8 @@ export function generatePdfReport(
   projectInfo: ProjectInfoLike,
   elements: CalculatedElement[],
   consolidated: MetradoLine[],
-  prices: Record<string, number>
+  prices: Record<string, number>,
+  materialesLines: MetradoLine[]
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -189,6 +190,31 @@ export function generatePdfReport(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cursorY = (doc as any).lastAutoTable.finalY + 10;
+
+  if (materialesLines.length > 0) {
+    if (cursorY > 240) {
+      doc.addPage();
+      cursorY = 16;
+    }
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text("Metrado de Materiales", marginX, cursorY);
+    cursorY += 3;
+
+    autoTable(doc, {
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      head: [["Material", "Unidad", "Cantidad"]],
+      body: materialesLines.map((l) => [l.partida, l.unidad, numberFormatter.format(l.cantidad)]),
+      headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: { 2: { halign: "right" } },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cursorY = (doc as any).lastAutoTable.finalY + 10;
+  }
 
   if (elements.length > 0) {
     if (cursorY > 240) {
