@@ -14,6 +14,7 @@ import {
   getProject,
   updateProjectInfo,
   setPrices,
+  setMaterialesCustom,
   addElement,
   removeElement,
 } from "./db.js";
@@ -115,6 +116,12 @@ app.patch("/api/project", async (req, res) => {
 app.put("/api/project/prices", async (req, res) => {
   const id = await getOrCreateProjectForUser(req.userId);
   await setPrices(id, req.body ?? {});
+  res.json(await getProject(id));
+});
+
+app.put("/api/project/materiales-custom", async (req, res) => {
+  const id = await getOrCreateProjectForUser(req.userId);
+  await setMaterialesCustom(id, Array.isArray(req.body) ? req.body : []);
   res.json(await getProject(id));
 });
 

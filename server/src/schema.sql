@@ -23,8 +23,11 @@ CREATE TABLE IF NOT EXISTS projects (
   fecha TEXT NOT NULL DEFAULT '',
   logo_data_url TEXT,
   prices_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  materiales_custom_json JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at BIGINT NOT NULL
 );
+
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS materiales_custom_json JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS elements (
   id TEXT PRIMARY KEY,

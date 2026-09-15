@@ -1,5 +1,6 @@
 import type { CalculatedElement } from "./types";
 import type { AuthUser, ProjectDto } from "./api";
+import type { CustomMaterialLine } from "./materiales";
 
 const PROJECT_SNAPSHOT_KEY = "metrapro:project-snapshot";
 const PENDING_QUEUE_KEY = "metrapro:pending-queue";
@@ -10,15 +11,21 @@ export type ElementOp = { type: "add"; element: CalculatedElement } | { type: "r
 export interface PendingQueue {
   projectInfoPatch: Record<string, unknown> | null;
   prices: Record<string, number> | null;
+  materialesCustom: CustomMaterialLine[] | null;
   elementOps: ElementOp[];
 }
 
 export function emptyQueue(): PendingQueue {
-  return { projectInfoPatch: null, prices: null, elementOps: [] };
+  return { projectInfoPatch: null, prices: null, materialesCustom: null, elementOps: [] };
 }
 
 export function pendingCount(queue: PendingQueue): number {
-  return (queue.projectInfoPatch ? 1 : 0) + (queue.prices ? 1 : 0) + queue.elementOps.length;
+  return (
+    (queue.projectInfoPatch ? 1 : 0) +
+    (queue.prices ? 1 : 0) +
+    (queue.materialesCustom ? 1 : 0) +
+    queue.elementOps.length
+  );
 }
 
 function readJson<T>(key: string): T | null {

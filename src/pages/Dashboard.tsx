@@ -28,6 +28,7 @@ import {
   ListChecks,
   ShoppingCart,
   FileText,
+  Plus,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -45,7 +46,13 @@ import {
   UT_ON_KEY,
   IGV_ON_KEY,
 } from "../lib/presupuesto";
-import { calcularMetradoMateriales, materialesALineas } from "../lib/materiales";
+import {
+  calcularMetradoMateriales,
+  materialesALineas,
+  aceroALineas,
+  customMaterialesALineas,
+  type CustomMaterialLine,
+} from "../lib/materiales";
 import {
   generateExcelReport,
   downloadExcelWorkbook,
@@ -105,6 +112,8 @@ export function DashboardPage() {
   const removeElement = useProjectStore((s) => s.removeElement);
   const prices = useProjectStore((s) => s.prices);
   const setPrice = useProjectStore((s) => s.setPrice);
+  const materialesCustom = useProjectStore((s) => s.materialesCustom);
+  const setMaterialesCustomStore = useProjectStore((s) => s.setMaterialesCustom);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
@@ -133,16 +142,38 @@ export function DashboardPage() {
 
   const materiales = useMemo(() => calcularMetradoMateriales(consolidated, elements), [consolidated, elements]);
   const materialesLines = useMemo(() => materialesALineas(materiales), [materiales]);
-  const materialesValorizado = useMemo(() => valorizarLineas(materialesLines, prices), [materialesLines, prices]);
-  const materialesFootRows = useMemo(() => {
-    const rows: (string | number)[][] = [
-      ["", "", "", "Costo total de materiales (S/.)", Number(materialesValorizado.total.toFixed(2))],
-    ];
-    if (materiales.totalVarillas > 0) {
-      rows.push(["Total de varillas de acero (todos los diámetros)", "und", materiales.totalVarillas, "", ""]);
-    }
+  const customLineas = useMemo(() => customMaterialesALineas(materialesCustom), [materialesCustom]);
+  const aceroLineas = useMemo(() => aceroALineas(materiales), [materiales]);
+
+  const derivedValorizado = useMemo(() => valorizarLineas(materialesLines, prices), [materialesLines, prices]);
+  const customValorizado = useMemo(() => valorizarLineas(customLineas, prices), [customLineas, prices]);
+  const aceroValorizado = useMemo(() => valorizarLineas(aceroLineas, prices), [aceroLineas, prices]);
+  const costoTotalMateriales = derivedValorizado.total + customValorizado.total + aceroValorizado.total;
+
+  const materialesExportLines = useMemo(
+    () => [...materialesLines, ...customLineas, ...aceroLineas],
+    [materialesLines, customLineas, aceroLineas]
+  );
+
+  const materialesFootRowsExcel = useMemo(() => {
+    const rows: (string | number)[][] = materiales.acero.map((r) => [
+      `Varillas Ø${r.diametroMm}mm x 9m (habilitación)`,
+      "und",
+      r.numeroVarillas,
+      "",
+      "",
+    ]);
+    rows.push(["", "", "", "Costo total de materiales (S/.)", Number(costoTotalMateriales.toFixed(2))]);
     return rows;
-  }, [materialesValorizado.total, materiales.totalVarillas]);
+  }, [materiales.acero, costoTotalMateriales]);
+
+  function addCustomMaterial(partida: string, unidad: string, cantidad: number) {
+    const item: CustomMaterialLine = { id: crypto.randomUUID(), partida, unidad, cantidad };
+    setMaterialesCustomStore([...materialesCustom, item]);
+  }
+  function removeCustomMaterial(id: string) {
+    setMaterialesCustomStore(materialesCustom.filter((m) => m.id !== id));
+  }
 
   const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
 
@@ -173,7 +204,7 @@ export function DashboardPage() {
     setGeneratingPdf(true);
     try {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
-      generatePdfReport(projectInfo, elements, consolidated, prices, materialesLines, materiales.totalVarillas);
+      generatePdfReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas);
     } finally {
       setGeneratingPdf(false);
     }
@@ -190,7 +221,7 @@ export function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
-                generateExcelReport(projectInfo, elements, consolidated, prices, materialesLines, materiales.totalVarillas)
+                generateExcelReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas)
               }
               disabled={consolidated.length === 0}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -537,24 +568,29 @@ export function DashboardPage() {
               <ExportSectionButtons
                 onExcel={() =>
                   downloadExcelWorkbook(`materiales_${safeProjectName}`, [
-                    buildValorizadoSheet("Metrado de Materiales", materialesValorizado.rows, materialesFootRows),
+                    buildValorizadoSheet(
+                      "Metrado de Materiales",
+                      [...derivedValorizado.rows, ...customValorizado.rows, ...aceroValorizado.rows],
+                      materialesFootRowsExcel
+                    ),
                   ])
                 }
                 onPdf={async () => {
                   const { downloadValorizadoPdf } = await import("../lib/reports/pdfReport");
-                  const footRows: (string | number)[][] = [
-                    ["", "", "", "Costo total de materiales (S/.)", currencyFormatter.format(materialesValorizado.total)],
-                  ];
-                  if (materiales.totalVarillas > 0) {
-                    footRows.push([
-                      "Total de varillas de acero (todos los diámetros)",
-                      "und",
-                      String(materiales.totalVarillas),
-                      "",
-                      "",
-                    ]);
-                  }
-                  downloadValorizadoPdf(`materiales_${safeProjectName}`, "Metrado de Materiales", materialesValorizado.rows, footRows);
+                  const footRows: (string | number)[][] = materiales.acero.map((r) => [
+                    `Varillas Ø${r.diametroMm}mm x 9m (habilitación)`,
+                    "und",
+                    String(r.numeroVarillas),
+                    "",
+                    "",
+                  ]);
+                  footRows.push(["", "", "", "Costo total de materiales (S/.)", currencyFormatter.format(costoTotalMateriales)]);
+                  downloadValorizadoPdf(
+                    `materiales_${safeProjectName}`,
+                    "Metrado de Materiales",
+                    [...derivedValorizado.rows, ...customValorizado.rows, ...aceroValorizado.rows],
+                    footRows
+                  );
                 }}
               />
             }
@@ -580,10 +616,11 @@ export function DashboardPage() {
                     <th className="px-4 py-2 text-right font-semibold">Cantidad</th>
                     <th className="px-4 py-2 text-right font-semibold">P. Unit. (S/.)</th>
                     <th className="px-4 py-2 text-right font-semibold">Parcial</th>
+                    <th className="px-4 py-2 no-print" />
                   </tr>
                 </thead>
                 <tbody>
-                  {materialesValorizado.rows.map((row, idx) => (
+                  {derivedValorizado.rows.map((row, idx) => (
                     <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
                       <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
                       <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
@@ -594,25 +631,109 @@ export function DashboardPage() {
                       <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
                         {currencyFormatter.format(row.subtotal)}
                       </td>
+                      <td className="px-4 py-2 no-print" />
+                    </tr>
+                  ))}
+                  {customValorizado.rows.map((row, idx) => (
+                    <tr
+                      key={row.key}
+                      className={(derivedValorizado.rows.length + idx) % 2 === 0 ? "bg-white" : "bg-steel-50"}
+                    >
+                      <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
+                      <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
+                      <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
+                      <td className="px-4 py-2 text-right">
+                        <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
+                        {currencyFormatter.format(row.subtotal)}
+                      </td>
+                      <td className="px-4 py-2 no-print">
+                        <button
+                          onClick={() => removeCustomMaterial(materialesCustom[idx].id)}
+                          aria-label="Quitar material"
+                          className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
                     <td className="px-4 py-2" colSpan={4}>
-                      Costo total de materiales (S/.)
+                      Subtotal materiales (S/.)
                     </td>
-                    <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(materialesValorizado.total)}</td>
+                    <td className="px-4 py-2 text-right font-mono">
+                      {currencyFormatter.format(derivedValorizado.total + customValorizado.total)}
+                    </td>
+                    <td className="no-print" />
                   </tr>
                 </tfoot>
               </table>
             </div>
-            {materiales.totalVarillas > 0 && (
-              <div className="mt-3 flex items-center justify-between rounded-md bg-steel-50 px-4 py-2 text-sm font-semibold text-navy-900">
-                <span>Total de varillas de acero (todos los diámetros)</span>
-                <span className="font-mono">{materiales.totalVarillas} und</span>
+
+            <AddMaterialForm onAdd={addCustomMaterial} />
+
+            {aceroValorizado.rows.length > 0 && (
+              <div className="mt-5">
+                <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-900">
+                  Acero de refuerzo por diámetro
+                </h4>
+                <div className="overflow-x-auto rounded-lg border border-steel-200">
+                  <table className="w-full min-w-[560px] border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-navy-900 text-left text-white">
+                        <th className="px-4 py-2 font-semibold">Diámetro</th>
+                        <th className="px-4 py-2 text-right font-semibold">Peso (kg)</th>
+                        <th className="px-4 py-2 text-right font-semibold">
+                          Varillas x {LONGITUD_VARILLA_COMERCIAL_M}m (und)
+                        </th>
+                        <th className="px-4 py-2 text-right font-semibold">P. Unit. (S/. x kg)</th>
+                        <th className="px-4 py-2 text-right font-semibold">Parcial</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aceroValorizado.rows.map((row, idx) => {
+                        const r = materiales.acero[idx];
+                        return (
+                          <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+                            <td className="px-4 py-2 text-navy-900">Ø{r.diametroMm}mm</td>
+                            <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
+                            <td className="px-4 py-2 text-right font-mono">{r.numeroVarillas}</td>
+                            <td className="px-4 py-2 text-right">
+                              <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
+                              {currencyFormatter.format(row.subtotal)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
+                        <td className="px-4 py-2">
+                          Subtotal acero — {materiales.totalVarillas} varilla{materiales.totalVarillas === 1 ? "" : "s"} en total
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono">
+                          {numberFormatter.format(materiales.acero.reduce((a, r) => a + r.pesoKg, 0))}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono">{materiales.totalVarillas}</td>
+                        <td />
+                        <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(aceroValorizado.total)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             )}
+
+            <div className="mt-4 flex items-center justify-between border-t-2 border-navy-900 pt-3 text-base font-bold text-navy-900">
+              <span>Costo total de materiales (S/.)</span>
+              <span className="font-mono">{currencyFormatter.format(costoTotalMateriales)}</span>
+            </div>
           </SectionCard>
         )}
       </div>
@@ -687,6 +808,65 @@ function PriceInput({ value, onChange }: { value: number; onChange: (v: number) 
         className="w-full min-w-0 flex-1 bg-transparent text-right font-mono text-navy-900 outline-none"
       />
     </div>
+  );
+}
+
+// Formulario para agregar un material que no viene del metrado automático
+// (clavos, alambre, madera, pintura, etc.), para completar la lista de compra.
+function AddMaterialForm({ onAdd }: { onAdd: (partida: string, unidad: string, cantidad: number) => void }) {
+  const [partida, setPartida] = useState("");
+  const [unidad, setUnidad] = useState("und");
+  const [cantidad, setCantidad] = useState(1);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!partida.trim() || cantidad <= 0) return;
+    onAdd(partida.trim(), unidad.trim() || "und", cantidad);
+    setPartida("");
+    setUnidad("und");
+    setCantidad(1);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-dashed border-steel-300 p-3">
+      <div className="min-w-[160px] flex-1">
+        <label className="mb-1 block text-xs font-medium text-navy-800">Material</label>
+        <input
+          type="text"
+          value={partida}
+          onChange={(e) => setPartida(e.target.value)}
+          placeholder='Ej. Clavos de 3"'
+          className="w-full rounded-md border border-steel-200 px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+        />
+      </div>
+      <div className="w-24">
+        <label className="mb-1 block text-xs font-medium text-navy-800">Unidad</label>
+        <input
+          type="text"
+          value={unidad}
+          onChange={(e) => setUnidad(e.target.value)}
+          className="w-full rounded-md border border-steel-200 px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+        />
+      </div>
+      <div className="w-24">
+        <label className="mb-1 block text-xs font-medium text-navy-800">Cantidad</label>
+        <input
+          type="number"
+          step="0.01"
+          min={0}
+          value={cantidad}
+          onChange={(e) => setCantidad(Number(e.target.value) || 0)}
+          className="w-full rounded-md border border-steel-200 px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+        />
+      </div>
+      <button
+        type="submit"
+        className="flex items-center gap-1.5 rounded-md bg-navy-900 px-3 py-2 text-xs font-semibold text-white hover:bg-navy-700"
+      >
+        <Plus size={14} />
+        Agregar material
+      </button>
+    </form>
   );
 }
 

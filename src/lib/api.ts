@@ -1,4 +1,5 @@
 import type { CalculatedElement } from "./types";
+import type { CustomMaterialLine } from "./materiales";
 
 export interface ProjectInfoDto {
   id?: number;
@@ -13,6 +14,7 @@ export interface ProjectInfoDto {
 export interface ProjectDto {
   projectInfo: ProjectInfoDto;
   prices: Record<string, number>;
+  materialesCustom: CustomMaterialLine[];
   elements: CalculatedElement[];
 }
 
@@ -77,6 +79,10 @@ export function patchProjectInfo(fields: Partial<ProjectInfoDto>): Promise<Proje
 
 export function putPrices(prices: Record<string, number>): Promise<ProjectDto> {
   return request<ProjectDto>("/project/prices", { method: "PUT", body: JSON.stringify(prices) });
+}
+
+export function putMaterialesCustom(items: CustomMaterialLine[]): Promise<ProjectDto> {
+  return request<ProjectDto>("/project/materiales-custom", { method: "PUT", body: JSON.stringify(items) });
 }
 
 export function postElement(element: CalculatedElement): Promise<ProjectDto> {

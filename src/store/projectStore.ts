@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import type { CalculatedElement } from "../lib/types";
+import type { CustomMaterialLine } from "../lib/materiales";
 import {
   fetchProject,
   patchProjectInfo,
   putPrices,
+  putMaterialesCustom,
   postElement,
   deleteElement as apiDeleteElement,
   NetworkError,
@@ -31,6 +33,7 @@ interface ProjectState {
   projectInfo: ProjectInfo;
   elements: CalculatedElement[];
   prices: Record<string, number>;
+  materialesCustom: CustomMaterialLine[];
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   isOffline: boolean;
@@ -43,6 +46,7 @@ interface ProjectState {
   addElement: (el: CalculatedElement) => void;
   removeElement: (id: string) => void;
   setPrice: (key: string, value: number) => void;
+  setMaterialesCustom: (items: CustomMaterialLine[]) => void;
   flushQueue: () => Promise<void>;
 }
 
@@ -58,8 +62,8 @@ let syncing = false;
 
 export const useProjectStore = create<ProjectState>()((set, get) => {
   function persistSnapshot() {
-    const { projectInfo, prices, elements } = get();
-    writeProjectSnapshot({ projectInfo, prices, elements });
+    const { projectInfo, prices, materialesCustom, elements } = get();
+    writeProjectSnapshot({ projectInfo, prices, materialesCustom, elements });
   }
 
   function persistQueue(queue: PendingQueue) {
@@ -71,6 +75,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     projectInfo: emptyProjectInfo,
     elements: [],
     prices: {},
+    materialesCustom: [],
     status: "idle",
     error: null,
     isOffline: false,
@@ -84,7 +89,14 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       try {
         const data = await fetchProject();
         writeProjectSnapshot(data);
-        set({ projectInfo: data.projectInfo, prices: data.prices, elements: data.elements, status: "ready", isOffline: false });
+        set({
+          projectInfo: data.projectInfo,
+          prices: data.prices,
+          materialesCustom: data.materialesCustom ?? [],
+          elements: data.elements,
+          status: "ready",
+          isOffline: false,
+        });
         get().flushQueue();
       } catch (e) {
         if (e instanceof NetworkError) {
@@ -93,6 +105,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             set({
               projectInfo: cached.projectInfo,
               prices: cached.prices,
+              materialesCustom: cached.materialesCustom ?? [],
               elements: cached.elements,
               status: "ready",
               isOffline: true,
@@ -108,7 +121,18 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       }
     },
 
-    reset: () => set({ projectInfo: emptyProjectInfo, elements: [], prices: {}, status: "idle", error: null, isOffline: false, pendingCount: 0, queue: emptyQueue() }),
+    reset: () =>
+      set({
+        projectInfo: emptyProjectInfo,
+        elements: [],
+        prices: {},
+        materialesCustom: [],
+        status: "idle",
+        error: null,
+        isOffline: false,
+        pendingCount: 0,
+        queue: emptyQueue(),
+      }),
 
     clearError: () => set({ error: null }),
 
@@ -181,6 +205,21 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         });
     },
 
+    setMaterialesCustom: (items) => {
+      set({ materialesCustom: items });
+      persistSnapshot();
+      putMaterialesCustom(items)
+        .then(() => get().flushQueue())
+        .catch((e) => {
+          if (e instanceof NetworkError) {
+            persistQueue({ ...get().queue, materialesCustom: items });
+            set({ isOffline: true });
+          } else {
+            set({ error: "No se pudo guardar el material en el servidor." });
+          }
+        });
+    },
+
     flushQueue: async () => {
       if (syncing) return;
       syncing = true;
@@ -215,6 +254,22 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             }
             set({ error: "No se pudieron sincronizar los precios pendientes." });
             queue = { ...queue, prices: null };
+            persistQueue(queue);
+          }
+        }
+
+        if (queue.materialesCustom) {
+          try {
+            await putMaterialesCustom(queue.materialesCustom);
+            queue = { ...queue, materialesCustom: null };
+            persistQueue(queue);
+          } catch (e) {
+            if (e instanceof NetworkError) {
+              set({ isOffline: true });
+              return;
+            }
+            set({ error: "No se pudieron sincronizar los materiales pendientes." });
+            queue = { ...queue, materialesCustom: null };
             persistQueue(queue);
           }
         }

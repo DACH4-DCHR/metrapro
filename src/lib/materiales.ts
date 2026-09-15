@@ -87,8 +87,10 @@ export function calcularMetradoMateriales(
   };
 }
 
-// Aplana el resumen a líneas de metrado (mismo shape que el resto de la app),
-// para poder reutilizar ResultTable y los mismos exportadores de Excel/PDF.
+// Aplana el resumen a líneas de metrado (mismo shape que el resto de la app), SIN
+// el acero — el acero tiene su propia tabla por diámetro (ver aceroALineas) para
+// que se note claramente la cantidad de varillas por diámetro, en vez de perderse
+// como una fila más entre cemento/arena/piedra.
 export function materialesALineas(materiales: MaterialesResumen): MetradoLine[] {
   return [
     { partida: "Cemento Portland Tipo I (bolsa 42.5 kg)", unidad: "bolsas", cantidad: materiales.cementoBolsas },
@@ -97,9 +99,27 @@ export function materialesALineas(materiales: MaterialesResumen): MetradoLine[] 
     { partida: "Agua", unidad: "m³", cantidad: materiales.aguaM3 },
     ...(materiales.morteroM3 > 0 ? [{ partida: "Mortero para asentado (preparado)", unidad: "m³", cantidad: materiales.morteroM3 }] : []),
     ...materiales.ladrillos.map((l) => ({ partida: l.tipo, unidad: "und", cantidad: l.cantidad })),
-    ...materiales.acero.flatMap((r) => [
-      { partida: `Acero corrugado Ø${r.diametroMm}mm`, unidad: "kg", cantidad: r.pesoKg },
-      { partida: `Varillas Ø${r.diametroMm}mm x 9m (habilitación)`, unidad: "und", cantidad: r.numeroVarillas },
-    ]),
   ];
+}
+
+// Una línea de metrado por diámetro de acero (peso en kg, que es como se cotiza
+// comercialmente); el número de varillas comerciales se muestra aparte (ver
+// AceroResumenItem.numeroVarillas), no como otra fila valorizada, para no tener
+// que inventarle un precio "por varilla" distinto al precio por kg.
+export function aceroALineas(materiales: MaterialesResumen): MetradoLine[] {
+  return materiales.acero.map((r) => ({ partida: `Acero corrugado Ø${r.diametroMm}mm`, unidad: "kg", cantidad: r.pesoKg }));
+}
+
+// Material agregado manualmente por el usuario (no derivado del metrado), para
+// completar la lista de compra con cosas como clavos, alambre, madera, etc.
+// Se persiste en el proyecto (setMaterialesCustom) igual que los precios.
+export interface CustomMaterialLine {
+  id: string;
+  partida: string;
+  unidad: string;
+  cantidad: number;
+}
+
+export function customMaterialesALineas(items: CustomMaterialLine[]): MetradoLine[] {
+  return items.map((i) => ({ partida: i.partida, unidad: i.unidad, cantidad: i.cantidad }));
 }

@@ -154,6 +154,7 @@ export async function getProject(projectId) {
   return {
     projectInfo: rowToProjectInfo(row),
     prices: row.prices_json,
+    materialesCustom: row.materiales_custom_json,
     elements: elementRows.map(rowToElement),
   };
 }
@@ -184,6 +185,13 @@ export async function updateProjectInfo(projectId, fields) {
 export async function setPrices(projectId, prices) {
   await pool.query("UPDATE projects SET prices_json = $1::jsonb WHERE id = $2", [
     JSON.stringify(prices),
+    projectId,
+  ]);
+}
+
+export async function setMaterialesCustom(projectId, materialesCustom) {
+  await pool.query("UPDATE projects SET materiales_custom_json = $1::jsonb WHERE id = $2", [
+    JSON.stringify(materialesCustom),
     projectId,
   ]);
 }
