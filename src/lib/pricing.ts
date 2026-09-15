@@ -5,6 +5,7 @@ const DEFAULT_PRICE_BY_UNIT: Record<string, number> = {
   kg: 4.8,
   und: 1.3,
   "m²": 45,
+  bolsas: 26,
 };
 
 export function defaultUnitPrice(unidad: string): number {

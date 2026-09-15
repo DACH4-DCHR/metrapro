@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CalculatedElement, MetradoLine } from "../types";
-import { calcularPresupuesto } from "../presupuesto";
+import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoRow } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 
@@ -24,12 +24,83 @@ const currencyFormatter = new Intl.NumberFormat("es-PE", {
 const NAVY: [number, number, number] = [11, 31, 58];
 const STEEL: [number, number, number] = [100, 116, 139];
 
+function pdfFooter(doc: jsPDF, marginX: number) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8);
+  doc.setTextColor(...STEEL);
+  doc.text(`Generado el ${new Date().toLocaleDateString("es-PE")}`, pageWidth - marginX, pageHeight - 8, { align: "right" });
+}
+
+// PDF de una sola tabla simple (partida/unidad/cantidad, sin precios) — lo usa
+// el botón de exportación individual del Cuadro de Metrados Consolidado.
+export function downloadMetradoLineasPdf(filename: string, tableTitle: string, lines: MetradoLine[]) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const marginX = 14;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...NAVY);
+  doc.text(tableTitle, marginX, 16);
+
+  autoTable(doc, {
+    startY: 22,
+    margin: { left: marginX, right: marginX },
+    head: [["Partida", "Unidad", "Cantidad"]],
+    body: lines.map((l) => [l.partida, l.unidad, numberFormatter.format(l.cantidad)]),
+    headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2 },
+    columnStyles: { 2: { halign: "right" } },
+  });
+
+  pdfFooter(doc, marginX);
+  doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+}
+
+// PDF de una tabla valorizada (partida/unidad/cantidad/precio/parcial + filas de
+// totales al pie) — lo usan los botones individuales de Presupuesto Referencial
+// y Metrado de Materiales.
+export function downloadValorizadoPdf(
+  filename: string,
+  tableTitle: string,
+  rows: PresupuestoRow[],
+  footRows: (string | number)[][]
+) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const marginX = 14;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...NAVY);
+  doc.text(tableTitle, marginX, 16);
+
+  autoTable(doc, {
+    startY: 22,
+    margin: { left: marginX, right: marginX },
+    head: [["Partida", "Unidad", "Cantidad", "P. Unit. (S/.)", "Parcial (S/.)"]],
+    body: rows.map((r) => [
+      r.line.partida,
+      r.line.unidad,
+      numberFormatter.format(r.line.cantidad),
+      currencyFormatter.format(r.price),
+      currencyFormatter.format(r.subtotal),
+    ]),
+    foot: footRows,
+    headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+    footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2 },
+    columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+  });
+
+  pdfFooter(doc, marginX);
+  doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+}
+
 export function generatePdfReport(
   projectInfo: ProjectInfoLike,
   elements: CalculatedElement[],
   consolidated: MetradoLine[],
   prices: Record<string, number>,
-  materialesLines: MetradoLine[]
+  materialesLines: MetradoLine[],
+  totalVarillas: number
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -146,25 +217,7 @@ export function generatePdfReport(
   }
 
   const presupuesto = calcularPresupuesto(consolidated, prices);
-  const presupuestoRows = presupuesto.rows.map((r) => [
-    r.line.partida,
-    r.line.unidad,
-    numberFormatter.format(r.line.cantidad),
-    currencyFormatter.format(r.price),
-    currencyFormatter.format(r.subtotal),
-  ]);
-
-  const footRows: (string | number)[][] = [["", "", "", "Costo directo (S/.)", currencyFormatter.format(presupuesto.costoDirecto)]];
-  if (presupuesto.ggOn) {
-    footRows.push(["", "", "", `Gastos Generales (${presupuesto.ggPct}%)`, currencyFormatter.format(presupuesto.montoGG)]);
-  }
-  if (presupuesto.utOn) {
-    footRows.push(["", "", "", `Utilidad (${presupuesto.utPct}%)`, currencyFormatter.format(presupuesto.montoUT)]);
-  }
-  if (presupuesto.igvOn) {
-    footRows.push(["", "", "", `IGV (${presupuesto.igvPct}%)`, currencyFormatter.format(presupuesto.montoIGV)]);
-  }
-  footRows.push(["", "", "", "TOTAL GENERAL (S/.)", currencyFormatter.format(presupuesto.totalGeneral)]);
+  const presupuestoFootRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
 
   if (cursorY > 250) {
     doc.addPage();
@@ -180,8 +233,14 @@ export function generatePdfReport(
     startY: cursorY,
     margin: { left: marginX, right: marginX },
     head: [["Partida", "Unidad", "Cantidad", "P. Unit.", "Parcial"]],
-    body: presupuestoRows,
-    foot: footRows,
+    body: presupuesto.rows.map((r) => [
+      r.line.partida,
+      r.line.unidad,
+      numberFormatter.format(r.line.cantidad),
+      currencyFormatter.format(r.price),
+      currencyFormatter.format(r.subtotal),
+    ]),
+    foot: presupuestoFootRows,
     headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
     footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
     styles: { fontSize: 9, cellPadding: 2 },
@@ -202,14 +261,30 @@ export function generatePdfReport(
     doc.text("Metrado de Materiales", marginX, cursorY);
     cursorY += 3;
 
+    const materialesValorizado = valorizarLineas(materialesLines, prices);
+    const materialesFootRows: (string | number)[][] = [
+      ["", "", "", "Costo total de materiales (S/.)", currencyFormatter.format(materialesValorizado.total)],
+    ];
+    if (totalVarillas > 0) {
+      materialesFootRows.push(["Total de varillas de acero (todos los diámetros)", "und", String(totalVarillas), "", ""]);
+    }
+
     autoTable(doc, {
       startY: cursorY,
       margin: { left: marginX, right: marginX },
-      head: [["Material", "Unidad", "Cantidad"]],
-      body: materialesLines.map((l) => [l.partida, l.unidad, numberFormatter.format(l.cantidad)]),
+      head: [["Material", "Unidad", "Cantidad", "P. Unit. (S/.)", "Parcial (S/.)"]],
+      body: materialesValorizado.rows.map((r) => [
+        r.line.partida,
+        r.line.unidad,
+        numberFormatter.format(r.line.cantidad),
+        currencyFormatter.format(r.price),
+        currencyFormatter.format(r.subtotal),
+      ]),
+      foot: materialesFootRows,
       headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+      footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
       styles: { fontSize: 9, cellPadding: 2 },
-      columnStyles: { 2: { halign: "right" } },
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

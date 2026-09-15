@@ -43,15 +43,25 @@ export interface PresupuestoTotales {
   totalGeneral: number;
 }
 
-export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<string, number>): PresupuestoTotales {
-  let costoDirecto = 0;
-  const rows: PresupuestoRow[] = consolidated.map((line) => {
+// Valoriza cualquier lista de líneas de metrado con los precios del proyecto
+// (o el precio referencial por defecto según unidad, si aún no se editó). Es el
+// núcleo que reutilizan tanto el Presupuesto Referencial (que además le suma
+// Gastos Generales/Utilidad/IGV) como el costo de materiales, que no necesita
+// esa capa adicional.
+export function valorizarLineas(lines: MetradoLine[], prices: Record<string, number>): { rows: PresupuestoRow[]; total: number } {
+  let total = 0;
+  const rows: PresupuestoRow[] = lines.map((line) => {
     const key = priceKey(line.partida, line.unidad);
     const price = prices[key] ?? defaultUnitPrice(line.unidad);
     const subtotal = price * line.cantidad;
-    costoDirecto += subtotal;
+    total += subtotal;
     return { key, line, price, subtotal };
   });
+  return { rows, total };
+}
+
+export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<string, number>): PresupuestoTotales {
+  const { rows, total: costoDirecto } = valorizarLineas(consolidated, prices);
 
   const ggOn = (prices[GG_ON_KEY] ?? 0) === 1;
   const ggPct = prices[GG_PCT_KEY] ?? GG_PCT_DEFAULT;
@@ -66,4 +76,27 @@ export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<
   const totalGeneral = costoDirecto + montoGG + montoUT + montoIGV;
 
   return { rows, costoDirecto, ggOn, ggPct, montoGG, utOn, utPct, montoUT, igvOn, igvPct, montoIGV, totalGeneral };
+}
+
+// Filas de totales del presupuesto (costo directo + GG/Utilidad/IGV activos +
+// total general), listas para agregar como "foot" de una tabla. Recibe un
+// formateador porque Excel necesita el número crudo (con 2 decimales) y el PDF
+// necesita el texto ya formateado en soles — así ambos exportadores muestran
+// exactamente las mismas filas sin duplicar esta lógica.
+export function buildPresupuestoFootRows(
+  presupuesto: PresupuestoTotales,
+  fmt: (n: number) => string | number
+): (string | number)[][] {
+  const rows: (string | number)[][] = [["", "", "", "Costo directo (S/.)", fmt(presupuesto.costoDirecto)]];
+  if (presupuesto.ggOn) {
+    rows.push(["", "", "", `Gastos Generales (${presupuesto.ggPct}%)`, fmt(presupuesto.montoGG)]);
+  }
+  if (presupuesto.utOn) {
+    rows.push(["", "", "", `Utilidad (${presupuesto.utPct}%)`, fmt(presupuesto.montoUT)]);
+  }
+  if (presupuesto.igvOn) {
+    rows.push(["", "", "", `IGV (${presupuesto.igvPct}%)`, fmt(presupuesto.montoIGV)]);
+  }
+  rows.push(["", "", "", "TOTAL GENERAL (S/.)", fmt(presupuesto.totalGeneral)]);
+  return rows;
 }

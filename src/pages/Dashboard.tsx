@@ -27,16 +27,32 @@ import {
   Wallet,
   ListChecks,
   ShoppingCart,
-  Download,
+  FileText,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { useProjectStore } from "../store/projectStore";
-import { calcularPresupuesto, GG_PCT_KEY, UT_PCT_KEY, IGV_PCT_KEY, GG_ON_KEY, UT_ON_KEY, IGV_ON_KEY } from "../lib/presupuesto";
+import {
+  calcularPresupuesto,
+  valorizarLineas,
+  buildPresupuestoFootRows,
+  GG_PCT_KEY,
+  UT_PCT_KEY,
+  IGV_PCT_KEY,
+  GG_ON_KEY,
+  UT_ON_KEY,
+  IGV_ON_KEY,
+} from "../lib/presupuesto";
 import { calcularMetradoMateriales, materialesALineas } from "../lib/materiales";
-import { generateExcelReport, downloadExcelWorkbook, buildMetradoLineasSheet, buildPresupuestoSheet } from "../lib/reports/excelReport";
+import {
+  generateExcelReport,
+  downloadExcelWorkbook,
+  buildMetradoLineasSheet,
+  buildPresupuestoSheet,
+  buildValorizadoSheet,
+} from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
 import type { MetradoLine, ModuleType } from "../lib/types";
@@ -117,6 +133,16 @@ export function DashboardPage() {
 
   const materiales = useMemo(() => calcularMetradoMateriales(consolidated, elements), [consolidated, elements]);
   const materialesLines = useMemo(() => materialesALineas(materiales), [materiales]);
+  const materialesValorizado = useMemo(() => valorizarLineas(materialesLines, prices), [materialesLines, prices]);
+  const materialesFootRows = useMemo(() => {
+    const rows: (string | number)[][] = [
+      ["", "", "", "Costo total de materiales (S/.)", Number(materialesValorizado.total.toFixed(2))],
+    ];
+    if (materiales.totalVarillas > 0) {
+      rows.push(["Total de varillas de acero (todos los diámetros)", "und", materiales.totalVarillas, "", ""]);
+    }
+    return rows;
+  }, [materialesValorizado.total, materiales.totalVarillas]);
 
   const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
 
@@ -147,7 +173,7 @@ export function DashboardPage() {
     setGeneratingPdf(true);
     try {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
-      generatePdfReport(projectInfo, elements, consolidated, prices, materialesLines);
+      generatePdfReport(projectInfo, elements, consolidated, prices, materialesLines, materiales.totalVarillas);
     } finally {
       setGeneratingPdf(false);
     }
@@ -163,7 +189,9 @@ export function DashboardPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => generateExcelReport(projectInfo, elements, consolidated, prices, materialesLines)}
+              onClick={() =>
+                generateExcelReport(projectInfo, elements, consolidated, prices, materialesLines, materiales.totalVarillas)
+              }
               disabled={consolidated.length === 0}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -315,12 +343,16 @@ export function DashboardPage() {
             icon={<ClipboardList size={16} className="text-navy-700" />}
             collapsible
             headerActions={
-              <ExportSectionButton
-                onClick={() =>
+              <ExportSectionButtons
+                onExcel={() =>
                   downloadExcelWorkbook(`metrados_${safeProjectName}`, [
                     buildMetradoLineasSheet("Metrados Consolidado", consolidated),
                   ])
                 }
+                onPdf={async () => {
+                  const { downloadMetradoLineasPdf } = await import("../lib/reports/pdfReport");
+                  downloadMetradoLineasPdf(`metrados_${safeProjectName}`, "Cuadro de Metrados Consolidado", consolidated);
+                }}
               />
             }
           >
@@ -409,8 +441,13 @@ export function DashboardPage() {
             icon={<Wallet size={16} className="text-navy-700" />}
             collapsible
             headerActions={
-              <ExportSectionButton
-                onClick={() => downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [buildPresupuestoSheet(presupuesto)])}
+              <ExportSectionButtons
+                onExcel={() => downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [buildPresupuestoSheet(presupuesto)])}
+                onPdf={async () => {
+                  const { downloadValorizadoPdf } = await import("../lib/reports/pdfReport");
+                  const footRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
+                  downloadValorizadoPdf(`presupuesto_${safeProjectName}`, "Presupuesto Referencial", presupuesto.rows, footRows);
+                }}
               />
             }
           >
@@ -497,19 +534,36 @@ export function DashboardPage() {
             icon={<ShoppingCart size={16} className="text-navy-700" />}
             collapsible
             headerActions={
-              <ExportSectionButton
-                onClick={() =>
+              <ExportSectionButtons
+                onExcel={() =>
                   downloadExcelWorkbook(`materiales_${safeProjectName}`, [
-                    buildMetradoLineasSheet("Metrado de Materiales", materialesLines),
+                    buildValorizadoSheet("Metrado de Materiales", materialesValorizado.rows, materialesFootRows),
                   ])
                 }
+                onPdf={async () => {
+                  const { downloadValorizadoPdf } = await import("../lib/reports/pdfReport");
+                  const footRows: (string | number)[][] = [
+                    ["", "", "", "Costo total de materiales (S/.)", currencyFormatter.format(materialesValorizado.total)],
+                  ];
+                  if (materiales.totalVarillas > 0) {
+                    footRows.push([
+                      "Total de varillas de acero (todos los diámetros)",
+                      "und",
+                      String(materiales.totalVarillas),
+                      "",
+                      "",
+                    ]);
+                  }
+                  downloadValorizadoPdf(`materiales_${safeProjectName}`, "Metrado de Materiales", materialesValorizado.rows, footRows);
+                }}
               />
             }
           >
             <div className="mb-3 text-xs text-steel-500">
               Lista de materiales a comprar, lista para enviar al cliente. El cemento, arena, piedra y agua se
               calculan a partir del concreto usando una dosificación referencial por f'c — ajústala si tu diseño de
-              mezcla real difiere.
+              mezcla real difiere. Los precios se toman de los mismos que editas en el Presupuesto Referencial (o el
+              valor por defecto según unidad); también puedes ajustarlos aquí directamente.
             </div>
             {materiales.fcNoReconocidos.length > 0 && (
               <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -517,7 +571,48 @@ export function DashboardPage() {
                 esas partidas de concreto no están incluidas en el cemento/arena/piedra/agua de esta lista.
               </div>
             )}
-            <ResultTable lines={materialesLines} />
+            <div className="overflow-x-auto rounded-lg border border-steel-200">
+              <table className="w-full min-w-[560px] border-collapse text-sm">
+                <thead>
+                  <tr className="bg-navy-900 text-left text-white">
+                    <th className="px-4 py-2 font-semibold">Material</th>
+                    <th className="px-4 py-2 font-semibold">Unidad</th>
+                    <th className="px-4 py-2 text-right font-semibold">Cantidad</th>
+                    <th className="px-4 py-2 text-right font-semibold">P. Unit. (S/.)</th>
+                    <th className="px-4 py-2 text-right font-semibold">Parcial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialesValorizado.rows.map((row, idx) => (
+                    <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+                      <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
+                      <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
+                      <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
+                      <td className="px-4 py-2 text-right">
+                        <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
+                        {currencyFormatter.format(row.subtotal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
+                    <td className="px-4 py-2" colSpan={4}>
+                      Costo total de materiales (S/.)
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(materialesValorizado.total)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            {materiales.totalVarillas > 0 && (
+              <div className="mt-3 flex items-center justify-between rounded-md bg-steel-50 px-4 py-2 text-sm font-semibold text-navy-900">
+                <span>Total de varillas de acero (todos los diámetros)</span>
+                <span className="font-mono">{materiales.totalVarillas} und</span>
+              </div>
+            )}
           </SectionCard>
         )}
       </div>
@@ -525,18 +620,42 @@ export function DashboardPage() {
   );
 }
 
-// Botón pequeño y discreto en el encabezado de una SectionCard para exportar
-// solo esa tabla a Excel, sin tener que descargar el reporte completo.
-function ExportSectionButton({ onClick }: { onClick: () => void }) {
+// Par de íconos pequeños y discretos en el encabezado de una SectionCard para
+// exportar solo esa tabla, sin tener que descargar el reporte completo. Colores
+// distintos al fondo ámbar del encabezado y entre sí (verde Excel / rojo PDF),
+// siguiendo la convención de esos formatos.
+function ExportSectionButtons({ onExcel, onPdf }: { onExcel: () => void; onPdf: () => void | Promise<void> }) {
+  const [generating, setGenerating] = useState(false);
+
+  async function handlePdf() {
+    setGenerating(true);
+    try {
+      await onPdf();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
-    <button
-      onClick={onClick}
-      aria-label="Exportar esta sección a Excel"
-      title="Exportar esta sección a Excel"
-      className="rounded p-1 text-steel-500 hover:bg-steel-100 hover:text-navy-800"
-    >
-      <Download size={14} />
-    </button>
+    <div className="flex items-center gap-0.5">
+      <button
+        onClick={onExcel}
+        aria-label="Exportar esta sección a Excel"
+        title="Exportar esta sección a Excel"
+        className="rounded p-1 text-green-600 hover:bg-green-50"
+      >
+        <FileSpreadsheet size={15} />
+      </button>
+      <button
+        onClick={handlePdf}
+        disabled={generating}
+        aria-label="Exportar esta sección a PDF"
+        title="Exportar esta sección a PDF"
+        className="rounded p-1 text-red-600 hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
+      >
+        <FileText size={15} />
+      </button>
+    </div>
   );
 }
 

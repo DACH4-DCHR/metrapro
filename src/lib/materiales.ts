@@ -24,6 +24,7 @@ export interface MaterialesResumen {
   ladrillos: { tipo: string; cantidad: number }[];
   morteroM3: number;
   acero: AceroResumenItem[];
+  totalVarillas: number;
   fcNoReconocidos: number[];
 }
 
@@ -71,8 +72,19 @@ export function calcularMetradoMateriales(
     .reduce((acc, l) => acc + l.cantidad, 0);
 
   const acero = resumirAceroPorDiametro(elements.flatMap((e) => e.steelByDiameter ?? []));
+  const totalVarillas = acero.reduce((acc, r) => acc + r.numeroVarillas, 0);
 
-  return { cementoBolsas, arenaM3, piedraM3, aguaM3, ladrillos, morteroM3, acero, fcNoReconocidos: Array.from(fcNoReconocidos) };
+  return {
+    cementoBolsas,
+    arenaM3,
+    piedraM3,
+    aguaM3,
+    ladrillos,
+    morteroM3,
+    acero,
+    totalVarillas,
+    fcNoReconocidos: Array.from(fcNoReconocidos),
+  };
 }
 
 // Aplana el resumen a líneas de metrado (mismo shape que el resto de la app),

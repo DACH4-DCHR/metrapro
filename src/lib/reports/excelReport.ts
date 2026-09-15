@@ -3,7 +3,7 @@
 // en su parser; como aquí solo generamos archivos (no leemos xlsx de terceros),
 // este formato XML simple es seguro, no requiere dependencias y Excel lo abre nativamente.
 import type { CalculatedElement, MetradoLine } from "../types";
-import { calcularPresupuesto, type PresupuestoTotales } from "../presupuesto";
+import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoTotales, type PresupuestoRow } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 
@@ -97,32 +97,29 @@ export function buildMetradoLineasSheet(name: string, lines: MetradoLine[]): Exc
   };
 }
 
-export function buildPresupuestoSheet(presupuesto: PresupuestoTotales): ExcelSheet {
-  const rows: (string | number)[][] = presupuesto.rows.map((r) => [
+// Hoja genérica para cualquier lista ya valorizada (precio unitario + parcial
+// por línea) más filas de totales al pie — la reutilizan tanto el Presupuesto
+// Referencial (con Gastos Generales/Utilidad/IGV) como el costo de materiales
+// (con un total simple), pasando cada uno sus propias filas de pie.
+export function buildValorizadoSheet(name: string, rows: PresupuestoRow[], footRows: (string | number)[][]): ExcelSheet {
+  const dataRows: (string | number)[][] = rows.map((r) => [
     r.line.partida,
     r.line.unidad,
     Number(r.line.cantidad.toFixed(3)),
     Number(r.price.toFixed(2)),
     Number(r.subtotal.toFixed(2)),
   ]);
-  rows.push(["", "", "", "Costo directo (S/.)", Number(presupuesto.costoDirecto.toFixed(2))]);
-  if (presupuesto.ggOn) {
-    rows.push(["", "", "", `Gastos Generales (${presupuesto.ggPct}%)`, Number(presupuesto.montoGG.toFixed(2))]);
-  }
-  if (presupuesto.utOn) {
-    rows.push(["", "", "", `Utilidad (${presupuesto.utPct}%)`, Number(presupuesto.montoUT.toFixed(2))]);
-  }
-  if (presupuesto.igvOn) {
-    rows.push(["", "", "", `IGV (${presupuesto.igvPct}%)`, Number(presupuesto.montoIGV.toFixed(2))]);
-  }
-  rows.push(["", "", "", "TOTAL GENERAL (S/.)", Number(presupuesto.totalGeneral.toFixed(2))]);
-
   return {
-    name: "Presupuesto Referencial",
+    name,
     headers: ["Partida", "Unidad", "Cantidad", "Precio Unit. (S/.)", "Parcial (S/.)"],
-    rows,
+    rows: [...dataRows, ...footRows],
     numericCols: [2, 3, 4],
   };
+}
+
+export function buildPresupuestoSheet(presupuesto: PresupuestoTotales): ExcelSheet {
+  const footRows = buildPresupuestoFootRows(presupuesto, (n) => Number(n.toFixed(2)));
+  return { ...buildValorizadoSheet("Presupuesto Referencial", presupuesto.rows, footRows) };
 }
 
 interface ProjectInfoLike {
@@ -138,7 +135,8 @@ export function generateExcelReport(
   elements: CalculatedElement[],
   consolidated: MetradoLine[],
   prices: Record<string, number>,
-  materialesLines: MetradoLine[]
+  materialesLines: MetradoLine[],
+  totalVarillas: number
 ) {
   const resumenSheet: ExcelSheet = {
     name: "Resumen",
@@ -182,7 +180,14 @@ export function generateExcelReport(
   const presupuesto = calcularPresupuesto(consolidated, prices);
   const presupuestoSheet = buildPresupuestoSheet(presupuesto);
 
-  const materialesSheet = buildMetradoLineasSheet("Metrado de Materiales", materialesLines);
+  const materialesValorizado = valorizarLineas(materialesLines, prices);
+  const materialesFootRows: (string | number)[][] = [
+    ["", "", "", "Costo total de materiales (S/.)", Number(materialesValorizado.total.toFixed(2))],
+  ];
+  if (totalVarillas > 0) {
+    materialesFootRows.push(["Total de varillas de acero (todos los diámetros)", "und", totalVarillas, "", ""]);
+  }
+  const materialesSheet = buildValorizadoSheet("Metrado de Materiales", materialesValorizado.rows, materialesFootRows);
 
   const elementosSheet: ExcelSheet = {
     name: "Elementos",

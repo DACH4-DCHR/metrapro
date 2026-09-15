@@ -26,7 +26,7 @@ export function SectionCard({
     <div
       className={`relative overflow-visible rounded-lg border border-steel-200 bg-white shadow-sm transition-shadow hover:shadow-md ${className}`}
     >
-      <div className="flex items-center gap-1.5 rounded-t-lg border-b-2 border-amber-500/70 bg-steel-50 px-2 py-1.5 sm:gap-2.5 sm:px-4 sm:py-3">
+      <div className="flex items-center gap-1.5 rounded-t-lg border-b-2 border-amber-500/70 bg-amber-500/10 px-2 py-1.5 sm:gap-2.5 sm:px-4 sm:py-3">
         {icon && (
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white shadow-sm ring-1 ring-steel-200 sm:h-7 sm:w-7">
             {icon}
