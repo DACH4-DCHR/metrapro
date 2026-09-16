@@ -109,6 +109,19 @@ function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
 
 const MAX_LOGO_BYTES = 1_000_000;
 
+// La PWA instalada (ícono en el celular) corre en un WebView "standalone" de
+// Android que no logra entregarle un archivo a NINGUNA otra app vía Web
+// Share — falla con "No se puede compartir, vuelve a intentarlo" en
+// WhatsApp, Gmail, etc. por igual (limitación conocida del modo standalone
+// de Android, no de esta app). Abrir el mismo sitio en Chrome normal sí
+// funciona, así que ahí se evita intentarlo y se descarga directo.
+function isStandaloneApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const displayModeStandalone = window.matchMedia?.("(display-mode: standalone)").matches ?? false;
+  const iosStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+  return displayModeStandalone || iosStandalone;
+}
+
 export function DashboardPage() {
   const projectInfo = useProjectStore((s) => s.projectInfo);
   const setProjectInfo = useProjectStore((s) => s.setProjectInfo);
@@ -245,6 +258,15 @@ export function DashboardPage() {
   async function handleShareWhatsApp() {
     setSharingPdf(true);
     try {
+      if (isStandaloneApp()) {
+        const { generatePdfReport } = await import("../lib/reports/pdfReport");
+        generatePdfReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas);
+        alert(
+          'La app instalada no puede compartir archivos directamente (una limitación de Android). Se descargó el PDF: ábrelo desde tus Descargas y compártelo por WhatsApp manualmente, o entra a metrapro.vercel.app desde Chrome (sin usar el ícono instalado) para compartirlo en un solo paso.'
+        );
+        return;
+      }
+
       const { sharePdfReport } = await import("../lib/reports/pdfReport");
       const shared = await sharePdfReport(
         projectInfo,
