@@ -381,17 +381,25 @@ export async function sharePdfReport(
 ): Promise<boolean> {
   const { doc, safeName } = buildReportDoc(projectInfo, elements, consolidated, prices, materialesLines, totalVarillas);
   const blob = doc.output("blob");
-  const file = new File([blob], `metrado_${safeName}.pdf`, { type: "application/pdf" });
+  // Nombre de archivo solo ASCII (sin tildes/ñ/espacios): algunas versiones de
+  // WhatsApp para Android fallan con "No se puede compartir, vuelve a
+  // intentarlo" al elegir el contacto cuando el nombre del archivo compartido
+  // trae caracteres no-ASCII en la URI de contenido que genera el navegador.
+  const asciiName = safeName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
+  const file = new File([blob], `metrado_${asciiName}.pdf`, { type: "application/pdf" });
 
   if (!navigator.canShare || !navigator.canShare({ files: [file] })) {
     return false;
   }
 
   try {
-    await navigator.share({
-      files: [file],
-      title: `Metrado — ${projectInfo.nombreObra || "Proyecto"}`,
-    });
+    // Sin "title": combinar texto + archivo en la misma llamada es lo que
+    // hace fallar a WhatsApp para Android justo al elegir el contacto — el
+    // nombre del archivo ya identifica el reporte, no hace falta un título.
+    await navigator.share({ files: [file] });
   } catch (e) {
     // El usuario canceló el panel de compartir (AbortError): no es un error real.
     if (!(e instanceof Error) || e.name !== "AbortError") throw e;
