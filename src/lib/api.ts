@@ -18,6 +18,14 @@ export interface ProjectDto {
   elements: CalculatedElement[];
 }
 
+export interface ProjectListItem {
+  id: number;
+  nombreObra: string;
+  cliente: string;
+  fecha: string;
+  createdAt: number;
+}
+
 export class NetworkError extends Error {
   constructor() {
     super("No hay conexión con el servidor");
@@ -69,28 +77,45 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function fetchProject(): Promise<ProjectDto> {
-  return request<ProjectDto>("/project");
+export function listProjects(): Promise<ProjectListItem[]> {
+  return request<ProjectListItem[]>("/projects");
 }
 
-export function patchProjectInfo(fields: Partial<ProjectInfoDto>): Promise<ProjectDto> {
-  return request<ProjectDto>("/project", { method: "PATCH", body: JSON.stringify(fields) });
+export function createProject(): Promise<ProjectDto> {
+  return request<ProjectDto>("/projects", { method: "POST" });
 }
 
-export function putPrices(prices: Record<string, number>): Promise<ProjectDto> {
-  return request<ProjectDto>("/project/prices", { method: "PUT", body: JSON.stringify(prices) });
+export function deleteProject(projectId: number): Promise<ProjectListItem[]> {
+  return request<ProjectListItem[]>(`/projects/${projectId}`, { method: "DELETE" });
 }
 
-export function putMaterialesCustom(items: CustomMaterialLine[]): Promise<ProjectDto> {
-  return request<ProjectDto>("/project/materiales-custom", { method: "PUT", body: JSON.stringify(items) });
+export function fetchProject(projectId: number): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}`);
 }
 
-export function postElement(element: CalculatedElement): Promise<ProjectDto> {
-  return request<ProjectDto>("/project/elements", { method: "POST", body: JSON.stringify(element) });
+export function patchProjectInfo(projectId: number, fields: Partial<ProjectInfoDto>): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}`, { method: "PATCH", body: JSON.stringify(fields) });
 }
 
-export function deleteElement(id: string): Promise<ProjectDto> {
-  return request<ProjectDto>(`/project/elements/${encodeURIComponent(id)}`, { method: "DELETE" });
+export function putPrices(projectId: number, prices: Record<string, number>): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/prices`, { method: "PUT", body: JSON.stringify(prices) });
+}
+
+export function putMaterialesCustom(projectId: number, items: CustomMaterialLine[]): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/materiales-custom`, {
+    method: "PUT",
+    body: JSON.stringify(items),
+  });
+}
+
+export function postElement(projectId: number, element: CalculatedElement): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/elements`, { method: "POST", body: JSON.stringify(element) });
+}
+
+export function deleteElement(projectId: number, elementId: string): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/elements/${encodeURIComponent(elementId)}`, {
+    method: "DELETE",
+  });
 }
 
 export interface AuthUser {

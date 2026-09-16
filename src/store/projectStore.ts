@@ -8,13 +8,21 @@ import {
   putMaterialesCustom,
   postElement,
   deleteElement as apiDeleteElement,
+  listProjects,
+  createProject as apiCreateProject,
+  deleteProject as apiDeleteProject,
   NetworkError,
+  type ProjectListItem,
 } from "../lib/api";
 import {
   readProjectSnapshot,
   writeProjectSnapshot,
   readPendingQueue,
   writePendingQueue,
+  readActiveProjectId,
+  writeActiveProjectId,
+  readProjectsListCache,
+  writeProjectsListCache,
   pendingCount as computePendingCount,
   emptyQueue,
   type PendingQueue,
@@ -30,6 +38,8 @@ interface ProjectInfo {
 }
 
 interface ProjectState {
+  projectId: number | null;
+  projects: ProjectListItem[];
   projectInfo: ProjectInfo;
   elements: CalculatedElement[];
   prices: Record<string, number>;
@@ -42,6 +52,9 @@ interface ProjectState {
   init: () => Promise<void>;
   reset: () => void;
   clearError: () => void;
+  switchProject: (projectId: number) => Promise<void>;
+  createProject: () => Promise<void>;
+  deleteProject: (projectId: number) => Promise<void>;
   setProjectInfo: (info: Partial<ProjectInfo>) => void;
   addElement: (el: CalculatedElement) => void;
   removeElement: (id: string) => void;
@@ -62,16 +75,63 @@ let syncing = false;
 
 export const useProjectStore = create<ProjectState>()((set, get) => {
   function persistSnapshot() {
-    const { projectInfo, prices, materialesCustom, elements } = get();
-    writeProjectSnapshot({ projectInfo, prices, materialesCustom, elements });
+    const { projectId, projectInfo, prices, materialesCustom, elements } = get();
+    if (projectId == null) return;
+    writeProjectSnapshot(projectId, { projectInfo, prices, materialesCustom, elements });
   }
 
   function persistQueue(queue: PendingQueue) {
-    writePendingQueue(queue);
+    const projectId = get().projectId;
+    if (projectId != null) writePendingQueue(projectId, queue);
     set({ queue, pendingCount: computePendingCount(queue) });
   }
 
+  // Carga los datos de un proyecto puntual (ya elegido) y los deja como el
+  // proyecto activo: recuerda el id para la próxima vez, lee su cola pendiente
+  // propia, y si no hay conexión cae al snapshot local de ESE proyecto.
+  async function loadProject(projectId: number) {
+    writeActiveProjectId(projectId);
+    const queue = readPendingQueue(projectId);
+    set({ projectId, queue, pendingCount: computePendingCount(queue) });
+    try {
+      const data = await fetchProject(projectId);
+      writeProjectSnapshot(projectId, data);
+      set({
+        projectInfo: data.projectInfo,
+        prices: data.prices,
+        materialesCustom: data.materialesCustom ?? [],
+        elements: data.elements,
+        status: "ready",
+        error: null,
+        isOffline: false,
+      });
+      get().flushQueue();
+    } catch (e) {
+      if (e instanceof NetworkError) {
+        const cached = readProjectSnapshot(projectId);
+        if (cached) {
+          set({
+            projectInfo: cached.projectInfo,
+            prices: cached.prices,
+            materialesCustom: cached.materialesCustom ?? [],
+            elements: cached.elements,
+            status: "ready",
+            isOffline: true,
+          });
+          return;
+        }
+      }
+      set({
+        status: "error",
+        error:
+          "No se pudo conectar con el servidor y no hay datos guardados localmente todavía. Verifica tu conexión o que el backend esté corriendo.",
+      });
+    }
+  }
+
   return {
+    projectId: null,
+    projects: [],
     projectInfo: emptyProjectInfo,
     elements: [],
     prices: {},
@@ -84,33 +144,47 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
     init: async () => {
       if (get().status === "loading" || get().status === "ready") return;
-      set({ status: "loading", error: null, queue: readPendingQueue() });
-      set((state) => ({ pendingCount: computePendingCount(state.queue) }));
+      set({ status: "loading", error: null });
       try {
-        const data = await fetchProject();
-        writeProjectSnapshot(data);
-        set({
-          projectInfo: data.projectInfo,
-          prices: data.prices,
-          materialesCustom: data.materialesCustom ?? [],
-          elements: data.elements,
-          status: "ready",
-          isOffline: false,
-        });
-        get().flushQueue();
+        const list = await listProjects();
+        writeProjectsListCache(list);
+        set({ projects: list });
+        const storedId = readActiveProjectId();
+        const targetId = list.some((p) => p.id === storedId) ? (storedId as number) : list[0]?.id;
+        if (targetId == null) {
+          // No debería pasar (todo usuario nace con un proyecto), pero por si acaso.
+          const created = await apiCreateProject();
+          const newId = created.projectInfo.id as number;
+          const refreshedList = await listProjects();
+          writeProjectsListCache(refreshedList);
+          set({ projects: refreshedList });
+          await loadProject(newId);
+          return;
+        }
+        await loadProject(targetId);
       } catch (e) {
         if (e instanceof NetworkError) {
-          const cached = readProjectSnapshot();
-          if (cached) {
-            set({
-              projectInfo: cached.projectInfo,
-              prices: cached.prices,
-              materialesCustom: cached.materialesCustom ?? [],
-              elements: cached.elements,
-              status: "ready",
-              isOffline: true,
-            });
-            return;
+          const cachedList = readProjectsListCache();
+          const storedId = readActiveProjectId();
+          if (cachedList && cachedList.length > 0) {
+            const targetId = cachedList.some((p) => p.id === storedId) ? (storedId as number) : cachedList[0].id;
+            const cachedSnap = readProjectSnapshot(targetId);
+            if (cachedSnap) {
+              const queue = readPendingQueue(targetId);
+              set({
+                projects: cachedList,
+                projectId: targetId,
+                projectInfo: cachedSnap.projectInfo,
+                prices: cachedSnap.prices,
+                materialesCustom: cachedSnap.materialesCustom ?? [],
+                elements: cachedSnap.elements,
+                queue,
+                pendingCount: computePendingCount(queue),
+                status: "ready",
+                isOffline: true,
+              });
+              return;
+            }
           }
         }
         set({
@@ -123,6 +197,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
     reset: () =>
       set({
+        projectId: null,
+        projects: [],
         projectInfo: emptyProjectInfo,
         elements: [],
         prices: {},
@@ -136,10 +212,68 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
     clearError: () => set({ error: null }),
 
+    switchProject: async (projectId) => {
+      if (get().projectId === projectId) return;
+      set({ status: "loading", error: null });
+      await loadProject(projectId);
+    },
+
+    createProject: async () => {
+      try {
+        const data = await apiCreateProject();
+        const newId = data.projectInfo.id as number;
+        const list = await listProjects();
+        writeProjectsListCache(list);
+        set({ projects: list, status: "loading", error: null });
+        await loadProject(newId);
+      } catch (e) {
+        set({
+          error:
+            e instanceof NetworkError
+              ? "No se puede crear un proyecto nuevo sin conexión."
+              : "No se pudo crear el proyecto.",
+        });
+      }
+    },
+
+    deleteProject: async (projectId) => {
+      try {
+        const list = await apiDeleteProject(projectId);
+        writeProjectsListCache(list);
+        set({ projects: list });
+        if (get().projectId === projectId) {
+          const next = list[0];
+          if (next) {
+            set({ status: "loading" });
+            await loadProject(next.id);
+          }
+        }
+      } catch (e) {
+        set({
+          error:
+            e instanceof NetworkError
+              ? "No se puede eliminar un proyecto sin conexión."
+              : "No se pudo eliminar el proyecto.",
+        });
+      }
+    },
+
     setProjectInfo: (info) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
       set((state) => ({ projectInfo: { ...state.projectInfo, ...info } }));
       persistSnapshot();
-      patchProjectInfo(info)
+      // El selector de proyectos muestra nombreObra/cliente/fecha desde la lista en caché,
+      // no desde projectInfo — sin esto, renombrar la obra activa no se reflejaría ahí
+      // hasta la próxima vez que se recargue la lista completa (crear/borrar un proyecto).
+      if ("nombreObra" in info || "cliente" in info || "fecha" in info) {
+        set((state) => {
+          const projects = state.projects.map((p) => (p.id === projectId ? { ...p, ...info } : p));
+          writeProjectsListCache(projects);
+          return { projects };
+        });
+      }
+      patchProjectInfo(projectId, info)
         .then(() => get().flushQueue())
         .catch((e) => {
           if (e instanceof NetworkError) {
@@ -153,9 +287,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     },
 
     addElement: (el) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
       set((state) => ({ elements: [el, ...state.elements] }));
       persistSnapshot();
-      postElement(el)
+      postElement(projectId, el)
         .then(() => get().flushQueue())
         .catch((e) => {
           if (e instanceof NetworkError) {
@@ -169,9 +305,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     },
 
     removeElement: (id) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
       set((state) => ({ elements: state.elements.filter((e) => e.id !== id) }));
       persistSnapshot();
-      apiDeleteElement(id)
+      apiDeleteElement(projectId, id)
         .then(() => get().flushQueue())
         .catch((e) => {
           if (e instanceof NetworkError) {
@@ -190,10 +328,12 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     },
 
     setPrice: (key, value) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
       const nextPrices = { ...get().prices, [key]: value };
       set({ prices: nextPrices });
       persistSnapshot();
-      putPrices(nextPrices)
+      putPrices(projectId, nextPrices)
         .then(() => get().flushQueue())
         .catch((e) => {
           if (e instanceof NetworkError) {
@@ -206,9 +346,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     },
 
     setMaterialesCustom: (items) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
       set({ materialesCustom: items });
       persistSnapshot();
-      putMaterialesCustom(items)
+      putMaterialesCustom(projectId, items)
         .then(() => get().flushQueue())
         .catch((e) => {
           if (e instanceof NetworkError) {
@@ -222,13 +364,15 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
     flushQueue: async () => {
       if (syncing) return;
+      const projectId = get().projectId;
+      if (projectId == null) return;
       syncing = true;
       try {
         let queue = get().queue;
 
         if (queue.projectInfoPatch) {
           try {
-            await patchProjectInfo(queue.projectInfoPatch);
+            await patchProjectInfo(projectId, queue.projectInfoPatch);
             queue = { ...queue, projectInfoPatch: null };
             persistQueue(queue);
           } catch (e) {
@@ -244,7 +388,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
         if (queue.prices) {
           try {
-            await putPrices(queue.prices);
+            await putPrices(projectId, queue.prices);
             queue = { ...queue, prices: null };
             persistQueue(queue);
           } catch (e) {
@@ -260,7 +404,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
 
         if (queue.materialesCustom) {
           try {
-            await putMaterialesCustom(queue.materialesCustom);
+            await putMaterialesCustom(projectId, queue.materialesCustom);
             queue = { ...queue, materialesCustom: null };
             persistQueue(queue);
           } catch (e) {
@@ -281,9 +425,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             const op = ops[idx];
             try {
               if (op.type === "add") {
-                await postElement(op.element);
+                await postElement(projectId, op.element);
               } else {
-                await apiDeleteElement(op.id);
+                await apiDeleteElement(projectId, op.id);
               }
             } catch (e) {
               if (e instanceof NetworkError) break;

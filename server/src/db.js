@@ -132,15 +132,36 @@ export async function deleteSession(sessionId) {
   await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
 }
 
-// --- Proyectos (uno por usuario) ---
+// --- Proyectos (varios por usuario) ---
 
-export async function getOrCreateProjectForUser(userId) {
+export async function listProjectsForUser(userId) {
   const { rows } = await pool.query(
-    "SELECT id FROM projects WHERE user_id = $1 ORDER BY id ASC LIMIT 1",
+    "SELECT id, nombre_obra, cliente, fecha, created_at FROM projects WHERE user_id = $1 ORDER BY created_at ASC",
     [userId]
   );
-  if (rows[0]) return rows[0].id;
+  return rows.map((row) => ({
+    id: row.id,
+    nombreObra: row.nombre_obra,
+    cliente: row.cliente,
+    fecha: row.fecha,
+    createdAt: Number(row.created_at),
+  }));
+}
+
+export async function createProjectForUser(userId) {
   return createProjectRow(userId);
+}
+
+// Devuelve el user_id dueño del proyecto, o null si no existe — se usa para
+// verificar que el proyecto pedido pertenece a quien hace la petición antes de
+// leer o modificar nada (evita que un usuario acceda a proyectos ajenos por id).
+export async function getProjectOwnerId(projectId) {
+  const { rows } = await pool.query("SELECT user_id FROM projects WHERE id = $1", [projectId]);
+  return rows[0]?.user_id ?? null;
+}
+
+export async function deleteProjectRow(projectId) {
+  await pool.query("DELETE FROM projects WHERE id = $1", [projectId]);
 }
 
 export async function getProject(projectId) {

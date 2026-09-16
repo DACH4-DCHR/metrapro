@@ -16,7 +16,6 @@ import {
   Grid2x2,
   Shovel,
   HardHat,
-  Building2,
   AlertTriangle,
   X,
   LogOut,
@@ -30,6 +29,7 @@ import { useAuthStore } from "../store/authStore";
 import { useHelpStore } from "../store/helpStore";
 import { HELP_CONTENT } from "../lib/helpContent";
 import { HelpPanel } from "./ui/HelpPanel";
+import { ProjectSwitcher } from "./ProjectSwitcher";
 
 // Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
 // cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
@@ -76,7 +76,6 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
 ];
 
 export function Layout() {
-  const projectInfo = useProjectStore((s) => s.projectInfo);
   const error = useProjectStore((s) => s.error);
   const clearError = useProjectStore((s) => s.clearError);
   const resetProject = useProjectStore((s) => s.reset);
@@ -206,12 +205,7 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-4 py-4 text-xs text-steel-400">
-          <div className="flex items-center gap-2">
-            <Building2 size={14} className="shrink-0" />
-            <span className="truncate">{projectInfo.nombreObra || "Sin obra configurada"}</span>
-          </div>
-        </div>
+        <ProjectSwitcher />
 
         {(isOffline || pendingCount > 0) && (
           <div className="border-t border-white/10 px-4 py-3 text-xs">

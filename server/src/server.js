@@ -10,7 +10,10 @@ import {
   createSession,
   getSession,
   deleteSession,
-  getOrCreateProjectForUser,
+  listProjectsForUser,
+  createProjectForUser,
+  getProjectOwnerId,
+  deleteProjectRow,
   getProject,
   updateProjectInfo,
   setPrices,
@@ -98,47 +101,80 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   res.json({ id: user.id, email: user.email });
 });
 
-// --- Proyecto (uno por usuario autenticado) ---
+// --- Proyectos (varios por usuario autenticado) ---
 
-app.use("/api/project", requireAuth);
+app.use("/api/projects", requireAuth);
 
-app.get("/api/project", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
-  res.json(await getProject(id));
+app.get("/api/projects", async (req, res) => {
+  res.json(await listProjectsForUser(req.userId));
 });
 
-app.patch("/api/project", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
-  await updateProjectInfo(id, req.body ?? {});
-  res.json(await getProject(id));
+app.post("/api/projects", async (req, res) => {
+  const id = await createProjectForUser(req.userId);
+  res.status(201).json(await getProject(id));
 });
 
-app.put("/api/project/prices", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
-  await setPrices(id, req.body ?? {});
-  res.json(await getProject(id));
+// Verifica que :id sea un proyecto del usuario autenticado antes de dejar pasar
+// cualquier lectura/escritura — sin esto, cambiar de "un proyecto por usuario" a
+// "varios por id" abriría la puerta a leer/modificar proyectos de otra cuenta
+// con solo adivinar o incrementar el id.
+async function requireProjectOwnership(req, res, next) {
+  const projectId = Number(req.params.id);
+  if (!Number.isInteger(projectId)) {
+    return res.status(400).json({ error: "Proyecto inválido" });
+  }
+  const ownerId = await getProjectOwnerId(projectId);
+  if (ownerId !== req.userId) {
+    return res.status(404).json({ error: "Proyecto no encontrado" });
+  }
+  req.projectId = projectId;
+  next();
+}
+
+app.get("/api/projects/:id", requireProjectOwnership, async (req, res) => {
+  res.json(await getProject(req.projectId));
 });
 
-app.put("/api/project/materiales-custom", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
-  await setMaterialesCustom(id, Array.isArray(req.body) ? req.body : []);
-  res.json(await getProject(id));
+app.patch("/api/projects/:id", requireProjectOwnership, async (req, res) => {
+  await updateProjectInfo(req.projectId, req.body ?? {});
+  res.json(await getProject(req.projectId));
 });
 
-app.post("/api/project/elements", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
+app.delete("/api/projects/:id", requireProjectOwnership, async (req, res) => {
+  await deleteProjectRow(req.projectId);
+  // Nunca dejar al usuario sin ningún proyecto: si borró el último, se le crea
+  // uno nuevo en blanco automáticamente (mismo comportamiento que tenía al
+  // registrarse, antes de que existiera el selector de proyectos).
+  let list = await listProjectsForUser(req.userId);
+  if (list.length === 0) {
+    await createProjectForUser(req.userId);
+    list = await listProjectsForUser(req.userId);
+  }
+  res.json(list);
+});
+
+app.put("/api/projects/:id/prices", requireProjectOwnership, async (req, res) => {
+  await setPrices(req.projectId, req.body ?? {});
+  res.json(await getProject(req.projectId));
+});
+
+app.put("/api/projects/:id/materiales-custom", requireProjectOwnership, async (req, res) => {
+  await setMaterialesCustom(req.projectId, Array.isArray(req.body) ? req.body : []);
+  res.json(await getProject(req.projectId));
+});
+
+app.post("/api/projects/:id/elements", requireProjectOwnership, async (req, res) => {
   const el = req.body;
   if (!el || !el.id || !el.module || !el.name) {
     return res.status(400).json({ error: "Elemento inválido" });
   }
-  await addElement(id, el);
-  res.status(201).json(await getProject(id));
+  await addElement(req.projectId, el);
+  res.status(201).json(await getProject(req.projectId));
 });
 
-app.delete("/api/project/elements/:elementId", async (req, res) => {
-  const id = await getOrCreateProjectForUser(req.userId);
-  await removeElement(id, req.params.elementId);
-  res.json(await getProject(id));
+app.delete("/api/projects/:id/elements/:elementId", requireProjectOwnership, async (req, res) => {
+  await removeElement(req.projectId, req.params.elementId);
+  res.json(await getProject(req.projectId));
 });
 
 app.get("/api/health", (req, res) => {
