@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Building2, ChevronsUpDown, Plus, Trash2, Check, CloudOff, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Building2, ChevronDown, Plus, Trash2, Check, CloudOff, RefreshCw } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 
 export function ProjectSwitcher() {
@@ -11,22 +11,7 @@ export function ProjectSwitcher() {
   const switchProject = useProjectStore((s) => s.switchProject);
   const createProject = useProjectStore((s) => s.createProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  async function handleCreate() {
-    setOpen(false);
-    await createProject();
-  }
+  const [open, setOpen] = useState(true);
 
   async function handleDelete(id: number, nombre: string) {
     const label = nombre.trim() || "este proyecto";
@@ -37,17 +22,14 @@ export function ProjectSwitcher() {
   }
 
   return (
-    <div ref={containerRef} className="relative border-b border-white/10 px-3 py-3">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-navy-900 px-3 py-2 text-left hover:bg-navy-800"
-      >
+    <div className="border-b border-white/10 px-3 py-3">
+      {/* Proyecto activo: siempre visible, fijo, independiente de si la lista está desplegada */}
+      <div className="flex items-center gap-2 rounded-md border border-white/10 bg-navy-900 px-3 py-2">
         <Building2 size={16} className="shrink-0 text-amber-500" />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
           {projectInfo.nombreObra || "Proyecto sin nombre"}
         </span>
-        <ChevronsUpDown size={14} className="shrink-0 text-steel-400" />
-      </button>
+      </div>
 
       <div className="mt-1.5 px-1 text-[11px]">
         {isOffline ? (
@@ -71,21 +53,33 @@ export function ProjectSwitcher() {
         )}
       </div>
 
-      {open && (
-        <div className="absolute left-3 right-3 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-md border border-navy-700 bg-navy-900 py-1 shadow-xl">
-          <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-steel-500">
-            Tus proyectos
-          </p>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="mt-2 flex w-full items-center justify-between rounded-md px-1 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-steel-500 transition-colors hover:bg-navy-800 hover:text-steel-200"
+      >
+        Proyectos
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+        />
+      </button>
+
+      <div
+        className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ease-in-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="min-h-0 space-y-0.5 overflow-hidden pt-1">
           {projects.map((p) => (
             <div
               key={p.id}
-              className={`group flex items-center gap-2 px-2 py-1.5 ${
+              className={`group flex items-center gap-2 rounded-md px-2 py-1.5 ${
                 p.id === projectId ? "bg-navy-800" : "hover:bg-navy-800"
               }`}
             >
               <button
                 onClick={() => {
-                  setOpen(false);
                   if (p.id !== projectId) switchProject(p.id);
                 }}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -93,7 +87,7 @@ export function ProjectSwitcher() {
                 <span className="flex w-4 shrink-0 justify-center">
                   {p.id === projectId && <Check size={13} className="text-amber-400" />}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-steel-200">
+                <span className="min-w-0 flex-1 truncate text-xs text-steel-200">
                   {p.nombreObra || "Proyecto sin nombre"}
                 </span>
               </button>
@@ -108,17 +102,15 @@ export function ProjectSwitcher() {
               )}
             </div>
           ))}
-          <div className="mt-1 border-t border-white/10 pt-1">
-            <button
-              onClick={handleCreate}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-steel-200 hover:bg-navy-800 hover:text-white"
-            >
-              <Plus size={13} />
-              Nuevo proyecto
-            </button>
-          </div>
+          <button
+            onClick={() => createProject()}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-steel-300 hover:bg-navy-800 hover:text-white"
+          >
+            <Plus size={13} />
+            Nuevo proyecto
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
