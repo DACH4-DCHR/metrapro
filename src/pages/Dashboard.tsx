@@ -29,11 +29,15 @@ import {
   ShoppingCart,
   FileText,
   Plus,
+  MessageCircle,
+  BarChart3,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
+import { HorizontalBarChart } from "../components/charts/HorizontalBarChart";
+import { costosPorCategoria, cantidadesPorModulo } from "../lib/dashboardCharts";
 import { useProjectStore } from "../store/projectStore";
 import {
   calcularPresupuesto,
@@ -116,6 +120,7 @@ export function DashboardPage() {
   const setMaterialesCustomStore = useProjectStore((s) => s.setMaterialesCustom);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sharingPdf, setSharingPdf] = useState(false);
 
   const totals = useMemo(() => {
     return elements.reduce(
@@ -139,6 +144,33 @@ export function DashboardPage() {
   );
 
   const presupuesto = useMemo(() => calcularPresupuesto(consolidated, prices), [consolidated, prices]);
+
+  const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
+  const cantidadesModulo = useMemo(() => cantidadesPorModulo(elements), [elements]);
+  const concretoPorModulo = useMemo(
+    () =>
+      cantidadesModulo
+        .filter((m) => m.concreteM3 > 0)
+        .sort((a, b) => b.concreteM3 - a.concreteM3)
+        .map((m) => ({ label: m.label, value: m.concreteM3, color: "#2a78d6" })),
+    [cantidadesModulo]
+  );
+  const aceroPorModuloChart = useMemo(
+    () =>
+      cantidadesModulo
+        .filter((m) => m.steelKg > 0)
+        .sort((a, b) => b.steelKg - a.steelKg)
+        .map((m) => ({ label: m.label, value: m.steelKg, color: "#eb6834" })),
+    [cantidadesModulo]
+  );
+  const encofradoPorModulo = useMemo(
+    () =>
+      cantidadesModulo
+        .filter((m) => m.formworkM2 > 0)
+        .sort((a, b) => b.formworkM2 - a.formworkM2)
+        .map((m) => ({ label: m.label, value: m.formworkM2, color: "#1baf7a" })),
+    [cantidadesModulo]
+  );
 
   const materiales = useMemo(() => calcularMetradoMateriales(consolidated, elements), [consolidated, elements]);
   const materialesLines = useMemo(() => materialesALineas(materiales), [materiales]);
@@ -210,6 +242,30 @@ export function DashboardPage() {
     }
   }
 
+  async function handleShareWhatsApp() {
+    setSharingPdf(true);
+    try {
+      const { sharePdfReport } = await import("../lib/reports/pdfReport");
+      const shared = await sharePdfReport(
+        projectInfo,
+        elements,
+        consolidated,
+        prices,
+        materialesExportLines,
+        materiales.totalVarillas
+      );
+      if (!shared) {
+        alert(
+          'Tu navegador no permite compartir archivos directamente. Usa el botón "Descargar PDF" y adjúntalo manualmente en WhatsApp.'
+        );
+      }
+    } catch {
+      alert("No se pudo compartir el PDF. Intenta descargarlo con el botón de al lado.");
+    } finally {
+      setSharingPdf(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -236,6 +292,14 @@ export function DashboardPage() {
             >
               <FileDown size={16} />
               {generatingPdf ? "Generando..." : "Descargar PDF"}
+            </button>
+            <button
+              onClick={handleShareWhatsApp}
+              disabled={consolidated.length === 0 || sharingPdf}
+              className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <MessageCircle size={16} />
+              {sharingPdf ? "Preparando..." : "Compartir por WhatsApp"}
             </button>
           </div>
         }
@@ -315,6 +379,58 @@ export function DashboardPage() {
             accent="amber"
           />
         </div>
+
+        {(costosCategoria.length > 0 || cantidadesModulo.length > 0) && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <SectionCard title="Costo directo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
+              <p className="mb-3 text-xs text-steel-500">
+                Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) entre concreto,
+                acero, encofrado y el resto de partidas.
+              </p>
+              <HorizontalBarChart
+                items={costosCategoria.map((c) => ({ label: c.categoria, value: c.monto, color: c.color }))}
+                valueFormatter={(v) => currencyFormatter.format(v)}
+              />
+            </SectionCard>
+
+            <SectionCard title="Metrados por módulo" icon={<BarChart3 size={16} className="text-navy-700" />}>
+              <p className="mb-3 text-xs text-steel-500">
+                Concreto, acero y encofrado por módulo — cada magnitud en su propia escala, ya que no se pueden
+                comparar entre sí.
+              </p>
+              <div className="flex flex-col gap-5">
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-steel-500">
+                    Concreto (m³)
+                  </p>
+                  <HorizontalBarChart
+                    items={concretoPorModulo}
+                    valueFormatter={(v) => `${numberFormatter.format(v)} m³`}
+                    emptyMessage="Sin concreto calculado todavía."
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-steel-500">Acero (kg)</p>
+                  <HorizontalBarChart
+                    items={aceroPorModuloChart}
+                    valueFormatter={(v) => `${numberFormatter.format(v)} kg`}
+                    emptyMessage="Sin acero calculado todavía."
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-steel-500">
+                    Encofrado (m²)
+                  </p>
+                  <HorizontalBarChart
+                    items={encofradoPorModulo}
+                    valueFormatter={(v) => `${numberFormatter.format(v)} m²`}
+                    emptyMessage="Sin encofrado calculado todavía."
+                  />
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        )}
 
         <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />}>
           {elements.length === 0 ? (

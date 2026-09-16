@@ -94,14 +94,17 @@ export function downloadValorizadoPdf(
   doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 
-export function generatePdfReport(
+// Construye el documento completo sin guardarlo ni compartirlo — lo reusan
+// generatePdfReport (descarga directa) y sharePdfReport (compartir por
+// WhatsApp u otra app), para no duplicar las ~250 líneas de armado del PDF.
+function buildReportDoc(
   projectInfo: ProjectInfoLike,
   elements: CalculatedElement[],
   consolidated: MetradoLine[],
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
   totalVarillas: number
-) {
+): { doc: jsPDF; safeName: string } {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 14;
@@ -348,5 +351,50 @@ export function generatePdfReport(
   }
 
   const safeName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
+  return { doc, safeName };
+}
+
+export function generatePdfReport(
+  projectInfo: ProjectInfoLike,
+  elements: CalculatedElement[],
+  consolidated: MetradoLine[],
+  prices: Record<string, number>,
+  materialesLines: MetradoLine[],
+  totalVarillas: number
+) {
+  const { doc, safeName } = buildReportDoc(projectInfo, elements, consolidated, prices, materialesLines, totalVarillas);
   doc.save(`metrado_${safeName}.pdf`);
+}
+
+// true si se pudo abrir el panel de compartir (WhatsApp, correo, etc. — lo
+// que el sistema operativo ofrezca); false si el navegador no soporta
+// compartir archivos y hay que avisarle al usuario que descargue el PDF y lo
+// adjunte manualmente. No confundir con que el usuario haya cancelado el
+// panel de compartir: eso también cuenta como "se pudo abrir" (true).
+export async function sharePdfReport(
+  projectInfo: ProjectInfoLike,
+  elements: CalculatedElement[],
+  consolidated: MetradoLine[],
+  prices: Record<string, number>,
+  materialesLines: MetradoLine[],
+  totalVarillas: number
+): Promise<boolean> {
+  const { doc, safeName } = buildReportDoc(projectInfo, elements, consolidated, prices, materialesLines, totalVarillas);
+  const blob = doc.output("blob");
+  const file = new File([blob], `metrado_${safeName}.pdf`, { type: "application/pdf" });
+
+  if (!navigator.canShare || !navigator.canShare({ files: [file] })) {
+    return false;
+  }
+
+  try {
+    await navigator.share({
+      files: [file],
+      title: `Metrado — ${projectInfo.nombreObra || "Proyecto"}`,
+    });
+  } catch (e) {
+    // El usuario canceló el panel de compartir (AbortError): no es un error real.
+    if (!(e instanceof Error) || e.name !== "AbortError") throw e;
+  }
+  return true;
 }
