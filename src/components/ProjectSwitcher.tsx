@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Building2, ChevronsUpDown, Plus, Trash2, Check } from "lucide-react";
+import { Building2, ChevronsUpDown, Plus, Trash2, Check, CloudOff, RefreshCw } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 
 export function ProjectSwitcher() {
   const projects = useProjectStore((s) => s.projects);
   const projectId = useProjectStore((s) => s.projectId);
   const projectInfo = useProjectStore((s) => s.projectInfo);
+  const isOffline = useProjectStore((s) => s.isOffline);
+  const pendingCount = useProjectStore((s) => s.pendingCount);
   const switchProject = useProjectStore((s) => s.switchProject);
   const createProject = useProjectStore((s) => s.createProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
@@ -35,18 +37,42 @@ export function ProjectSwitcher() {
   }
 
   return (
-    <div ref={containerRef} className="relative border-t border-white/10 px-4 py-4 text-xs">
+    <div ref={containerRef} className="relative border-b border-white/10 px-3 py-3">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-steel-400 hover:bg-navy-800 hover:text-white"
+        className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-navy-900 px-3 py-2 text-left hover:bg-navy-800"
       >
-        <Building2 size={14} className="shrink-0" />
-        <span className="min-w-0 flex-1 truncate">{projectInfo.nombreObra || "Proyecto sin nombre"}</span>
-        <ChevronsUpDown size={13} className="shrink-0 text-steel-500" />
+        <Building2 size={16} className="shrink-0 text-amber-500" />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+          {projectInfo.nombreObra || "Proyecto sin nombre"}
+        </span>
+        <ChevronsUpDown size={14} className="shrink-0 text-steel-400" />
       </button>
 
+      <div className="mt-1.5 px-1 text-[11px]">
+        {isOffline ? (
+          <div className="flex items-center gap-1.5 text-amber-400">
+            <CloudOff size={12} className="shrink-0" />
+            <span>
+              Sin conexión
+              {pendingCount > 0 && ` — ${pendingCount} cambio${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"}`}
+            </span>
+          </div>
+        ) : pendingCount > 0 ? (
+          <div className="flex items-center gap-1.5 text-steel-300">
+            <RefreshCw size={12} className="shrink-0 animate-spin" />
+            <span>Sincronizando {pendingCount} cambio{pendingCount === 1 ? "" : "s"}…</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-steel-500">
+            <Check size={12} className="shrink-0 text-green-500" />
+            <span>Guardado</span>
+          </div>
+        )}
+      </div>
+
       {open && (
-        <div className="absolute bottom-full left-2 right-2 z-50 mb-1 max-h-80 overflow-y-auto rounded-md border border-navy-700 bg-navy-900 py-1 shadow-xl">
+        <div className="absolute left-3 right-3 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-md border border-navy-700 bg-navy-900 py-1 shadow-xl">
           <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-steel-500">
             Tus proyectos
           </p>

@@ -19,8 +19,6 @@ import {
   AlertTriangle,
   X,
   LogOut,
-  CloudOff,
-  RefreshCw,
   Menu,
   ChevronDown,
 } from "lucide-react";
@@ -79,8 +77,6 @@ export function Layout() {
   const error = useProjectStore((s) => s.error);
   const clearError = useProjectStore((s) => s.clearError);
   const resetProject = useProjectStore((s) => s.reset);
-  const isOffline = useProjectStore((s) => s.isOffline);
-  const pendingCount = useProjectStore((s) => s.pendingCount);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -144,6 +140,8 @@ export function Layout() {
           </button>
         </div>
 
+        <ProjectSwitcher />
+
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
           <NavLink
             to={dashboardItem.to}
@@ -204,27 +202,6 @@ export function Layout() {
             );
           })}
         </nav>
-
-        <ProjectSwitcher />
-
-        {(isOffline || pendingCount > 0) && (
-          <div className="border-t border-white/10 px-4 py-3 text-xs">
-            {isOffline ? (
-              <div className="flex items-center gap-2 text-amber-400">
-                <CloudOff size={14} className="shrink-0" />
-                <span>
-                  Sin conexión
-                  {pendingCount > 0 && ` — ${pendingCount} cambio${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"}`}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-steel-300">
-                <RefreshCw size={14} className="shrink-0 animate-spin" />
-                <span>Sincronizando {pendingCount} cambio{pendingCount === 1 ? "" : "s"}…</span>
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="border-t border-white/10 px-4 py-3">
           <div className="mb-2 truncate text-xs text-steel-400">{user?.email}</div>
