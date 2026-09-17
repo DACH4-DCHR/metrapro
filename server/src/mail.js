@@ -1,36 +1,40 @@
-import nodemailer from "nodemailer";
-
-// Correo transaccional vía SMTP de Gmail (cuenta propia + contraseña de
-// aplicación) — evita depender de un proveedor externo que exija verificar un
-// dominio propio (no lo hay: la app vive en subdominios de Vercel/Railway).
-// Sin GMAIL_USER/GMAIL_APP_PASSWORD configurados (ej. en desarrollo local),
-// no falla: solo deja el correo en el log, para poder probar el flujo de
-// recuperación sin enviar nada de verdad.
-let transporter = null;
-function getTransporter() {
-  if (transporter) return transporter;
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) return null;
-  transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user, pass },
-    // Railway no tiene salida de red IPv6 utilizable — sin esto, Node intenta
-    // conectar a smtp.gmail.com por IPv6 primero y tarda minutos en fallar
-    // (ENETUNREACH) antes de caer a IPv4. Forzar IPv4 evita esa demora.
-    family: 4,
-  });
-  return transporter;
-}
+// Correo transaccional vía la API HTTPS de Brevo (antes Sendinblue). Se probó
+// primero con SMTP de Gmail, pero Railway bloquea las conexiones SMTP
+// salientes (confirmado en producción: ETIMEDOUT en el puerto 465) — un
+// bloqueo común en varios hosting en la nube para prevenir spam. La API de
+// Brevo se llama por HTTPS normal, sin ese problema.
+// Sin BREVO_API_KEY configurada (ej. en desarrollo local), no falla: solo
+// deja el correo en el log, para poder probar el flujo de recuperación sin
+// enviar nada de verdad.
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+const SENDER_EMAIL = process.env.MAIL_FROM_EMAIL || "no-reply@metrapro.app";
 
 async function sendMail({ to, subject, html, text }) {
-  const t = getTransporter();
-  if (!t) {
-    console.log(`[mail] GMAIL_USER/GMAIL_APP_PASSWORD no configurados — correo no enviado a ${to}: ${subject}`);
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.log(`[mail] BREVO_API_KEY no configurada — correo no enviado a ${to}: ${subject}`);
     console.log(text);
     return;
   }
-  await t.sendMail({ from: `MetraPro <${process.env.GMAIL_USER}>`, to, subject, html, text });
+  const res = await fetch(BREVO_API_URL, {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: "MetraPro", email: SENDER_EMAIL },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Brevo respondió ${res.status}: ${body}`);
+  }
 }
 
 export async function sendPasswordResetEmail(toEmail, resetLink) {
