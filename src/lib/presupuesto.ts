@@ -68,6 +68,41 @@ export interface PresupuestoModuloGroup {
   subtotal: number;
 }
 
+const ACERO_LINE_RE = /^Acero de refuerzo Ø/;
+const VARILLA_LINE_RE = /^Varillas Ø/;
+export const ACERO_PRESUPUESTO_PARTIDA = "Acero fy=4200 Kg/cm2 Grado 60";
+
+// El Presupuesto Referencial no valoriza el acero por diámetro (ese detalle ya
+// está en "Acero de refuerzo por Diámetro y Elemento", en el Cuadro de
+// Metrados Consolidado y en los reportes) ni las varillas comerciales (esas
+// son solo referencia de compra en unidades, no una partida de costo aparte
+// — dejarlas priceable duplicaba el costo del mismo acero). Aquí se juntan
+// todas las líneas de acero de un grupo en una sola partida estándar (un
+// precio de kg de acero fy=4200 Grado 60, sin importar el diámetro), como se
+// presupuesta en la práctica. Solo afecta esta valorización — el resto de la
+// app (metrados, acero por diámetro) sigue mostrando el detalle completo.
+function consolidarAceroParaPresupuesto(lines: MetradoLine[]): MetradoLine[] {
+  let pesoAceroTotal = 0;
+  let insertIndex = -1;
+  const result: MetradoLine[] = [];
+  for (const line of lines) {
+    if (VARILLA_LINE_RE.test(line.partida)) continue;
+    if (ACERO_LINE_RE.test(line.partida)) {
+      pesoAceroTotal += line.cantidad;
+      if (insertIndex === -1) {
+        insertIndex = result.length;
+        result.push({ partida: ACERO_PRESUPUESTO_PARTIDA, unidad: "kg", cantidad: 0 });
+      }
+      continue;
+    }
+    result.push(line);
+  }
+  if (insertIndex !== -1) {
+    result[insertIndex] = { ...result[insertIndex], cantidad: pesoAceroTotal };
+  }
+  return result;
+}
+
 // Mismas partidas y precios que calcularPresupuesto, pero organizadas por
 // elemento (zapatas, vigas, losas, ...) en vez de en una sola lista plana —
 // así se ve el Presupuesto Referencial en pantalla y en los reportes. La
@@ -80,13 +115,13 @@ export function agruparPresupuestoPorModulo(
   prices: Record<string, number>
 ): PresupuestoModuloGroup[] {
   return consolidateLinesByModule(elements).map((group) => {
-    const { rows, total } = valorizarLineas(group.lines, prices);
+    const { rows, total } = valorizarLineas(consolidarAceroParaPresupuesto(group.lines), prices);
     return { module: group.module, label: group.label, rows, subtotal: total };
   });
 }
 
 export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<string, number>): PresupuestoTotales {
-  const { rows, total: costoDirecto } = valorizarLineas(consolidated, prices);
+  const { rows, total: costoDirecto } = valorizarLineas(consolidarAceroParaPresupuesto(consolidated), prices);
 
   const ggOn = (prices[GG_ON_KEY] ?? 0) === 1;
   const ggPct = prices[GG_PCT_KEY] ?? GG_PCT_DEFAULT;
