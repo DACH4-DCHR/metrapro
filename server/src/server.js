@@ -170,11 +170,11 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     if (user) {
       const reset = await createPasswordReset(user.id);
       const link = `${FRONTEND_URL}/reset-password?token=${reset.id}`;
-      try {
-        await sendPasswordResetEmail(user.email, link);
-      } catch (err) {
+      // Sin esperar: si el proveedor de correo está lento, el usuario no debe
+      // quedarse mirando un spinner varios segundos por eso.
+      sendPasswordResetEmail(user.email, link).catch((err) => {
         console.error("No se pudo enviar el correo de recuperación:", err);
-      }
+      });
     }
   }
   res.json({ ok: true });

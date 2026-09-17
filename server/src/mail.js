@@ -12,7 +12,14 @@ function getTransporter() {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) return null;
-  transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+  transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+    // Railway no tiene salida de red IPv6 utilizable — sin esto, Node intenta
+    // conectar a smtp.gmail.com por IPv6 primero y tarda minutos en fallar
+    // (ENETUNREACH) antes de caer a IPv4. Forzar IPv4 evita esa demora.
+    family: 4,
+  });
   return transporter;
 }
 
