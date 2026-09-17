@@ -19,6 +19,7 @@ import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { TermsPage, PrivacyPage } from "./pages/Legal";
+import { PricingPage } from "./pages/Pricing";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
 
@@ -87,11 +88,12 @@ function App() {
   const authStatus = useAuthStore((s) => s.status);
   const checkAuth = useAuthStore((s) => s.checkAuth);
   // Rutas públicas, independientes de la sesión (recuperar contraseña llega
-  // desde un enlace de correo; términos/privacidad se enlazan desde el pie
-  // del login) — no pasan por react-router porque el resto de la app no lo
-  // usa hasta después de autenticarse.
+  // desde un enlace de correo; términos/privacidad/precios se enlazan desde
+  // el pie del login) — no pasan por react-router porque el resto de la app
+  // no lo usa hasta después de autenticarse.
   const path = window.location.pathname;
-  const isPublicRoute = path === "/reset-password" || path === "/terminos" || path === "/privacidad";
+  const isPublicRoute =
+    path === "/reset-password" || path === "/terminos" || path === "/privacidad" || path === "/precios";
 
   useEffect(() => {
     if (!isPublicRoute) checkAuth();
@@ -100,6 +102,7 @@ function App() {
   if (path === "/reset-password") return <ResetPasswordPage />;
   if (path === "/terminos") return <TermsPage />;
   if (path === "/privacidad") return <PrivacyPage />;
+  if (path === "/precios") return <PricingPage />;
 
   if (authStatus === "idle" || authStatus === "loading") {
     return <LoadingScreen message="Verificando sesión…" />;

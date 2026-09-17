@@ -166,6 +166,14 @@ export function LoginPage() {
                 </>
               )}
             </p>
+
+            {mode !== "forgot" && (
+              <p className="mt-3 text-center text-sm">
+                <a href="/precios" className="font-semibold text-amber-600 hover:underline">
+                  Ver precios
+                </a>
+              </p>
+            )}
           </div>
 
           <p className="mt-4 text-center text-xs text-steel-400">
