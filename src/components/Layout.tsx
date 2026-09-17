@@ -271,6 +271,15 @@ export function Layout() {
             <LogOut size={14} />
             Cerrar sesión
           </button>
+          <p className="mt-2 text-center text-[10px] text-steel-500">
+            <a href="/terminos" className="hover:text-steel-300 hover:underline">
+              Términos
+            </a>{" "}
+            ·{" "}
+            <a href="/privacidad" className="hover:text-steel-300 hover:underline">
+              Privacidad
+            </a>
+          </p>
         </div>
       </aside>
 

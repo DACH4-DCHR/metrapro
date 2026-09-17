@@ -167,6 +167,18 @@ export function LoginPage() {
               )}
             </p>
           </div>
+
+          <p className="mt-4 text-center text-xs text-steel-400">
+            Al continuar aceptas los{" "}
+            <a href="/terminos" className="underline hover:text-steel-600">
+              Términos de Uso
+            </a>{" "}
+            y la{" "}
+            <a href="/privacidad" className="underline hover:text-steel-600">
+              Política de Privacidad
+            </a>
+            .
+          </p>
         </div>
       </div>
     </div>

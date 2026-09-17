@@ -18,6 +18,7 @@ import { LosaMacizaPage } from "./pages/LosaMaciza";
 import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
+import { TermsPage, PrivacyPage } from "./pages/Legal";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
 
@@ -85,18 +86,20 @@ function ProjectGate() {
 function App() {
   const authStatus = useAuthStore((s) => s.status);
   const checkAuth = useAuthStore((s) => s.checkAuth);
-  // Ruta independiente del resto (se llega acá desde el enlace del correo de
-  // recuperación, sin sesión) — no pasa por react-router porque el resto de
-  // la app no lo usa hasta después de autenticarse.
-  const isResetPasswordRoute = window.location.pathname === "/reset-password";
+  // Rutas públicas, independientes de la sesión (recuperar contraseña llega
+  // desde un enlace de correo; términos/privacidad se enlazan desde el pie
+  // del login) — no pasan por react-router porque el resto de la app no lo
+  // usa hasta después de autenticarse.
+  const path = window.location.pathname;
+  const isPublicRoute = path === "/reset-password" || path === "/terminos" || path === "/privacidad";
 
   useEffect(() => {
-    if (!isResetPasswordRoute) checkAuth();
-  }, [checkAuth, isResetPasswordRoute]);
+    if (!isPublicRoute) checkAuth();
+  }, [checkAuth, isPublicRoute]);
 
-  if (isResetPasswordRoute) {
-    return <ResetPasswordPage />;
-  }
+  if (path === "/reset-password") return <ResetPasswordPage />;
+  if (path === "/terminos") return <TermsPage />;
+  if (path === "/privacidad") return <PrivacyPage />;
 
   if (authStatus === "idle" || authStatus === "loading") {
     return <LoadingScreen message="Verificando sesión…" />;
