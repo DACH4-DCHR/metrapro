@@ -130,6 +130,9 @@ export function deleteElement(projectId: number, elementId: string): Promise<Pro
 export interface AuthUser {
   id: number;
   email: string;
+  trialEndsAt: number;
+  isPaid: boolean;
+  hasFullAccess: boolean;
 }
 
 async function authRequest(path: string, options?: RequestInit): Promise<AuthUser> {

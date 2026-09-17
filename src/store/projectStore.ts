@@ -14,8 +14,16 @@ import {
   createProject as apiCreateProject,
   deleteProject as apiDeleteProject,
   NetworkError,
+  ApiError,
   type ProjectListItem,
 } from "../lib/api";
+
+// El backend manda un mensaje específico en 403 (ej. prueba vencida, modo de
+// solo lectura) — se muestra tal cual en vez del genérico "no se pudo
+// guardar", para que el usuario sepa exactamente por qué falló.
+function errorMessage(e: unknown, fallback: string): string {
+  return e instanceof ApiError ? e.message : fallback;
+}
 import {
   readProjectSnapshot,
   writeProjectSnapshot,
@@ -240,7 +248,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
           error:
             e instanceof NetworkError
               ? "No se puede crear un proyecto nuevo sin conexión."
-              : "No se pudo crear el proyecto.",
+              : errorMessage(e, "No se pudo crear el proyecto."),
         });
       }
     },
@@ -262,7 +270,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
           error:
             e instanceof NetworkError
               ? "No se puede eliminar un proyecto sin conexión."
-              : "No se pudo eliminar el proyecto.",
+              : errorMessage(e, "No se pudo eliminar el proyecto."),
         });
       }
     },
@@ -270,6 +278,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     setProjectInfo: (info) => {
       const projectId = get().projectId;
       if (projectId == null) return;
+      const previousInfo = get().projectInfo;
+      const previousProjects = get().projects;
       set((state) => ({ projectInfo: { ...state.projectInfo, ...info } }));
       persistSnapshot();
       // El selector de proyectos muestra nombreObra/cliente/fecha desde la lista en caché,
@@ -290,7 +300,12 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...queue, projectInfoPatch: { ...(queue.projectInfoPatch ?? {}), ...info } });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo guardar el cambio en el servidor." });
+            // No se guardó en el servidor (ej. cuenta en modo de solo lectura) — se
+            // revierte el cambio optimista para no mostrar datos que no se guardaron.
+            set({ projectInfo: previousInfo, projects: previousProjects });
+            persistSnapshot();
+            writeProjectsListCache(previousProjects);
+            set({ error: errorMessage(e, "No se pudo guardar el cambio en el servidor.") });
           }
         });
     },
@@ -308,7 +323,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...queue, elementOps: [...queue.elementOps, { type: "add", element: el }] });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo guardar el elemento en el servidor." });
+            set((state) => ({ elements: state.elements.filter((existing) => existing.id !== el.id) }));
+            persistSnapshot();
+            set({ error: errorMessage(e, "No se pudo guardar el elemento en el servidor.") });
           }
         });
     },
@@ -316,6 +333,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     removeElement: (id) => {
       const projectId = get().projectId;
       if (projectId == null) return;
+      const removed = get().elements.find((e) => e.id === id);
       set((state) => ({ elements: state.elements.filter((e) => e.id !== id) }));
       persistSnapshot();
       apiDeleteElement(projectId, id)
@@ -331,7 +349,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...queue, elementOps: nextOps });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo eliminar el elemento en el servidor." });
+            if (removed) {
+              set((state) => ({ elements: [removed, ...state.elements] }));
+              persistSnapshot();
+            }
+            set({ error: errorMessage(e, "No se pudo eliminar el elemento en el servidor.") });
           }
         });
     },
@@ -339,7 +361,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     setPrice: (key, value) => {
       const projectId = get().projectId;
       if (projectId == null) return;
-      const nextPrices = { ...get().prices, [key]: value };
+      const previousPrices = get().prices;
+      const nextPrices = { ...previousPrices, [key]: value };
       set({ prices: nextPrices });
       persistSnapshot();
       putPrices(projectId, nextPrices)
@@ -349,7 +372,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...get().queue, prices: nextPrices });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo guardar el precio en el servidor." });
+            set({ prices: previousPrices });
+            persistSnapshot();
+            set({ error: errorMessage(e, "No se pudo guardar el precio en el servidor.") });
           }
         });
     },
@@ -357,6 +382,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     setMaterialesCustom: (items) => {
       const projectId = get().projectId;
       if (projectId == null) return;
+      const previousItems = get().materialesCustom;
       set({ materialesCustom: items });
       persistSnapshot();
       putMaterialesCustom(projectId, items)
@@ -366,7 +392,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...get().queue, materialesCustom: items });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo guardar el material en el servidor." });
+            set({ materialesCustom: previousItems });
+            persistSnapshot();
+            set({ error: errorMessage(e, "No se pudo guardar el material en el servidor.") });
           }
         });
     },
@@ -374,6 +402,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     setPresupuestoCustom: (items) => {
       const projectId = get().projectId;
       if (projectId == null) return;
+      const previousItems = get().presupuestoCustom;
       set({ presupuestoCustom: items });
       persistSnapshot();
       putPresupuestoCustom(projectId, items)
@@ -383,7 +412,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             persistQueue({ ...get().queue, presupuestoCustom: items });
             set({ isOffline: true });
           } else {
-            set({ error: "No se pudo guardar la partida en el servidor." });
+            set({ presupuestoCustom: previousItems });
+            persistSnapshot();
+            set({ error: errorMessage(e, "No se pudo guardar la partida en el servidor.") });
           }
         });
     },

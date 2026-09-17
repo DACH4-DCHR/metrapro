@@ -109,11 +109,31 @@ function verifyPassword(password, salt, expectedHash) {
   return candidate.length === expected.length && timingSafeEqual(candidate, expected);
 }
 
+// --- Prueba gratuita y activación manual ---
+
+export const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+
+// true si el usuario puede crear/editar (pagó, o su prueba de 14 días sigue
+// vigente); false = modo de solo lectura. Se calcula al vuelo (nunca se
+// guarda) para que nunca quede desactualizado por un reloj de servidor viejo.
+export function hasFullAccess(user) {
+  return user.is_paid || Date.now() < Number(user.trial_ends_at);
+}
+
+export function accessFieldsFor(user) {
+  return {
+    trialEndsAt: Number(user.trial_ends_at),
+    isPaid: user.is_paid,
+    hasFullAccess: hasFullAccess(user),
+  };
+}
+
 export async function createUser(email, password) {
   const { salt, hash } = hashPassword(password);
+  const now = Date.now();
   const { rows } = await pool.query(
-    "INSERT INTO users (email, password_hash, password_salt, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
-    [email, hash, salt, Date.now()]
+    "INSERT INTO users (email, password_hash, password_salt, created_at, trial_ends_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+    [email, hash, salt, now, now + TRIAL_DURATION_MS]
   );
   const userId = rows[0].id;
   await createProjectRow(userId);
@@ -126,12 +146,38 @@ export async function findUserByEmail(email) {
 }
 
 export async function getUserById(id) {
-  const { rows } = await pool.query("SELECT id, email, created_at FROM users WHERE id = $1", [id]);
+  const { rows } = await pool.query(
+    "SELECT id, email, created_at, trial_ends_at, is_paid FROM users WHERE id = $1",
+    [id]
+  );
   return rows[0] ?? null;
 }
 
 export function verifyUserPassword(user, password) {
   return verifyPassword(password, user.password_salt, user.password_hash);
+}
+
+// Activación/desactivación manual (el dueño de la app la ejecuta después de
+// recibir el pago por transferencia/Yape/Plin — ver POST /api/admin/activate).
+export async function setUserPaid(email, isPaid) {
+  const { rows } = await pool.query(
+    "UPDATE users SET is_paid = $1, paid_at = $2 WHERE email = $3 RETURNING id, email",
+    [isPaid, isPaid ? Date.now() : null, email]
+  );
+  return rows[0] ?? null;
+}
+
+export async function listUsersWithAccessStatus() {
+  const { rows } = await pool.query(
+    "SELECT id, email, created_at, trial_ends_at, is_paid, paid_at FROM users ORDER BY created_at DESC"
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    createdAt: Number(row.created_at),
+    paidAt: row.paid_at ? Number(row.paid_at) : null,
+    ...accessFieldsFor(row),
+  }));
 }
 
 // --- Sesiones ---

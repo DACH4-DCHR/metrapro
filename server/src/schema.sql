@@ -9,6 +9,21 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS price_catalog_json JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+-- Prueba gratuita de 14 días desde el registro; is_paid se activa a mano
+-- (transferencia/Yape/Plin fuera de la app) vía POST /api/admin/activate.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS paid_at BIGINT;
+
+-- Migración única: las cuentas creadas ANTES de este sistema de prueba (donde
+-- trial_ends_at todavía es NULL — la señal de que nunca pasaron por esta
+-- migración) se activan automáticamente para no cortarles el acceso
+-- retroactivamente. Después de esta pasada trial_ends_at nunca vuelve a ser
+-- NULL (createUser siempre lo fija al crear la cuenta), así que esto no se
+-- repite en cuentas nuevas ni en próximos arranques del servidor.
+UPDATE users SET is_paid = true, paid_at = created_at WHERE trial_ends_at IS NULL;
+UPDATE users SET trial_ends_at = created_at + 1209600000 WHERE trial_ends_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

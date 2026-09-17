@@ -73,12 +73,16 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
   },
 ];
 
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
 export function Layout() {
   const error = useProjectStore((s) => s.error);
   const clearError = useProjectStore((s) => s.clearError);
   const resetProject = useProjectStore((s) => s.reset);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const diasRestantesPrueba =
+    user && !user.isPaid ? Math.ceil((user.trialEndsAt - Date.now()) / MS_POR_DIA) : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const helpKey = useHelpStore((s) => s.openKey);
   const closeHelp = useHelpStore((s) => s.close);
@@ -232,6 +236,20 @@ export function Layout() {
 
         <div className="flex min-w-0 flex-1">
           <main className="min-w-0 flex-1">
+            {diasRestantesPrueba !== null && diasRestantesPrueba <= 0 && (
+              <div className="no-print flex items-center gap-2 bg-red-600 px-6 py-2 text-sm font-medium text-white">
+                <AlertTriangle size={16} />
+                Tu período de prueba de 14 días terminó. Tu cuenta está en modo de solo lectura — puedes ver y
+                exportar tus proyectos, pero no crear ni editar nada nuevo. Contáctanos para activarla.
+              </div>
+            )}
+            {diasRestantesPrueba !== null && diasRestantesPrueba > 0 && diasRestantesPrueba <= 3 && (
+              <div className="no-print flex items-center gap-2 bg-amber-100 px-6 py-2 text-sm font-medium text-amber-900">
+                <AlertTriangle size={16} />
+                Tu prueba gratuita termina en {diasRestantesPrueba} {diasRestantesPrueba === 1 ? "día" : "días"}.
+                Contáctanos para activar tu cuenta y no perder acceso.
+              </div>
+            )}
             {error && (
               <div className="no-print flex items-center justify-between gap-3 bg-red-50 px-6 py-2 text-sm text-red-700">
                 <span className="flex items-center gap-2">
