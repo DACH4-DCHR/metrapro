@@ -28,7 +28,13 @@ import {
   accessFieldsFor,
   setUserPaid,
   listUsersWithAccessStatus,
+  deleteSessionsForUser,
+  createPasswordReset,
+  getPasswordReset,
+  deletePasswordReset,
+  updateUserPassword,
 } from "./db.js";
+import { sendPasswordResetEmail } from "./mail.js";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
@@ -61,6 +67,9 @@ function createAuthLimiter(message) {
 }
 const loginLimiter = createAuthLimiter("Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo.");
 const registerLimiter = createAuthLimiter("Demasiados intentos de registro. Espera unos minutos e inténtalo de nuevo.");
+const forgotPasswordLimiter = createAuthLimiter(
+  "Demasiadas solicitudes de recuperación. Espera unos minutos e inténtalo de nuevo."
+);
 
 const SESSION_COOKIE = "mp_sid";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -109,6 +118,7 @@ function requireFullAccess(req, res, next) {
 
 app.use("/api/auth/register", registerLimiter);
 app.use("/api/auth/login", loginLimiter);
+app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 
 app.post("/api/auth/register", async (req, res) => {
   const { email, password } = req.body ?? {};
@@ -143,6 +153,47 @@ app.post("/api/auth/logout", async (req, res) => {
   const sid = req.cookies?.[SESSION_COOKIE];
   if (sid) await deleteSession(sid);
   res.clearCookie(SESSION_COOKIE, { path: "/", sameSite: IS_PRODUCTION ? "none" : "lax", secure: IS_PRODUCTION });
+  res.json({ ok: true });
+});
+
+// El frontend vive en un origen distinto (Vercel) — se arma el enlace del
+// correo con esa URL, la misma que ya se usa para restringir CORS.
+const FRONTEND_URL = process.env.CORS_ORIGIN || "http://localhost:5173";
+
+// Responde igual exista o no la cuenta (nunca revela si un correo está
+// registrado) — evita que alguien use este endpoint para averiguar qué
+// correos tienen cuenta en MetraPro.
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const { email } = req.body ?? {};
+  if (typeof email === "string" && EMAIL_RE.test(email)) {
+    const user = await findUserByEmail(email);
+    if (user) {
+      const reset = await createPasswordReset(user.id);
+      const link = `${FRONTEND_URL}/reset-password?token=${reset.id}`;
+      try {
+        await sendPasswordResetEmail(user.email, link);
+      } catch (err) {
+        console.error("No se pudo enviar el correo de recuperación:", err);
+      }
+    }
+  }
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  const { token, password } = req.body ?? {};
+  if (typeof token !== "string" || typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres" });
+  }
+  const reset = await getPasswordReset(token);
+  if (!reset) {
+    return res.status(400).json({ error: "El enlace de recuperación es inválido o venció. Solicita uno nuevo." });
+  }
+  await updateUserPassword(reset.user_id, password);
+  await deletePasswordReset(token);
+  // Cierra cualquier sesión abierta con la contraseña anterior — si alguien más
+  // tenía acceso, esto lo saca.
+  await deleteSessionsForUser(reset.user_id);
   res.json({ ok: true });
 });
 

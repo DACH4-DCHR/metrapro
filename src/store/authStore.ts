@@ -1,5 +1,14 @@
 import { create } from "zustand";
-import { authMe, authLogin, authRegister, authLogout, NetworkError, type AuthUser } from "../lib/api";
+import {
+  authMe,
+  authLogin,
+  authRegister,
+  authLogout,
+  authForgotPassword,
+  authResetPassword,
+  NetworkError,
+  type AuthUser,
+} from "../lib/api";
 import { readCachedAuthUser, writeCachedAuthUser, clearCachedAuthUser, clearOfflineData } from "../lib/offlineCache";
 
 interface AuthState {
@@ -7,11 +16,17 @@ interface AuthState {
   user: AuthUser | null;
   isOfflineSession: boolean;
   error: string | null;
+  // Confirmaciones (no errores) de acciones puntuales, ej. "revisa tu correo"
+  // tras pedir recuperar la contraseña.
+  message: string | null;
   checkAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<boolean>;
+  resetPassword: (token: string, password: string) => Promise<boolean>;
   clearError: () => void;
+  clearMessage: () => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -19,6 +34,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   isOfflineSession: false,
   error: null,
+  message: null,
 
   checkAuth: async () => {
     set({ status: "loading" });
@@ -87,5 +103,42 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ user: null, status: "unauthenticated", isOfflineSession: false });
   },
 
+  forgotPassword: async (email) => {
+    set({ error: null, message: null });
+    try {
+      await authForgotPassword(email);
+      set({ message: "Si ese correo tiene una cuenta, te enviamos un enlace para recuperar tu contraseña." });
+      return true;
+    } catch (e) {
+      const message =
+        e instanceof NetworkError
+          ? "No hay conexión con el servidor."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo procesar la solicitud.";
+      set({ error: message });
+      return false;
+    }
+  },
+
+  resetPassword: async (token, password) => {
+    set({ error: null, message: null });
+    try {
+      await authResetPassword(token, password);
+      set({ message: "Tu contraseña se actualizó. Ya puedes iniciar sesión con la nueva." });
+      return true;
+    } catch (e) {
+      const message =
+        e instanceof NetworkError
+          ? "No hay conexión con el servidor."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo actualizar la contraseña.";
+      set({ error: message });
+      return false;
+    }
+  },
+
   clearError: () => set({ error: null }),
+  clearMessage: () => set({ message: null }),
 }));

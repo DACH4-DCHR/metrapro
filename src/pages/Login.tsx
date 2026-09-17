@@ -3,26 +3,31 @@ import { HardHat, Loader2, Layers3, RectangleVertical, Square, Ruler } from "luc
 import { useAuthStore } from "../store/authStore";
 
 export function LoginPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const error = useAuthStore((s) => s.error);
+  const message = useAuthStore((s) => s.message);
   const clearError = useAuthStore((s) => s.clearError);
+  const clearMessage = useAuthStore((s) => s.clearMessage);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
+  const forgotPassword = useAuthStore((s) => s.forgotPassword);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    const ok = mode === "login" ? await login(email, password) : await register(email, password);
+    const ok =
+      mode === "login" ? await login(email, password) : mode === "register" ? await register(email, password) : await forgotPassword(email);
     setSubmitting(false);
     if (!ok) return;
   }
 
-  function toggleMode() {
+  function switchTo(next: "login" | "register" | "forgot") {
     clearError();
-    setMode((m) => (m === "login" ? "register" : "login"));
+    clearMessage();
+    setMode(next);
   }
 
   return (
@@ -80,61 +85,86 @@ export function LoginPage() {
 
           <div className="rounded-lg border border-steel-200 bg-white p-6 shadow-sm">
             <h1 className="mb-1 text-lg font-bold text-navy-900">
-              {mode === "login" ? "Inicia sesión" : "Crea tu cuenta"}
+              {mode === "login" ? "Inicia sesión" : mode === "register" ? "Crea tu cuenta" : "Recupera tu contraseña"}
             </h1>
             <p className="mb-5 text-sm text-steel-500">
               {mode === "login"
                 ? "Accede a tus proyectos de metrados."
-                : "Empieza a metrar tus proyectos en minutos."}
+                : mode === "register"
+                  ? "Empieza a metrar tus proyectos en minutos."
+                  : "Te enviaremos un enlace a tu correo para elegir una nueva contraseña."}
             </p>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-navy-800">Correo electrónico</span>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-md border border-steel-200 bg-white px-3 py-2 text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-navy-800">Contraseña</span>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-md border border-steel-200 bg-white px-3 py-2 text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
-                />
-                {mode === "register" && (
-                  <span className="text-xs text-steel-500">Mínimo 8 caracteres.</span>
+            {message ? (
+              <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{message}</div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-navy-800">Correo electrónico</span>
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-md border border-steel-200 bg-white px-3 py-2 text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+                  />
+                </label>
+                {mode !== "forgot" && (
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-navy-800">Contraseña</span>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete={mode === "login" ? "current-password" : "new-password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-md border border-steel-200 bg-white px-3 py-2 text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+                    />
+                    {mode === "register" && <span className="text-xs text-steel-500">Mínimo 8 caracteres.</span>}
+                  </label>
                 )}
-              </label>
 
-              {error && (
-                <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-              )}
+                {mode === "login" && (
+                  <button
+                    type="button"
+                    onClick={() => switchTo("forgot")}
+                    className="-mt-2 self-end text-xs font-medium text-navy-700 hover:underline"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="mt-1 flex items-center justify-center gap-2 rounded-md bg-navy-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting && <Loader2 size={16} className="animate-spin" />}
-                {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
-              </button>
-            </form>
+                {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="mt-1 flex items-center justify-center gap-2 rounded-md bg-navy-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting && <Loader2 size={16} className="animate-spin" />}
+                  {mode === "login" ? "Iniciar sesión" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}
+                </button>
+              </form>
+            )}
 
             <p className="mt-5 text-center text-sm text-steel-500">
-              {mode === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
-              <button onClick={toggleMode} className="font-semibold text-navy-800 hover:underline">
-                {mode === "login" ? "Regístrate" : "Inicia sesión"}
-              </button>
+              {mode === "forgot" ? (
+                <button onClick={() => switchTo("login")} className="font-semibold text-navy-800 hover:underline">
+                  Volver a iniciar sesión
+                </button>
+              ) : (
+                <>
+                  {mode === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+                  <button
+                    onClick={() => switchTo(mode === "login" ? "register" : "login")}
+                    className="font-semibold text-navy-800 hover:underline"
+                  >
+                    {mode === "login" ? "Regístrate" : "Inicia sesión"}
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>

@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at BIGINT NOT NULL
 );
 
+-- Token de un solo uso para "olvidé mi contraseña", enviado por correo.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at BIGINT NOT NULL,
+  created_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON password_resets(user_id);
+
 CREATE TABLE IF NOT EXISTS projects (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

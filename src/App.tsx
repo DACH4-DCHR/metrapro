@@ -17,6 +17,7 @@ import { MurosAlbanileriaPage } from "./pages/MurosAlbanileria";
 import { LosaMacizaPage } from "./pages/LosaMaciza";
 import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
 import { LoginPage } from "./pages/Login";
+import { ResetPasswordPage } from "./pages/ResetPassword";
 import { useAuthStore } from "./store/authStore";
 import { useProjectStore } from "./store/projectStore";
 
@@ -84,10 +85,18 @@ function ProjectGate() {
 function App() {
   const authStatus = useAuthStore((s) => s.status);
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  // Ruta independiente del resto (se llega acá desde el enlace del correo de
+  // recuperación, sin sesión) — no pasa por react-router porque el resto de
+  // la app no lo usa hasta después de autenticarse.
+  const isResetPasswordRoute = window.location.pathname === "/reset-password";
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!isResetPasswordRoute) checkAuth();
+  }, [checkAuth, isResetPasswordRoute]);
+
+  if (isResetPasswordRoute) {
+    return <ResetPasswordPage />;
+  }
 
   if (authStatus === "idle" || authStatus === "loading") {
     return <LoadingScreen message="Verificando sesión…" />;

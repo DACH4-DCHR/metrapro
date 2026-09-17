@@ -170,3 +170,21 @@ export async function authLogout(): Promise<void> {
     // si no hay conexión, la sesión local se limpia igual; el servidor expirará la cookie por sí solo
   }
 }
+
+// Responde ok:true exista o no la cuenta (el backend nunca revela si un
+// correo está registrado), así que esto no lanza por "correo no encontrado".
+export async function authForgotPassword(email: string): Promise<void> {
+  const res = await doFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.error || "Ocurrió un error. Intenta de nuevo.", res.status);
+  }
+}
+
+export async function authResetPassword(token: string, password: string): Promise<void> {
+  const res = await doFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.error || "Ocurrió un error. Intenta de nuevo.", res.status);
+  }
+}

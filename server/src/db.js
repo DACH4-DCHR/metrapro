@@ -217,6 +217,46 @@ export async function deleteSession(sessionId) {
   await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
 }
 
+export async function deleteSessionsForUser(userId) {
+  await pool.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
+}
+
+// --- Recuperación de contraseña ---
+
+const PASSWORD_RESET_DURATION_MS = 60 * 60 * 1000;
+
+export async function createPasswordReset(userId) {
+  const id = randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + PASSWORD_RESET_DURATION_MS;
+  await pool.query("INSERT INTO password_resets (id, user_id, expires_at, created_at) VALUES ($1, $2, $3, $4)", [
+    id,
+    userId,
+    expiresAt,
+    Date.now(),
+  ]);
+  return { id, expiresAt };
+}
+
+export async function getPasswordReset(token) {
+  const { rows } = await pool.query("SELECT * FROM password_resets WHERE id = $1", [token]);
+  const row = rows[0];
+  if (!row) return null;
+  if (Number(row.expires_at) < Date.now()) {
+    await pool.query("DELETE FROM password_resets WHERE id = $1", [token]);
+    return null;
+  }
+  return row;
+}
+
+export async function deletePasswordReset(token) {
+  await pool.query("DELETE FROM password_resets WHERE id = $1", [token]);
+}
+
+export async function updateUserPassword(userId, password) {
+  const { salt, hash } = hashPassword(password);
+  await pool.query("UPDATE users SET password_hash = $1, password_salt = $2 WHERE id = $3", [hash, salt, userId]);
+}
+
 // --- Proyectos (varios por usuario) ---
 
 export async function listProjectsForUser(userId) {
