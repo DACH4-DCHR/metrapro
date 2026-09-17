@@ -21,6 +21,8 @@ import {
   LogOut,
   Menu,
   ChevronDown,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -28,6 +30,7 @@ import { useHelpStore } from "../store/helpStore";
 import { HELP_CONTENT } from "../lib/helpContent";
 import { HelpPanel } from "./ui/HelpPanel";
 import { ProjectSwitcher } from "./ProjectSwitcher";
+import { whatsappLink, mailtoLink } from "../lib/contact";
 
 // Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
 // cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
@@ -74,6 +77,32 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
 ];
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+// Enlaces de contacto reales (WhatsApp + correo) para los avisos de prueba
+// vencida/por vencer y renovación de actualizaciones — sin esto, "contáctanos"
+// era solo texto sin ningún lugar a donde escribir.
+function ContactLinks({ message, subject, className }: { message: string; subject: string; className: string }) {
+  return (
+    <span className="flex items-center gap-3">
+      <a
+        href={whatsappLink(message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 ${className}`}
+      >
+        <MessageCircle size={14} />
+        Escribir por WhatsApp
+      </a>
+      <a
+        href={mailtoLink(subject, message)}
+        className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 ${className}`}
+      >
+        <Mail size={14} />
+        Escribir por correo
+      </a>
+    </span>
+  );
+}
 
 export function Layout() {
   const error = useProjectStore((s) => s.error);
@@ -241,24 +270,45 @@ export function Layout() {
         <div className="flex min-w-0 flex-1">
           <main className="min-w-0 flex-1">
             {diasRestantesPrueba !== null && diasRestantesPrueba <= 0 && (
-              <div className="no-print flex items-center gap-2 bg-red-600 px-6 py-2 text-sm font-medium text-white">
+              <div className="no-print flex flex-wrap items-center gap-x-2 gap-y-1 bg-red-600 px-6 py-2 text-sm font-medium text-white">
                 <AlertTriangle size={16} />
-                Tu período de prueba de 14 días terminó. Tu cuenta está en modo de solo lectura — puedes ver y
-                exportar tus proyectos, pero no crear ni editar nada nuevo. Contáctanos para activarla.
+                <span>
+                  Tu período de prueba de 14 días terminó. Tu cuenta está en modo de solo lectura — puedes ver y
+                  exportar tus proyectos, pero no crear ni editar nada nuevo. Contáctanos para activarla:
+                </span>
+                <ContactLinks
+                  message={`Hola, mi prueba de MetraPro terminó y quiero activar mi cuenta (${user?.email ?? ""}).`}
+                  subject="Activar cuenta MetraPro"
+                  className="text-white"
+                />
               </div>
             )}
             {diasRestantesPrueba !== null && diasRestantesPrueba > 0 && diasRestantesPrueba <= 3 && (
-              <div className="no-print flex items-center gap-2 bg-amber-100 px-6 py-2 text-sm font-medium text-amber-900">
+              <div className="no-print flex flex-wrap items-center gap-x-2 gap-y-1 bg-amber-100 px-6 py-2 text-sm font-medium text-amber-900">
                 <AlertTriangle size={16} />
-                Tu prueba gratuita termina en {diasRestantesPrueba} {diasRestantesPrueba === 1 ? "día" : "días"}.
-                Contáctanos para activar tu cuenta y no perder acceso.
+                <span>
+                  Tu prueba gratuita termina en {diasRestantesPrueba} {diasRestantesPrueba === 1 ? "día" : "días"}.
+                  Contáctanos para activar tu cuenta y no perder acceso:
+                </span>
+                <ContactLinks
+                  message={`Hola, mi prueba de MetraPro termina en ${diasRestantesPrueba} ${diasRestantesPrueba === 1 ? "día" : "días"} y quiero activar mi cuenta (${user?.email ?? ""}).`}
+                  subject="Activar cuenta MetraPro"
+                  className="text-amber-900"
+                />
               </div>
             )}
             {avisoActualizaciones && (
-              <div className="no-print flex items-center gap-2 bg-blue-50 px-6 py-2 text-sm font-medium text-blue-800">
+              <div className="no-print flex flex-wrap items-center gap-x-2 gap-y-1 bg-blue-50 px-6 py-2 text-sm font-medium text-blue-800">
                 <AlertTriangle size={16} />
-                Ya pasó un año desde que activaste tu cuenta. Hay actualizaciones nuevas disponibles —
-                contáctanos para renovar y seguir recibiéndolas.
+                <span>
+                  Ya pasó un año desde que activaste tu cuenta. Hay actualizaciones nuevas disponibles —
+                  contáctanos para renovar y seguir recibiéndolas:
+                </span>
+                <ContactLinks
+                  message={`Hola, quiero renovar mi cuenta de MetraPro para seguir recibiendo actualizaciones (${user?.email ?? ""}).`}
+                  subject="Renovar cuenta MetraPro"
+                  className="text-blue-800"
+                />
               </div>
             )}
             {error && (
