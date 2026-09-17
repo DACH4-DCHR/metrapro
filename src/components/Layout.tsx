@@ -23,6 +23,7 @@ import {
   ChevronDown,
   MessageCircle,
   Mail,
+  Send,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -30,7 +31,7 @@ import { useHelpStore } from "../store/helpStore";
 import { HELP_CONTENT } from "../lib/helpContent";
 import { HelpPanel } from "./ui/HelpPanel";
 import { ProjectSwitcher } from "./ProjectSwitcher";
-import { whatsappLink, mailtoLink } from "../lib/contact";
+import { whatsappLink, telegramLink, mailtoLink } from "../lib/contact";
 
 // Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
 // cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
@@ -78,28 +79,48 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
-// Enlaces de contacto reales (WhatsApp + correo) para los avisos de prueba
-// vencida/por vencer y renovación de actualizaciones — sin esto, "contáctanos"
-// era solo texto sin ningún lugar a donde escribir.
+// Botón "Enviar" con menú desplegable (WhatsApp/Telegram/Correo) para los
+// avisos de prueba vencida/por vencer y renovación de actualizaciones — sin
+// esto, "contáctanos" era solo texto sin ningún lugar a donde escribir.
 function ContactLinks({ message, subject, className }: { message: string; subject: string; className: string }) {
+  const [open, setOpen] = useState(false);
+
+  const options = [
+    { label: "WhatsApp", icon: MessageCircle, href: whatsappLink(message), external: true },
+    { label: "Telegram", icon: Send, href: telegramLink(), external: true },
+    { label: "Correo", icon: Mail, href: mailtoLink(subject, message), external: false },
+  ];
+
   return (
-    <span className="flex items-center gap-3">
-      <a
-        href={whatsappLink(message)}
-        target="_blank"
-        rel="noopener noreferrer"
+    <span className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
         className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 ${className}`}
       >
-        <MessageCircle size={14} />
-        Escribir por WhatsApp
-      </a>
-      <a
-        href={mailtoLink(subject, message)}
-        className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 ${className}`}
-      >
-        <Mail size={14} />
-        Escribir por correo
-      </a>
+        <Send size={14} />
+        Enviar
+      </button>
+      {open && (
+        <>
+          <span className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
+          <span className="absolute left-0 top-full z-50 mt-1 flex min-w-[140px] flex-col gap-0.5 rounded-md border border-steel-200 bg-white p-1.5 text-sm font-normal text-navy-900 shadow-lg">
+            {options.map((opt) => (
+              <a
+                key={opt.label}
+                href={opt.href}
+                target={opt.external ? "_blank" : undefined}
+                rel={opt.external ? "noopener noreferrer" : undefined}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-steel-100"
+              >
+                <opt.icon size={14} />
+                {opt.label}
+              </a>
+            ))}
+          </span>
+        </>
+      )}
     </span>
   );
 }
