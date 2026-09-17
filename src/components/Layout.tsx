@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Mail,
   Send,
+  Phone,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -98,8 +99,8 @@ function ContactLinks({ message, subject, className }: { message: string; subjec
         onClick={() => setOpen((o) => !o)}
         className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 ${className}`}
       >
-        <Send size={14} />
-        Enviar
+        <Phone size={14} />
+        Contactar
       </button>
       {open && (
         <>
@@ -295,7 +296,7 @@ export function Layout() {
                 <AlertTriangle size={16} />
                 <span>
                   Tu período de prueba de 14 días terminó. Tu cuenta está en modo de solo lectura — puedes ver y
-                  exportar tus proyectos, pero no crear ni editar nada nuevo. Contáctanos para activarla:
+                  exportar tus proyectos, pero no crear ni editar nada nuevo.
                 </span>
                 <ContactLinks
                   message={`Hola, mi prueba de MetraPro terminó y quiero activar mi cuenta (${user?.email ?? ""}).`}
@@ -309,7 +310,7 @@ export function Layout() {
                 <AlertTriangle size={16} />
                 <span>
                   Tu prueba gratuita termina en {diasRestantesPrueba} {diasRestantesPrueba === 1 ? "día" : "días"}.
-                  Contáctanos para activar tu cuenta y no perder acceso:
+                  Actívala ahora para no perder acceso.
                 </span>
                 <ContactLinks
                   message={`Hola, mi prueba de MetraPro termina en ${diasRestantesPrueba} ${diasRestantesPrueba === 1 ? "día" : "días"} y quiero activar mi cuenta (${user?.email ?? ""}).`}
@@ -321,10 +322,7 @@ export function Layout() {
             {avisoActualizaciones && (
               <div className="no-print flex flex-wrap items-center gap-x-2 gap-y-1 bg-blue-50 px-6 py-2 text-sm font-medium text-blue-800">
                 <AlertTriangle size={16} />
-                <span>
-                  Ya pasó un año desde que activaste tu cuenta. Hay actualizaciones nuevas disponibles —
-                  contáctanos para renovar y seguir recibiéndolas:
-                </span>
+                <span>Ya pasó un año desde que activaste tu cuenta. Hay actualizaciones nuevas disponibles.</span>
                 <ContactLinks
                   message={`Hola, quiero renovar mi cuenta de MetraPro para seguir recibiendo actualizaciones (${user?.email ?? ""}).`}
                   subject="Renovar cuenta MetraPro"
