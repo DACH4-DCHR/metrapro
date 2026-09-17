@@ -512,7 +512,7 @@ export function DashboardPage() {
           </div>
         )}
 
-        <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />}>
+        <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />} collapsible>
           {elements.length === 0 ? (
             <p className="py-6 text-center text-sm text-steel-500">
               Aún no has guardado ningún elemento. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y
