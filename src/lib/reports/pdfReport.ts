@@ -6,8 +6,13 @@ import {
   agruparPresupuestoPorModulo,
   valorizarLineas,
   buildPresupuestoFootRows,
+  crearLineaMovilizacion,
+  presupuestoCustomALineas,
+  MOVILIZACION_LABEL,
+  PRESUPUESTO_CUSTOM_LABEL,
   type PresupuestoRow,
-  type PresupuestoModuloGroup,
+  type PresupuestoSeccion,
+  type PresupuestoCustomLine,
   type PresupuestoTotales,
 } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
@@ -175,7 +180,7 @@ export function downloadValorizadoPdf(
 export function downloadPresupuestoPorModuloPdf(
   filename: string,
   tableTitle: string,
-  groups: PresupuestoModuloGroup[],
+  groups: PresupuestoSeccion[],
   presupuesto: PresupuestoTotales
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -247,7 +252,8 @@ function buildReportDoc(
   consolidated: MetradoLine[],
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
-  totalVarillas: number
+  totalVarillas: number,
+  presupuestoCustom: PresupuestoCustomLine[] = []
 ): { doc: jsPDF; safeName: string } {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -300,7 +306,9 @@ function buildReportDoc(
   });
   cursorY += Math.ceil(infoRows.length / 2) * 7 + 6;
 
-  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const lineaMovilizacion = crearLineaMovilizacion();
+  const presupuestoCustomLineas = presupuestoCustomALineas(presupuestoCustom);
+  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]);
   const costosCategoria = costosPorCategoria(presupuesto.rows);
   const cantidadesModulo = cantidadesPorModulo(elements);
   const chartWidth = pageWidth - marginX * 2;
@@ -436,6 +444,13 @@ function buildReportDoc(
   }
 
   const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
+  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices);
+  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices);
+  const seccionesPresupuesto: PresupuestoSeccion[] = [
+    { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
+    ...presupuestoPorModulo,
+    { label: PRESUPUESTO_CUSTOM_LABEL, rows: presupuestoCustomValorizado.rows, subtotal: presupuestoCustomValorizado.total },
+  ];
   const presupuestoFootRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
 
   // Umbral más conservador que el resto de secciones: esta tabla siempre trae
@@ -453,7 +468,7 @@ function buildReportDoc(
   doc.text("Presupuesto Referencial", marginX, cursorY);
   cursorY += 3;
 
-  for (const group of presupuestoPorModulo) {
+  for (const group of seccionesPresupuesto) {
     if (cursorY > 260) {
       doc.addPage();
       cursorY = 16;
@@ -609,9 +624,18 @@ export function generatePdfReport(
   consolidated: MetradoLine[],
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
-  totalVarillas: number
+  totalVarillas: number,
+  presupuestoCustom: PresupuestoCustomLine[] = []
 ) {
-  const { doc, safeName } = buildReportDoc(projectInfo, elements, consolidated, prices, materialesLines, totalVarillas);
+  const { doc, safeName } = buildReportDoc(
+    projectInfo,
+    elements,
+    consolidated,
+    prices,
+    materialesLines,
+    totalVarillas,
+    presupuestoCustom
+  );
   doc.save(`metrado_${safeName}.pdf`);
 }
 
@@ -626,9 +650,18 @@ export async function sharePdfReport(
   consolidated: MetradoLine[],
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
-  totalVarillas: number
+  totalVarillas: number,
+  presupuestoCustom: PresupuestoCustomLine[] = []
 ): Promise<boolean> {
-  const { doc, safeName } = buildReportDoc(projectInfo, elements, consolidated, prices, materialesLines, totalVarillas);
+  const { doc, safeName } = buildReportDoc(
+    projectInfo,
+    elements,
+    consolidated,
+    prices,
+    materialesLines,
+    totalVarillas,
+    presupuestoCustom
+  );
   const blob = doc.output("blob");
   // Nombre de archivo solo ASCII (sin tildes/ñ/espacios): algunas versiones de
   // WhatsApp para Android fallan con "No se puede compartir, vuelve a

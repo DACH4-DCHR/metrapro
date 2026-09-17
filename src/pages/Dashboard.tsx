@@ -43,12 +43,18 @@ import {
   calcularPresupuesto,
   agruparPresupuestoPorModulo,
   valorizarLineas,
+  crearLineaMovilizacion,
+  presupuestoCustomALineas,
+  MOVILIZACION_LABEL,
+  PRESUPUESTO_CUSTOM_LABEL,
   GG_PCT_KEY,
   UT_PCT_KEY,
   IGV_PCT_KEY,
   GG_ON_KEY,
   UT_ON_KEY,
   IGV_ON_KEY,
+  type PresupuestoCustomLine,
+  type PresupuestoSeccion,
 } from "../lib/presupuesto";
 import { consolidateLines } from "../lib/consolidate";
 import {
@@ -116,6 +122,8 @@ export function DashboardPage() {
   const setPrice = useProjectStore((s) => s.setPrice);
   const materialesCustom = useProjectStore((s) => s.materialesCustom);
   const setMaterialesCustomStore = useProjectStore((s) => s.setMaterialesCustom);
+  const presupuestoCustom = useProjectStore((s) => s.presupuestoCustom);
+  const setPresupuestoCustomStore = useProjectStore((s) => s.setPresupuestoCustom);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sharingPdf, setSharingPdf] = useState(false);
@@ -141,10 +149,38 @@ export function DashboardPage() {
     [elements]
   );
 
-  const presupuesto = useMemo(() => calcularPresupuesto(consolidated, prices), [consolidated, prices]);
+  const lineaMovilizacion = useMemo(() => crearLineaMovilizacion(), []);
+  const presupuestoCustomLineas = useMemo(
+    () => presupuestoCustomALineas(presupuestoCustom),
+    [presupuestoCustom]
+  );
+  const presupuesto = useMemo(
+    () => calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]),
+    [consolidated, prices, lineaMovilizacion, presupuestoCustomLineas]
+  );
   const presupuestoPorModulo = useMemo(
     () => agruparPresupuestoPorModulo(elements, prices),
     [elements, prices]
+  );
+  const movilizacionValorizado = useMemo(
+    () => valorizarLineas([lineaMovilizacion], prices),
+    [lineaMovilizacion, prices]
+  );
+  const presupuestoCustomValorizado = useMemo(
+    () => valorizarLineas(presupuestoCustomLineas, prices),
+    [presupuestoCustomLineas, prices]
+  );
+  const presupuestoSecciones = useMemo<PresupuestoSeccion[]>(
+    () => [
+      { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
+      ...presupuestoPorModulo,
+      {
+        label: PRESUPUESTO_CUSTOM_LABEL,
+        rows: presupuestoCustomValorizado.rows,
+        subtotal: presupuestoCustomValorizado.total,
+      },
+    ],
+    [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizado]
   );
 
   const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
@@ -209,6 +245,14 @@ export function DashboardPage() {
     setMaterialesCustomStore(materialesCustom.filter((m) => m.id !== id));
   }
 
+  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number) {
+    const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad };
+    setPresupuestoCustomStore([...presupuestoCustom, item]);
+  }
+  function removeCustomPresupuestoLine(id: string) {
+    setPresupuestoCustomStore(presupuestoCustom.filter((p) => p.id !== id));
+  }
+
   const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
 
   function setGGOn(on: boolean) {
@@ -238,7 +282,15 @@ export function DashboardPage() {
     setGeneratingPdf(true);
     try {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
-      generatePdfReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas);
+      generatePdfReport(
+        projectInfo,
+        elements,
+        consolidated,
+        prices,
+        materialesExportLines,
+        materiales.totalVarillas,
+        presupuestoCustom
+      );
     } finally {
       setGeneratingPdf(false);
     }
@@ -249,7 +301,15 @@ export function DashboardPage() {
     try {
       if (isStandaloneApp()) {
         const { generatePdfReport } = await import("../lib/reports/pdfReport");
-        generatePdfReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas);
+        generatePdfReport(
+          projectInfo,
+          elements,
+          consolidated,
+          prices,
+          materialesExportLines,
+          materiales.totalVarillas,
+          presupuestoCustom
+        );
         alert(
           'La app instalada no puede compartir archivos directamente (una limitación de Android). Se descargó el PDF: ábrelo desde tus Descargas y compártelo por WhatsApp manualmente, o entra a metrapro.vercel.app desde Chrome (sin usar el ícono instalado) para compartirlo en un solo paso.'
         );
@@ -263,7 +323,8 @@ export function DashboardPage() {
         consolidated,
         prices,
         materialesExportLines,
-        materiales.totalVarillas
+        materiales.totalVarillas,
+        presupuestoCustom
       );
       if (!shared) {
         alert(
@@ -288,7 +349,15 @@ export function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
-                generateExcelReport(projectInfo, elements, consolidated, prices, materialesExportLines, materiales.totalVarillas)
+                generateExcelReport(
+                  projectInfo,
+                  elements,
+                  consolidated,
+                  prices,
+                  materialesExportLines,
+                  materiales.totalVarillas,
+                  presupuestoCustom
+                )
               }
               disabled={consolidated.length === 0}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -593,55 +662,57 @@ export function DashboardPage() {
           </SectionCard>
         )}
 
-        {presupuestoPorModulo.length > 0 && (
-          <SectionCard
-            title="Presupuesto referencial"
-            icon={<Wallet size={16} className="text-navy-700" />}
-            collapsible
-            headerActions={
-              <ExportSectionButtons
-                onExcel={() =>
-                  downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [
-                    buildPresupuestoPorModuloSheet(presupuestoPorModulo, presupuesto),
-                  ])
-                }
-                onPdf={async () => {
-                  const { downloadPresupuestoPorModuloPdf } = await import("../lib/reports/pdfReport");
-                  downloadPresupuestoPorModuloPdf(
-                    `presupuesto_${safeProjectName}`,
-                    "Presupuesto Referencial",
-                    presupuestoPorModulo,
-                    presupuesto
-                  );
-                }}
-              />
-            }
-          >
-            <div className="mb-3 text-xs text-steel-500">
-              Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu
-              zona y proveedor.
-            </div>
-            <div className="overflow-x-auto rounded-lg border border-steel-200">
-              <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead>
-                  <tr className="bg-navy-900 text-left text-white">
-                    <th className="px-4 py-2 font-semibold">Partida</th>
-                    <th className="px-4 py-2 font-semibold">Unidad</th>
-                    <th className="px-4 py-2 text-right font-semibold">Cantidad</th>
-                    <th className="px-4 py-2 text-right font-semibold">P. Unit. (S/.)</th>
-                    <th className="px-4 py-2 text-right font-semibold">Parcial</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {presupuestoPorModulo.map((group) => (
-                    <Fragment key={group.module}>
+        <SectionCard
+          title="Presupuesto referencial"
+          icon={<Wallet size={16} className="text-navy-700" />}
+          collapsible
+          headerActions={
+            <ExportSectionButtons
+              onExcel={() =>
+                downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [
+                  buildPresupuestoPorModuloSheet(presupuestoSecciones, presupuesto),
+                ])
+              }
+              onPdf={async () => {
+                const { downloadPresupuestoPorModuloPdf } = await import("../lib/reports/pdfReport");
+                downloadPresupuestoPorModuloPdf(
+                  `presupuesto_${safeProjectName}`,
+                  "Presupuesto Referencial",
+                  presupuestoSecciones,
+                  presupuesto
+                );
+              }}
+            />
+          }
+        >
+          <div className="mb-3 text-xs text-steel-500">
+            Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu
+            zona y proveedor.
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-steel-200">
+            <table className="w-full min-w-[560px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-navy-900 text-left text-white">
+                  <th className="px-4 py-2 font-semibold">Partida</th>
+                  <th className="px-4 py-2 font-semibold">Unidad</th>
+                  <th className="px-4 py-2 text-right font-semibold">Cantidad</th>
+                  <th className="px-4 py-2 text-right font-semibold">P. Unit. (S/.)</th>
+                  <th className="px-4 py-2 text-right font-semibold">Parcial</th>
+                  <th className="px-4 py-2 no-print" />
+                </tr>
+              </thead>
+              <tbody>
+                {presupuestoSecciones.map((group) => {
+                  const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
+                  return (
+                    <Fragment key={group.label}>
                       <tr className="bg-amber-500/10">
-                        <td className="px-4 py-1.5 font-semibold uppercase tracking-wide text-navy-800" colSpan={5}>
+                        <td className="px-4 py-1.5 font-semibold uppercase tracking-wide text-navy-800" colSpan={6}>
                           {group.label}
                         </td>
                       </tr>
                       {group.rows.map((row, idx) => (
-                        <tr key={`${group.module}-${row.key}`} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+                        <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
                           <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
                           <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
                           <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
@@ -651,6 +722,17 @@ export function DashboardPage() {
                           <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
                             {currencyFormatter.format(row.subtotal)}
                           </td>
+                          <td className="px-4 py-2 no-print">
+                            {esOtros && (
+                              <button
+                                onClick={() => removeCustomPresupuestoLine(presupuestoCustom[idx].id)}
+                                aria-label="Quitar partida"
+                                className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                       <tr className="bg-steel-100/70 text-xs font-medium text-steel-600">
@@ -658,22 +740,32 @@ export function DashboardPage() {
                           Subtotal {group.label} (S/.)
                         </td>
                         <td className="px-4 py-1.5 text-right font-mono">{currencyFormatter.format(group.subtotal)}</td>
+                        <td className="no-print" />
                       </tr>
                     </Fragment>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
-                    <td className="px-4 py-2" colSpan={4}>
-                      Costo directo (S/.)
-                    </td>
-                    <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(presupuesto.costoDirecto)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
+                  <td className="px-4 py-2" colSpan={4}>
+                    Costo directo (S/.)
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono">{currencyFormatter.format(presupuesto.costoDirecto)}</td>
+                  <td className="no-print" />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
-            <div className="mt-4 flex flex-col gap-2 border-t border-steel-200 pt-4">
+          <AddCustomLineForm
+            itemLabel="Partida"
+            placeholder="Ej. Movilización de personal, cerco perimétrico, etc."
+            buttonLabel="Agregar partida"
+            onAdd={addCustomPresupuestoLine}
+          />
+
+          <div className="mt-4 flex flex-col gap-2 border-t border-steel-200 pt-4">
               <BudgetLineRow
                 label="Gastos Generales"
                 checked={presupuesto.ggOn}
@@ -706,8 +798,7 @@ export function DashboardPage() {
                 <span className="font-mono">{currencyFormatter.format(presupuesto.totalGeneral)}</span>
               </div>
             </div>
-          </SectionCard>
-        )}
+        </SectionCard>
 
         {materialesLines.length > 0 && (
           <SectionCard
@@ -824,7 +915,12 @@ export function DashboardPage() {
               </table>
             </div>
 
-            <AddMaterialForm onAdd={addCustomMaterial} />
+            <AddCustomLineForm
+              itemLabel="Material"
+              placeholder='Ej. Clavos de 3"'
+              buttonLabel="Agregar material"
+              onAdd={addCustomMaterial}
+            />
 
             {aceroValorizado.rows.length > 0 && (
               <div className="mt-5">
@@ -961,9 +1057,22 @@ function PriceInput({ value, onChange }: { value: number; onChange: (v: number) 
   );
 }
 
-// Formulario para agregar un material que no viene del metrado automático
-// (clavos, alambre, madera, pintura, etc.), para completar la lista de compra.
-function AddMaterialForm({ onAdd }: { onAdd: (partida: string, unidad: string, cantidad: number) => void }) {
+// Formulario genérico para agregar una línea que no viene del metrado
+// automático — lo usan tanto Metrado de Materiales (clavos, alambre, madera,
+// etc., para completar la lista de compra) como Presupuesto Referencial
+// (partidas que ningún módulo cubre, como movilización de personal o cerco
+// perimétrico).
+function AddCustomLineForm({
+  itemLabel,
+  placeholder,
+  buttonLabel,
+  onAdd,
+}: {
+  itemLabel: string;
+  placeholder: string;
+  buttonLabel: string;
+  onAdd: (partida: string, unidad: string, cantidad: number) => void;
+}) {
   const [partida, setPartida] = useState("");
   const [unidad, setUnidad] = useState("und");
   const [cantidad, setCantidad] = useState(1);
@@ -980,12 +1089,12 @@ function AddMaterialForm({ onAdd }: { onAdd: (partida: string, unidad: string, c
   return (
     <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-dashed border-steel-300 p-3">
       <div className="min-w-[160px] flex-1">
-        <label className="mb-1 block text-xs font-medium text-navy-800">Material</label>
+        <label className="mb-1 block text-xs font-medium text-navy-800">{itemLabel}</label>
         <input
           type="text"
           value={partida}
           onChange={(e) => setPartida(e.target.value)}
-          placeholder='Ej. Clavos de 3"'
+          placeholder={placeholder}
           className="w-full rounded-md border border-steel-200 px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
         />
       </div>
@@ -1014,7 +1123,7 @@ function AddMaterialForm({ onAdd }: { onAdd: (partida: string, unidad: string, c
         className="flex items-center gap-1.5 rounded-md bg-navy-900 px-3 py-2 text-xs font-semibold text-white hover:bg-navy-700"
       >
         <Plus size={14} />
-        Agregar material
+        {buttonLabel}
       </button>
     </form>
   );

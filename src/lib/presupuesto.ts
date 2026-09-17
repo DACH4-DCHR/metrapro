@@ -195,8 +195,19 @@ export function agruparPresupuestoPorModulo(
   });
 }
 
-export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<string, number>): PresupuestoTotales {
-  const { rows, total: costoDirecto } = valorizarLineas(consolidarAceroParaPresupuesto(consolidated), prices);
+// extraLines suma partidas que no vienen de elementos calculados (movilización
+// de equipo, partidas adicionales agregadas a mano) al mismo costo directo —
+// así el Total General del Presupuesto Referencial las incluye sin importar
+// dónde se llame calcularPresupuesto (pantalla, PDF o Excel).
+export function calcularPresupuesto(
+  consolidated: MetradoLine[],
+  prices: Record<string, number>,
+  extraLines: MetradoLine[] = []
+): PresupuestoTotales {
+  const { rows, total: costoDirecto } = valorizarLineas(
+    [...consolidarAceroParaPresupuesto(consolidated), ...extraLines],
+    prices
+  );
 
   const ggOn = (prices[GG_ON_KEY] ?? 0) === 1;
   const ggPct = prices[GG_PCT_KEY] ?? GG_PCT_DEFAULT;
@@ -234,4 +245,42 @@ export function buildPresupuestoFootRows(
   }
   rows.push(["", "", "", "TOTAL GENERAL (S/.)", fmt(presupuesto.totalGeneral)]);
   return rows;
+}
+
+// Partida fija de movilización de equipo: va antes de Movimiento de Tierras
+// en el Presupuesto Referencial, con cantidad 1 (no editable) — solo existe
+// para que el usuario pueda ponerle un precio general (glb), sin depender de
+// ningún metrado calculado.
+export const MOVILIZACION_PARTIDA = "Movilización y Desmovilización de Equipos y Herramientas";
+export const MOVILIZACION_UNIDAD = "glb";
+export const MOVILIZACION_LABEL = "Movilización de Equipo";
+
+export function crearLineaMovilizacion(): MetradoLine {
+  return { partida: MOVILIZACION_PARTIDA, unidad: MOVILIZACION_UNIDAD, cantidad: 1 };
+}
+
+// Partidas que el usuario agrega a mano al Presupuesto Referencial para lo
+// que no cubre ningún módulo calculado — van después de Muros de
+// Arquitectura, igual que "Metrado de Materiales" ya permite agregar
+// materiales sueltos (customMaterialesALineas en materiales.ts).
+export interface PresupuestoCustomLine {
+  id: string;
+  partida: string;
+  unidad: string;
+  cantidad: number;
+}
+export const PRESUPUESTO_CUSTOM_LABEL = "Otros / Partidas Adicionales";
+
+export function presupuestoCustomALineas(items: PresupuestoCustomLine[]): MetradoLine[] {
+  return items.map((i) => ({ partida: i.partida, unidad: i.unidad, cantidad: i.cantidad }));
+}
+
+// Forma mínima que necesitan la tabla en pantalla y los exportadores para
+// pintar una sección del Presupuesto Referencial — la cumplen tanto
+// PresupuestoModuloGroup (con su "module" de más) como Movilización y Otros
+// (que no pertenecen a ningún módulo).
+export interface PresupuestoSeccion {
+  label: string;
+  rows: PresupuestoRow[];
+  subtotal: number;
 }

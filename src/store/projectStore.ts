@@ -1,11 +1,13 @@
 import { create } from "zustand";
 import type { CalculatedElement } from "../lib/types";
 import type { CustomMaterialLine } from "../lib/materiales";
+import type { PresupuestoCustomLine } from "../lib/presupuesto";
 import {
   fetchProject,
   patchProjectInfo,
   putPrices,
   putMaterialesCustom,
+  putPresupuestoCustom,
   postElement,
   deleteElement as apiDeleteElement,
   listProjects,
@@ -44,6 +46,7 @@ interface ProjectState {
   elements: CalculatedElement[];
   prices: Record<string, number>;
   materialesCustom: CustomMaterialLine[];
+  presupuestoCustom: PresupuestoCustomLine[];
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   isOffline: boolean;
@@ -60,6 +63,7 @@ interface ProjectState {
   removeElement: (id: string) => void;
   setPrice: (key: string, value: number) => void;
   setMaterialesCustom: (items: CustomMaterialLine[]) => void;
+  setPresupuestoCustom: (items: PresupuestoCustomLine[]) => void;
   flushQueue: () => Promise<void>;
 }
 
@@ -75,9 +79,9 @@ let syncing = false;
 
 export const useProjectStore = create<ProjectState>()((set, get) => {
   function persistSnapshot() {
-    const { projectId, projectInfo, prices, materialesCustom, elements } = get();
+    const { projectId, projectInfo, prices, materialesCustom, presupuestoCustom, elements } = get();
     if (projectId == null) return;
-    writeProjectSnapshot(projectId, { projectInfo, prices, materialesCustom, elements });
+    writeProjectSnapshot(projectId, { projectInfo, prices, materialesCustom, presupuestoCustom, elements });
   }
 
   function persistQueue(queue: PendingQueue) {
@@ -100,6 +104,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         projectInfo: data.projectInfo,
         prices: data.prices,
         materialesCustom: data.materialesCustom ?? [],
+        presupuestoCustom: data.presupuestoCustom ?? [],
         elements: data.elements,
         status: "ready",
         error: null,
@@ -114,6 +119,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             projectInfo: cached.projectInfo,
             prices: cached.prices,
             materialesCustom: cached.materialesCustom ?? [],
+            presupuestoCustom: cached.presupuestoCustom ?? [],
             elements: cached.elements,
             status: "ready",
             isOffline: true,
@@ -136,6 +142,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     elements: [],
     prices: {},
     materialesCustom: [],
+    presupuestoCustom: [],
     status: "idle",
     error: null,
     isOffline: false,
@@ -177,6 +184,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
                 projectInfo: cachedSnap.projectInfo,
                 prices: cachedSnap.prices,
                 materialesCustom: cachedSnap.materialesCustom ?? [],
+                presupuestoCustom: cachedSnap.presupuestoCustom ?? [],
                 elements: cachedSnap.elements,
                 queue,
                 pendingCount: computePendingCount(queue),
@@ -203,6 +211,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         elements: [],
         prices: {},
         materialesCustom: [],
+        presupuestoCustom: [],
         status: "idle",
         error: null,
         isOffline: false,
@@ -362,6 +371,23 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         });
     },
 
+    setPresupuestoCustom: (items) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
+      set({ presupuestoCustom: items });
+      persistSnapshot();
+      putPresupuestoCustom(projectId, items)
+        .then(() => get().flushQueue())
+        .catch((e) => {
+          if (e instanceof NetworkError) {
+            persistQueue({ ...get().queue, presupuestoCustom: items });
+            set({ isOffline: true });
+          } else {
+            set({ error: "No se pudo guardar la partida en el servidor." });
+          }
+        });
+    },
+
     flushQueue: async () => {
       if (syncing) return;
       const projectId = get().projectId;
@@ -414,6 +440,22 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             }
             set({ error: "No se pudieron sincronizar los materiales pendientes." });
             queue = { ...queue, materialesCustom: null };
+            persistQueue(queue);
+          }
+        }
+
+        if (queue.presupuestoCustom) {
+          try {
+            await putPresupuestoCustom(projectId, queue.presupuestoCustom);
+            queue = { ...queue, presupuestoCustom: null };
+            persistQueue(queue);
+          } catch (e) {
+            if (e instanceof NetworkError) {
+              set({ isOffline: true });
+              return;
+            }
+            set({ error: "No se pudieron sincronizar las partidas pendientes." });
+            queue = { ...queue, presupuestoCustom: null };
             persistQueue(queue);
           }
         }

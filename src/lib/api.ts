@@ -1,5 +1,6 @@
 import type { CalculatedElement } from "./types";
 import type { CustomMaterialLine } from "./materiales";
+import type { PresupuestoCustomLine } from "./presupuesto";
 
 export interface ProjectInfoDto {
   id?: number;
@@ -15,6 +16,7 @@ export interface ProjectDto {
   projectInfo: ProjectInfoDto;
   prices: Record<string, number>;
   materialesCustom: CustomMaterialLine[];
+  presupuestoCustom: PresupuestoCustomLine[];
   elements: CalculatedElement[];
 }
 
@@ -103,6 +105,13 @@ export function putPrices(projectId: number, prices: Record<string, number>): Pr
 
 export function putMaterialesCustom(projectId: number, items: CustomMaterialLine[]): Promise<ProjectDto> {
   return request<ProjectDto>(`/projects/${projectId}/materiales-custom`, {
+    method: "PUT",
+    body: JSON.stringify(items),
+  });
+}
+
+export function putPresupuestoCustom(projectId: number, items: PresupuestoCustomLine[]): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/presupuesto-custom`, {
     method: "PUT",
     body: JSON.stringify(items),
   });

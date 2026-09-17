@@ -8,8 +8,13 @@ import {
   agruparPresupuestoPorModulo,
   valorizarLineas,
   buildPresupuestoFootRows,
+  crearLineaMovilizacion,
+  presupuestoCustomALineas,
+  MOVILIZACION_LABEL,
+  PRESUPUESTO_CUSTOM_LABEL,
   type PresupuestoTotales,
-  type PresupuestoModuloGroup,
+  type PresupuestoSeccion,
+  type PresupuestoCustomLine,
   type PresupuestoRow,
 } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
@@ -138,7 +143,7 @@ export function buildValorizadoSheet(name: string, rows: PresupuestoRow[], footR
 // sus partidas, un subtotal en negrita, y al final las filas de totales
 // (Costo directo/GG/Utilidad/IGV/Total General) que ya calculó calcularPresupuesto.
 export function buildPresupuestoPorModuloSheet(
-  groups: PresupuestoModuloGroup[],
+  groups: PresupuestoSeccion[],
   presupuesto: PresupuestoTotales
 ): ExcelSheet {
   const rows: (string | number)[][] = [];
@@ -214,7 +219,8 @@ export function generateExcelReport(
   consolidated: MetradoLine[],
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
-  totalVarillas: number
+  totalVarillas: number,
+  presupuestoCustom: PresupuestoCustomLine[] = []
 ) {
   const resumenSheet: ExcelSheet = {
     name: "Resumen",
@@ -235,7 +241,9 @@ export function generateExcelReport(
 
   const metradosSheet = buildMetradoLineasSheet("Metrados Consolidado", consolidated);
 
-  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const lineaMovilizacion = crearLineaMovilizacion();
+  const presupuestoCustomLineas = presupuestoCustomALineas(presupuestoCustom);
+  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]);
   const costoPorCategoriaSheet = buildCostoPorCategoriaSheet(costosPorCategoria(presupuesto.rows));
   const metradosPorModuloSheet = buildMetradosPorModuloSheet(cantidadesPorModulo(elements));
 
@@ -260,7 +268,14 @@ export function generateExcelReport(
   };
 
   const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
-  const presupuestoSheet = buildPresupuestoPorModuloSheet(presupuestoPorModulo, presupuesto);
+  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices);
+  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices);
+  const secciones: PresupuestoSeccion[] = [
+    { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
+    ...presupuestoPorModulo,
+    { label: PRESUPUESTO_CUSTOM_LABEL, rows: presupuestoCustomValorizado.rows, subtotal: presupuestoCustomValorizado.total },
+  ];
+  const presupuestoSheet = buildPresupuestoPorModuloSheet(secciones, presupuesto);
 
   const materialesValorizado = valorizarLineas(materialesLines, prices);
   const materialesFootRows: (string | number)[][] = [

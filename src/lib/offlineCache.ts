@@ -1,6 +1,7 @@
 import type { CalculatedElement } from "./types";
 import type { AuthUser, ProjectDto, ProjectListItem } from "./api";
 import type { CustomMaterialLine } from "./materiales";
+import type { PresupuestoCustomLine } from "./presupuesto";
 
 const NAMESPACE = "metrapro:";
 const PROJECT_SNAPSHOT_PREFIX = `${NAMESPACE}project-snapshot:`;
@@ -15,11 +16,12 @@ export interface PendingQueue {
   projectInfoPatch: Record<string, unknown> | null;
   prices: Record<string, number> | null;
   materialesCustom: CustomMaterialLine[] | null;
+  presupuestoCustom: PresupuestoCustomLine[] | null;
   elementOps: ElementOp[];
 }
 
 export function emptyQueue(): PendingQueue {
-  return { projectInfoPatch: null, prices: null, materialesCustom: null, elementOps: [] };
+  return { projectInfoPatch: null, prices: null, materialesCustom: null, presupuestoCustom: null, elementOps: [] };
 }
 
 export function pendingCount(queue: PendingQueue): number {
@@ -27,6 +29,7 @@ export function pendingCount(queue: PendingQueue): number {
     (queue.projectInfoPatch ? 1 : 0) +
     (queue.prices ? 1 : 0) +
     (queue.materialesCustom ? 1 : 0) +
+    (queue.presupuestoCustom ? 1 : 0) +
     queue.elementOps.length
   );
 }

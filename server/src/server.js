@@ -19,6 +19,7 @@ import {
   setPrices,
   mergeIntoPriceCatalog,
   setMaterialesCustom,
+  setPresupuestoCustom,
   addElement,
   removeElement,
 } from "./db.js";
@@ -165,6 +166,11 @@ app.put("/api/projects/:id/prices", requireProjectOwnership, async (req, res) =>
 
 app.put("/api/projects/:id/materiales-custom", requireProjectOwnership, async (req, res) => {
   await setMaterialesCustom(req.projectId, Array.isArray(req.body) ? req.body : []);
+  res.json(await getProject(req.projectId));
+});
+
+app.put("/api/projects/:id/presupuesto-custom", requireProjectOwnership, async (req, res) => {
+  await setPresupuestoCustom(req.projectId, Array.isArray(req.body) ? req.body : []);
   res.json(await getProject(req.projectId));
 });
 
