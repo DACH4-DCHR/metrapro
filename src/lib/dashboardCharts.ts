@@ -1,47 +1,65 @@
 // Datos preparados para los gráficos del Dashboard: agrupa lo que ya se
 // calcula en otros lados (presupuesto valorizado, elementos guardados) en la
 // forma que necesitan los gráficos de barras, sin duplicar esos cálculos.
-import type { PresupuestoRow } from "./presupuesto";
+import { esPartidaMovimientoTierras, MOVILIZACION_PARTIDA, type PresupuestoRow } from "./presupuesto";
 import type { CalculatedElement, ModuleType } from "./types";
 import { MODULE_LABELS } from "./moduleLabels";
 
-const CATEGORIAS_COSTO = ["Concreto", "Acero", "Encofrado", "Otros"] as const;
+const CATEGORIAS_COSTO = ["Concreto", "Acero", "Encofrado", "Movimiento de Tierras", "Movilización", "Otros"] as const;
 export type CategoriaCosto = (typeof CATEGORIAS_COSTO)[number];
 
 // Mismo orden y colores siempre (paleta categórica fija, nunca ciclada): así
 // "Concreto" es azul en todos los proyectos, independientemente de qué
-// categorías tengan monto en un proyecto puntual.
+// categorías tengan monto en un proyecto puntual. "Movimiento de Tierras" y
+// "Movilización" antes caían dentro de "Otros" — con proyectos que mueven
+// bastante tierra o le ponen precio alto a la movilización, "Otros" se veía
+// desproporcionado sin explicar por qué; separarlas responde esa pregunta.
 const CATEGORIA_COLOR: Record<CategoriaCosto, string> = {
   Concreto: "#2a78d6",
   Acero: "#eb6834",
   Encofrado: "#1baf7a",
-  Otros: "#eda100",
+  "Movimiento de Tierras": "#eda100",
+  Movilización: "#e87ba4",
+  Otros: "#008300",
 };
 
 function categorizarPartida(partida: string): CategoriaCosto {
   if (/concreto/i.test(partida)) return "Concreto";
   if (/acero/i.test(partida)) return "Acero";
   if (/encofrado/i.test(partida)) return "Encofrado";
+  if (partida === MOVILIZACION_PARTIDA) return "Movilización";
+  if (esPartidaMovimientoTierras(partida)) return "Movimiento de Tierras";
   return "Otros";
 }
 
 export interface CostoCategoriaItem {
   categoria: CategoriaCosto;
   monto: number;
+  pct: number;
   color: string;
 }
 
 // Costo directo del presupuesto (sin GG/Utilidad/IGV, que son porcentajes
-// sobre el total y no se pueden repartir por categoría) agrupado en 4
+// sobre el total y no se pueden repartir por categoría) agrupado en 6
 // categorías fijas, para el gráfico "Costo directo por categoría".
 export function costosPorCategoria(rows: PresupuestoRow[]): CostoCategoriaItem[] {
-  const totales: Record<CategoriaCosto, number> = { Concreto: 0, Acero: 0, Encofrado: 0, Otros: 0 };
+  const totales: Record<CategoriaCosto, number> = {
+    Concreto: 0,
+    Acero: 0,
+    Encofrado: 0,
+    "Movimiento de Tierras": 0,
+    Movilización: 0,
+    Otros: 0,
+  };
+  let total = 0;
   for (const row of rows) {
     totales[categorizarPartida(row.line.partida)] += row.subtotal;
+    total += row.subtotal;
   }
   return CATEGORIAS_COSTO.map((categoria) => ({
     categoria,
     monto: totales[categoria],
+    pct: total > 0 ? (totales[categoria] / total) * 100 : 0,
     color: CATEGORIA_COLOR[categoria],
   })).filter((c) => c.monto > 0);
 }

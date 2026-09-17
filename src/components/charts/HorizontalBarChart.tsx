@@ -4,6 +4,9 @@ export interface HorizontalBarChartItem {
   label: string;
   value: number;
   color: string;
+  // Texto corto opcional junto al valor (ej. "18.6%") — para cuando además
+  // del monto importa la proporción sobre un total.
+  subLabel?: string;
 }
 
 interface HorizontalBarChartProps {
@@ -43,7 +46,7 @@ export function HorizontalBarChart({ items, valueFormatter, emptyMessage }: Hori
             onFocus={() => setHoverIdx(idx)}
             onBlur={() => setHoverIdx((h) => (h === idx ? null : h))}
             tabIndex={0}
-            aria-label={`${item.label}: ${fmt(item.value)}`}
+            aria-label={item.subLabel ? `${item.label}: ${fmt(item.value)} (${item.subLabel})` : `${item.label}: ${fmt(item.value)}`}
           >
             <span className="w-28 shrink-0 truncate text-right text-xs text-steel-600 sm:w-36" title={item.label}>
               {item.label}
@@ -56,11 +59,13 @@ export function HorizontalBarChart({ items, valueFormatter, emptyMessage }: Hori
               {isHover && (
                 <div className="pointer-events-none absolute -top-8 left-0 z-10 whitespace-nowrap rounded bg-navy-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg">
                   {item.label}: <span className="font-bold">{fmt(item.value)}</span>
+                  {item.subLabel && <span className="text-steel-300"> ({item.subLabel})</span>}
                 </div>
               )}
             </div>
-            <span className="w-20 shrink-0 text-right text-xs font-semibold text-navy-800 sm:w-24">
-              {fmt(item.value)}
+            <span className="flex w-20 shrink-0 flex-col items-end sm:w-24">
+              <span className="text-xs font-semibold text-navy-800">{fmt(item.value)}</span>
+              {item.subLabel && <span className="text-[10px] leading-tight text-steel-500">{item.subLabel}</span>}
             </span>
           </div>
         );

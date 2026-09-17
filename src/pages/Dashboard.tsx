@@ -468,14 +468,19 @@ export function DashboardPage() {
             <SectionCard title="Costo directo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
               <p className="mb-3 text-xs text-steel-500">
                 Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) entre concreto,
-                acero, encofrado y el resto de partidas.
+                acero, encofrado, movimiento de tierras, movilización y el resto de partidas.
               </p>
               <HorizontalBarChart
-                items={costosCategoria.map((c) => ({ label: c.categoria, value: c.monto, color: c.color }))}
+                items={costosCategoria.map((c) => ({
+                  label: c.categoria,
+                  value: c.monto,
+                  color: c.color,
+                  subLabel: `${c.pct.toFixed(1)}%`,
+                }))}
                 valueFormatter={(v) => currencyFormatter.format(v)}
               />
 
-              <div className="mt-4 border-t border-steel-200 pt-3 text-sm">
+              <div className="mt-4 rounded-lg border border-steel-200 bg-steel-50 p-3 text-sm">
                 <div className="flex items-center justify-between py-1">
                   <span className="text-steel-600">Costo directo (S/.)</span>
                   <span className="font-mono font-medium text-navy-900">
@@ -500,7 +505,7 @@ export function DashboardPage() {
                     <span className="font-mono text-navy-900">{currencyFormatter.format(presupuesto.montoIGV)}</span>
                   </div>
                 )}
-                <div className="mt-1 flex items-center justify-between border-t-2 border-navy-900 pt-2 text-base font-bold text-navy-900">
+                <div className="mt-2 flex items-center justify-between rounded-md bg-navy-900 px-3 py-2 text-base font-bold text-white">
                   <span>Total general (S/.)</span>
                   <span className="font-mono">{currencyFormatter.format(presupuesto.totalGeneral)}</span>
                 </div>

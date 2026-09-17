@@ -123,6 +123,13 @@ const PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS = new Set<string>(ORDEN_PARTIDAS_C
 const EXCAVACION_RE = /^Excavación/;
 const MODULO_MOVIMIENTO_TIERRAS: ModuleType = "movimientoTierras";
 
+// Reutilizado por el gráfico "Costo directo por categoría" (dashboardCharts.ts)
+// para que "Movimiento de Tierras" ahí sea exactamente el mismo conjunto de
+// partidas que este módulo agrupa en el Presupuesto Referencial.
+export function esPartidaMovimientoTierras(partida: string): boolean {
+  return EXCAVACION_RE.test(partida) || PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS.has(partida);
+}
+
 // Saca las partidas de movimiento de tierras de todos los módulos (incluido
 // Movimiento de Tierras mismo, para que el orden final no dependa de si su
 // propia excavación ya estaba ahí) y arma el grupo de Movimiento de Tierras
