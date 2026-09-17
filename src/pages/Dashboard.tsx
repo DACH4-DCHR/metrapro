@@ -29,7 +29,7 @@ import {
   ShoppingCart,
   FileText,
   Plus,
-  MessageCircle,
+  Send,
   BarChart3,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
@@ -296,7 +296,10 @@ export function DashboardPage() {
     }
   }
 
-  async function handleShareWhatsApp() {
+  // Usa el panel nativo de compartir del sistema operativo (navigator.share),
+  // que deja elegir WhatsApp, Telegram, correo o cualquier otra app instalada
+  // — no es específico de WhatsApp, por eso el botón dice "Enviar".
+  async function handleSharePdf() {
     setSharingPdf(true);
     try {
       if (isStandaloneApp()) {
@@ -311,7 +314,7 @@ export function DashboardPage() {
           presupuestoCustom
         );
         alert(
-          'La app instalada no puede compartir archivos directamente (una limitación de Android). Se descargó el PDF: ábrelo desde tus Descargas y compártelo por WhatsApp manualmente, o entra a metrapro.vercel.app desde Chrome (sin usar el ícono instalado) para compartirlo en un solo paso.'
+          "La app instalada no puede compartir archivos directamente (una limitación de Android). Se descargó el PDF: ábrelo desde tus Descargas y compártelo manualmente, o entra a metrapro.vercel.app desde Chrome (sin usar el ícono instalado) para enviarlo en un solo paso."
         );
         return;
       }
@@ -328,11 +331,11 @@ export function DashboardPage() {
       );
       if (!shared) {
         alert(
-          'Tu navegador no permite compartir archivos directamente. Usa el botón "Descargar PDF" y adjúntalo manualmente en WhatsApp.'
+          'Tu navegador no permite compartir archivos directamente. Usa el botón "Descargar PDF" y adjúntalo manualmente donde quieras enviarlo.'
         );
       }
     } catch {
-      alert("No se pudo compartir el PDF. Intenta descargarlo con el botón de al lado.");
+      alert("No se pudo enviar el PDF. Intenta descargarlo con el botón de al lado.");
     } finally {
       setSharingPdf(false);
     }
@@ -374,12 +377,12 @@ export function DashboardPage() {
               {generatingPdf ? "Generando..." : "Descargar PDF"}
             </button>
             <button
-              onClick={handleShareWhatsApp}
+              onClick={handleSharePdf}
               disabled={consolidated.length === 0 || sharingPdf}
               className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <MessageCircle size={16} />
-              {sharingPdf ? "Preparando..." : "WhatsApp"}
+              <Send size={16} />
+              {sharingPdf ? "Preparando..." : "Enviar"}
             </button>
           </div>
         }
