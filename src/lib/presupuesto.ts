@@ -3,8 +3,9 @@
 // opcionales) para llegar a un Total General. Lo comparten el Dashboard (pantalla)
 // y los reportes de Excel/PDF, para que el número exportado sea siempre el mismo
 // que se ve en pantalla.
-import type { MetradoLine } from "./types";
+import type { CalculatedElement, MetradoLine, ModuleType } from "./types";
 import { defaultUnitPrice, priceKey } from "./pricing";
+import { consolidateLinesByModule } from "./consolidate";
 
 // Gastos Generales, Utilidad e IGV se guardan como llaves reservadas dentro del
 // mismo mapa "prices" (ya persistido en el backend con setPrice/putPrices) en vez
@@ -58,6 +59,30 @@ export function valorizarLineas(lines: MetradoLine[], prices: Record<string, num
     return { key, line, price, subtotal };
   });
   return { rows, total };
+}
+
+export interface PresupuestoModuloGroup {
+  module: ModuleType;
+  label: string;
+  rows: PresupuestoRow[];
+  subtotal: number;
+}
+
+// Mismas partidas y precios que calcularPresupuesto, pero organizadas por
+// elemento (zapatas, vigas, losas, ...) en vez de en una sola lista plana —
+// así se ve el Presupuesto Referencial en pantalla y en los reportes. La
+// suma de los subtotales de cada grupo da exactamente el mismo costo directo
+// que calcularPresupuesto (mismo precio por partida, sin importar cómo se
+// agrupen las líneas), así que esta función NO reemplaza a calcularPresupuesto
+// — los totales con Gastos Generales/Utilidad/IGV se siguen calculando ahí.
+export function agruparPresupuestoPorModulo(
+  elements: CalculatedElement[],
+  prices: Record<string, number>
+): PresupuestoModuloGroup[] {
+  return consolidateLinesByModule(elements).map((group) => {
+    const { rows, total } = valorizarLineas(group.lines, prices);
+    return { module: group.module, label: group.label, rows, subtotal: total };
+  });
 }
 
 export function calcularPresupuesto(consolidated: MetradoLine[], prices: Record<string, number>): PresupuestoTotales {

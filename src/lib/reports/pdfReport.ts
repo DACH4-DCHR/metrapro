@@ -1,7 +1,15 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CalculatedElement, MetradoLine } from "../types";
-import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoRow } from "../presupuesto";
+import {
+  calcularPresupuesto,
+  agruparPresupuestoPorModulo,
+  valorizarLineas,
+  buildPresupuestoFootRows,
+  type PresupuestoRow,
+  type PresupuestoModuloGroup,
+  type PresupuestoTotales,
+} from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
@@ -154,6 +162,76 @@ export function downloadValorizadoPdf(
     footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
     styles: { fontSize: 9, cellPadding: 2 },
     columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+  });
+
+  pdfFooter(doc, marginX);
+  doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+}
+
+// PDF del Presupuesto Referencial agrupado por elemento (zapatas, vigas,
+// losas, ...) — una subtabla por módulo con su propio subtotal, en vez de una
+// sola lista plana, y al final las filas de totales (costo directo/GG/UT/IGV/
+// total general) igual que el resto de exportaciones de este presupuesto.
+export function downloadPresupuestoPorModuloPdf(
+  filename: string,
+  tableTitle: string,
+  groups: PresupuestoModuloGroup[],
+  presupuesto: PresupuestoTotales
+) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const marginX = 14;
+  let cursorY = 16;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...NAVY);
+  doc.text(tableTitle, marginX, cursorY);
+  cursorY += 6;
+
+  for (const group of groups) {
+    if (cursorY > 260) {
+      doc.addPage();
+      cursorY = 16;
+    }
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...STEEL);
+    doc.text(group.label, marginX, cursorY + 3);
+    cursorY += 5;
+
+    autoTable(doc, {
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      head: [["Partida", "Unidad", "Cantidad", "P. Unit. (S/.)", "Parcial (S/.)"]],
+      body: group.rows.map((r) => [
+        r.line.partida,
+        r.line.unidad,
+        numberFormatter.format(r.line.cantidad),
+        currencyFormatter.format(r.price),
+        currencyFormatter.format(r.subtotal),
+      ]),
+      foot: [["", "", "", `Subtotal ${group.label} (S/.)`, currencyFormatter.format(group.subtotal)]],
+      headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+      footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cursorY = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  const footRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
+  if (cursorY > 250) {
+    doc.addPage();
+    cursorY = 16;
+  }
+  autoTable(doc, {
+    startY: cursorY,
+    margin: { left: marginX, right: marginX },
+    body: footRows,
+    styles: { fontSize: 9, cellPadding: 2, fontStyle: "bold" },
+    columnStyles: { 4: { halign: "right" } },
+    bodyStyles: { fillColor: [232, 236, 240], textColor: NAVY },
   });
 
   pdfFooter(doc, marginX);
@@ -357,6 +435,7 @@ function buildReportDoc(
     cursorY += 4;
   }
 
+  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
   const presupuestoFootRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
 
   // Umbral más conservador que el resto de secciones: esta tabla siempre trae
@@ -370,25 +449,54 @@ function buildReportDoc(
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(...NAVY);
   doc.text("Presupuesto Referencial", marginX, cursorY);
   cursorY += 3;
 
+  for (const group of presupuestoPorModulo) {
+    if (cursorY > 260) {
+      doc.addPage();
+      cursorY = 16;
+    }
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...STEEL);
+    doc.text(group.label, marginX, cursorY + 3);
+    cursorY += 5;
+
+    autoTable(doc, {
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      head: [["Partida", "Unidad", "Cantidad", "P. Unit.", "Parcial"]],
+      body: group.rows.map((r) => [
+        r.line.partida,
+        r.line.unidad,
+        numberFormatter.format(r.line.cantidad),
+        currencyFormatter.format(r.price),
+        currencyFormatter.format(r.subtotal),
+      ]),
+      foot: [["", "", "", `Subtotal ${group.label} (S/.)`, currencyFormatter.format(group.subtotal)]],
+      headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
+      footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cursorY = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  if (cursorY > 250) {
+    doc.addPage();
+    cursorY = 16;
+  }
   autoTable(doc, {
     startY: cursorY,
     margin: { left: marginX, right: marginX },
-    head: [["Partida", "Unidad", "Cantidad", "P. Unit.", "Parcial"]],
-    body: presupuesto.rows.map((r) => [
-      r.line.partida,
-      r.line.unidad,
-      numberFormatter.format(r.line.cantidad),
-      currencyFormatter.format(r.price),
-      currencyFormatter.format(r.subtotal),
-    ]),
-    foot: presupuestoFootRows,
-    headStyles: { fillColor: NAVY, textColor: 255, fontStyle: "bold" },
-    footStyles: { fillColor: [232, 236, 240], textColor: NAVY, fontStyle: "bold" },
-    styles: { fontSize: 9, cellPadding: 2 },
-    columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+    body: presupuestoFootRows,
+    styles: { fontSize: 9, cellPadding: 2, fontStyle: "bold" },
+    columnStyles: { 4: { halign: "right" } },
+    bodyStyles: { fillColor: [232, 236, 240], textColor: NAVY },
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

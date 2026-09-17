@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Box,
@@ -41,8 +41,8 @@ import { costosPorCategoria, cantidadesPorModulo } from "../lib/dashboardCharts"
 import { useProjectStore } from "../store/projectStore";
 import {
   calcularPresupuesto,
+  agruparPresupuestoPorModulo,
   valorizarLineas,
-  buildPresupuestoFootRows,
   GG_PCT_KEY,
   UT_PCT_KEY,
   IGV_PCT_KEY,
@@ -50,6 +50,7 @@ import {
   UT_ON_KEY,
   IGV_ON_KEY,
 } from "../lib/presupuesto";
+import { consolidateLines } from "../lib/consolidate";
 import {
   calcularMetradoMateriales,
   materialesALineas,
@@ -61,12 +62,12 @@ import {
   generateExcelReport,
   downloadExcelWorkbook,
   buildMetradoLineasSheet,
-  buildPresupuestoSheet,
+  buildPresupuestoPorModuloSheet,
   buildValorizadoSheet,
 } from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
-import type { MetradoLine, ModuleType } from "../lib/types";
+import type { ModuleType } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("es-PE", {
@@ -90,22 +91,6 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   losaMaciza: { label: MODULE_LABELS.losaMaciza, icon: LayoutPanelTop },
   muroArquitectura: { label: MODULE_LABELS.muroArquitectura, icon: Grid2x2 },
 };
-
-function consolidateLines(allLines: MetradoLine[][]): MetradoLine[] {
-  const map = new Map<string, MetradoLine>();
-  for (const lines of allLines) {
-    for (const line of lines) {
-      const key = `${line.partida}__${line.unidad}`;
-      const existing = map.get(key);
-      if (existing) {
-        existing.cantidad += line.cantidad;
-      } else {
-        map.set(key, { ...line });
-      }
-    }
-  }
-  return Array.from(map.values());
-}
 
 const MAX_LOGO_BYTES = 1_000_000;
 
@@ -157,6 +142,10 @@ export function DashboardPage() {
   );
 
   const presupuesto = useMemo(() => calcularPresupuesto(consolidated, prices), [consolidated, prices]);
+  const presupuestoPorModulo = useMemo(
+    () => agruparPresupuestoPorModulo(elements, prices),
+    [elements, prices]
+  );
 
   const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
   const cantidadesModulo = useMemo(() => cantidadesPorModulo(elements), [elements]);
@@ -604,18 +593,26 @@ export function DashboardPage() {
           </SectionCard>
         )}
 
-        {presupuesto.rows.length > 0 && (
+        {presupuestoPorModulo.length > 0 && (
           <SectionCard
             title="Presupuesto referencial"
             icon={<Wallet size={16} className="text-navy-700" />}
             collapsible
             headerActions={
               <ExportSectionButtons
-                onExcel={() => downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [buildPresupuestoSheet(presupuesto)])}
+                onExcel={() =>
+                  downloadExcelWorkbook(`presupuesto_${safeProjectName}`, [
+                    buildPresupuestoPorModuloSheet(presupuestoPorModulo, presupuesto),
+                  ])
+                }
                 onPdf={async () => {
-                  const { downloadValorizadoPdf } = await import("../lib/reports/pdfReport");
-                  const footRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
-                  downloadValorizadoPdf(`presupuesto_${safeProjectName}`, "Presupuesto Referencial", presupuesto.rows, footRows);
+                  const { downloadPresupuestoPorModuloPdf } = await import("../lib/reports/pdfReport");
+                  downloadPresupuestoPorModuloPdf(
+                    `presupuesto_${safeProjectName}`,
+                    "Presupuesto Referencial",
+                    presupuestoPorModulo,
+                    presupuesto
+                  );
                 }}
               />
             }
@@ -636,18 +633,33 @@ export function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {presupuesto.rows.map((row, idx) => (
-                    <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
-                      <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
-                      <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
-                      <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
-                      <td className="px-4 py-2 text-right">
-                        <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
-                        {currencyFormatter.format(row.subtotal)}
-                      </td>
-                    </tr>
+                  {presupuestoPorModulo.map((group) => (
+                    <Fragment key={group.module}>
+                      <tr className="bg-amber-500/10">
+                        <td className="px-4 py-1.5 font-semibold uppercase tracking-wide text-navy-800" colSpan={5}>
+                          {group.label}
+                        </td>
+                      </tr>
+                      {group.rows.map((row, idx) => (
+                        <tr key={`${group.module}-${row.key}`} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+                          <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
+                          <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
+                          <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
+                          <td className="px-4 py-2 text-right">
+                            <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
+                          </td>
+                          <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
+                            {currencyFormatter.format(row.subtotal)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-steel-100/70 text-xs font-medium text-steel-600">
+                        <td className="px-4 py-1.5" colSpan={4}>
+                          Subtotal {group.label} (S/.)
+                        </td>
+                        <td className="px-4 py-1.5 text-right font-mono">{currencyFormatter.format(group.subtotal)}</td>
+                      </tr>
+                    </Fragment>
                   ))}
                 </tbody>
                 <tfoot>

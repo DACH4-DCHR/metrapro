@@ -3,7 +3,15 @@
 // en su parser; como aquí solo generamos archivos (no leemos xlsx de terceros),
 // este formato XML simple es seguro, no requiere dependencias y Excel lo abre nativamente.
 import type { CalculatedElement, MetradoLine } from "../types";
-import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoTotales, type PresupuestoRow } from "../presupuesto";
+import {
+  calcularPresupuesto,
+  agruparPresupuestoPorModulo,
+  valorizarLineas,
+  buildPresupuestoFootRows,
+  type PresupuestoTotales,
+  type PresupuestoModuloGroup,
+  type PresupuestoRow,
+} from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
@@ -13,6 +21,9 @@ export interface ExcelSheet {
   headers: string[];
   rows: (string | number)[][];
   numericCols?: number[];
+  // Índices (0-based) de filas que van en negrita — separadores de módulo y
+  // subtotales, sin necesitar una hoja o tabla aparte para cada uno.
+  boldRows?: number[];
 }
 
 function escapeXml(value: string): string {
@@ -34,13 +45,16 @@ function cellXml(value: string | number, isNumeric: boolean, styleId?: string): 
 
 function sheetXml(sheet: ExcelSheet): string {
   const numeric = new Set(sheet.numericCols ?? []);
+  const bold = new Set(sheet.boldRows ?? []);
   const headerCells = sheet.headers.map((h) => cellXml(h, false, "header")).join("");
   const dataRows = sheet.rows
-    .map((row) => {
+    .map((row, rowIdx) => {
+      const isBoldRow = bold.has(rowIdx);
       const cells = row
         .map((val, i) => {
           const isNumericValue = numeric.has(i) && typeof val === "number";
-          return cellXml(val, isNumericValue, isNumericValue ? "number" : undefined);
+          const styleId = isNumericValue ? (isBoldRow ? "numberBold" : "number") : isBoldRow ? "bold" : undefined;
+          return cellXml(val, isNumericValue, styleId);
         })
         .join("");
       return `<Row>${cells}</Row>`;
@@ -60,6 +74,7 @@ export function buildExcelWorkbook(sheets: ExcelSheet[]): string {
     <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#0B1F3A" ss:Pattern="Solid"/></Style>
     <Style ss:ID="bold"><Font ss:Bold="1"/></Style>
     <Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/></Style>
+    <Style ss:ID="numberBold"><Font ss:Bold="1"/><NumberFormat ss:Format="#,##0.00"/></Style>
   </Styles>`;
 
   const sheetsXml = sheets.map(sheetXml).join("\n");
@@ -118,9 +133,42 @@ export function buildValorizadoSheet(name: string, rows: PresupuestoRow[], footR
   };
 }
 
-export function buildPresupuestoSheet(presupuesto: PresupuestoTotales): ExcelSheet {
+// Presupuesto Referencial agrupado por elemento (zapatas, vigas, losas, ...),
+// en el mismo orden que se ve en pantalla: un encabezado en negrita por módulo,
+// sus partidas, un subtotal en negrita, y al final las filas de totales
+// (Costo directo/GG/Utilidad/IGV/Total General) que ya calculó calcularPresupuesto.
+export function buildPresupuestoPorModuloSheet(
+  groups: PresupuestoModuloGroup[],
+  presupuesto: PresupuestoTotales
+): ExcelSheet {
+  const rows: (string | number)[][] = [];
+  const boldRows: number[] = [];
+  for (const group of groups) {
+    boldRows.push(rows.length);
+    rows.push([group.label, "", "", "", ""]);
+    for (const r of group.rows) {
+      rows.push([
+        r.line.partida,
+        r.line.unidad,
+        Number(r.line.cantidad.toFixed(3)),
+        Number(r.price.toFixed(2)),
+        Number(r.subtotal.toFixed(2)),
+      ]);
+    }
+    boldRows.push(rows.length);
+    rows.push(["", "", "", `Subtotal ${group.label} (S/.)`, Number(group.subtotal.toFixed(2))]);
+  }
   const footRows = buildPresupuestoFootRows(presupuesto, (n) => Number(n.toFixed(2)));
-  return { ...buildValorizadoSheet("Presupuesto Referencial", presupuesto.rows, footRows) };
+  const footStart = rows.length;
+  for (let i = 0; i < footRows.length; i++) boldRows.push(footStart + i);
+  rows.push(...footRows);
+  return {
+    name: "Presupuesto Referencial",
+    headers: ["Partida", "Unidad", "Cantidad", "Precio Unit. (S/.)", "Parcial (S/.)"],
+    rows,
+    numericCols: [2, 3, 4],
+    boldRows,
+  };
 }
 
 // Mismos datos que los gráficos de barras del Dashboard, en formato de tabla
@@ -211,7 +259,8 @@ export function generateExcelReport(
     numericCols: [2, 3, 4],
   };
 
-  const presupuestoSheet = buildPresupuestoSheet(presupuesto);
+  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
+  const presupuestoSheet = buildPresupuestoPorModuloSheet(presupuestoPorModulo, presupuesto);
 
   const materialesValorizado = valorizarLineas(materialesLines, prices);
   const materialesFootRows: (string | number)[][] = [
