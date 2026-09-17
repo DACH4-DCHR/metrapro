@@ -35,6 +35,7 @@ import {
   updateUserPassword,
 } from "./db.js";
 import { sendPasswordResetEmail } from "./mail.js";
+import { startTrialReminderJob } from "./trialReminders.js";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
@@ -334,6 +335,7 @@ initSchema()
     app.listen(PORT, () => {
       console.log(`MetraPro API escuchando en http://localhost:${PORT}`);
     });
+    startTrialReminderJob();
   })
   .catch((err) => {
     console.error("No se pudo inicializar el esquema de la base de datos:", err);

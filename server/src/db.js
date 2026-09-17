@@ -188,6 +188,46 @@ export async function listUsersWithAccessStatus() {
   }));
 }
 
+// --- Avisos de prueba por correo (ver trialReminders.js) ---
+
+export const TRIAL_REMINDER_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+// Cuentas sin pagar, dentro de los últimos 3 días de prueba, a las que
+// todavía no se les mandó el aviso de "tu prueba está por terminar".
+export async function getUsersNeedingTrialReminder() {
+  const now = Date.now();
+  const { rows } = await pool.query(
+    `SELECT id, email, trial_ends_at FROM users
+     WHERE is_paid = false
+       AND trial_reminder_sent_at IS NULL
+       AND trial_ends_at > $1
+       AND trial_ends_at <= $2`,
+    [now, now + TRIAL_REMINDER_WINDOW_MS]
+  );
+  return rows;
+}
+
+// Cuentas sin pagar cuya prueba ya venció, a las que todavía no se les mandó
+// el aviso de "tu prueba terminó".
+export async function getUsersNeedingTrialExpiredEmail() {
+  const { rows } = await pool.query(
+    `SELECT id, email FROM users
+     WHERE is_paid = false
+       AND trial_expired_email_sent_at IS NULL
+       AND trial_ends_at <= $1`,
+    [Date.now()]
+  );
+  return rows;
+}
+
+export async function markTrialReminderSent(userId) {
+  await pool.query("UPDATE users SET trial_reminder_sent_at = $1 WHERE id = $2", [Date.now(), userId]);
+}
+
+export async function markTrialExpiredEmailSent(userId) {
+  await pool.query("UPDATE users SET trial_expired_email_sent_at = $1 WHERE id = $2", [Date.now(), userId]);
+}
+
 // --- Sesiones ---
 
 export async function createSession(userId) {

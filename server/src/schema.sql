@@ -15,6 +15,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at BIGINT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS paid_at BIGINT;
 
+-- Evitan reenviar el mismo correo de aviso de prueba una y otra vez cada vez
+-- que corre el chequeo periódico (ver trialReminders.js) — una vez marcado,
+-- ese correo puntual no se vuelve a mandar.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_reminder_sent_at BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_expired_email_sent_at BIGINT;
+
 -- Migración única: las cuentas creadas ANTES de este sistema de prueba (donde
 -- trial_ends_at todavía es NULL — la señal de que nunca pasaron por esta
 -- migración) se activan automáticamente para no cortarles el acceso

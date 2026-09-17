@@ -56,3 +56,44 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
     `,
   });
 }
+
+// Mismo número que src/lib/contact.ts en el frontend — no es secreto, se
+// repite acá porque el backend no comparte código con el frontend.
+const CONTACT_WHATSAPP = "51980623649";
+
+function contactBlockHtml() {
+  return `<p style="color: #52514e; font-size: 13px;">
+    Escríbenos por <a href="https://wa.me/${CONTACT_WHATSAPP}">WhatsApp</a> para activar tu cuenta.
+  </p>`;
+}
+
+export async function sendTrialEndingSoonEmail(toEmail, diasRestantes) {
+  const dias = diasRestantes === 1 ? "1 día" : `${diasRestantes} días`;
+  await sendMail({
+    to: toEmail,
+    subject: `Tu prueba de MetraPro termina en ${dias}`,
+    text: `Tu prueba gratuita de MetraPro termina en ${dias}. Después de eso tu cuenta queda en modo de solo lectura (puedes ver y exportar tus proyectos, pero no crear ni editar nada nuevo) hasta que la actives.\n\nEscríbenos por WhatsApp para activarla: https://wa.me/${CONTACT_WHATSAPP}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #0b1f3a;">Tu prueba termina en ${dias}</h2>
+        <p>Después de eso tu cuenta de <strong>MetraPro</strong> queda en modo de solo lectura — puedes ver y exportar tus proyectos, pero no crear ni editar nada nuevo, hasta que la actives.</p>
+        ${contactBlockHtml()}
+      </div>
+    `,
+  });
+}
+
+export async function sendTrialExpiredEmail(toEmail) {
+  await sendMail({
+    to: toEmail,
+    subject: "Tu prueba de MetraPro terminó",
+    text: `Tu período de prueba de 14 días en MetraPro terminó. Tu cuenta quedó en modo de solo lectura: puedes ver y exportar tus proyectos, pero no crear ni editar nada nuevo.\n\nEscríbenos por WhatsApp para activarla: https://wa.me/${CONTACT_WHATSAPP}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #0b1f3a;">Tu prueba terminó</h2>
+        <p>Tu cuenta de <strong>MetraPro</strong> quedó en modo de solo lectura: puedes ver y exportar tus proyectos, pero no crear ni editar nada nuevo.</p>
+        ${contactBlockHtml()}
+      </div>
+    `,
+  });
+}
