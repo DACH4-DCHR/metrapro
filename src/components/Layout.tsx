@@ -83,6 +83,10 @@ export function Layout() {
   const logout = useAuthStore((s) => s.logout);
   const diasRestantesPrueba =
     user && !user.isPaid ? Math.ceil((user.trialEndsAt - Date.now()) / MS_POR_DIA) : null;
+  // Solo un aviso — a diferencia del banner de prueba vencida, esto nunca
+  // bloquea nada: la cuenta pagada sigue funcionando igual, es solo una
+  // invitación a renovar para seguir recibiendo actualizaciones.
+  const avisoActualizaciones = user?.isPaid && user.updatesReminderDue;
   const [menuOpen, setMenuOpen] = useState(false);
   const helpKey = useHelpStore((s) => s.openKey);
   const closeHelp = useHelpStore((s) => s.close);
@@ -248,6 +252,13 @@ export function Layout() {
                 <AlertTriangle size={16} />
                 Tu prueba gratuita termina en {diasRestantesPrueba} {diasRestantesPrueba === 1 ? "día" : "días"}.
                 Contáctanos para activar tu cuenta y no perder acceso.
+              </div>
+            )}
+            {avisoActualizaciones && (
+              <div className="no-print flex items-center gap-2 bg-blue-50 px-6 py-2 text-sm font-medium text-blue-800">
+                <AlertTriangle size={16} />
+                Ya pasó un año desde que activaste tu cuenta. Hay actualizaciones nuevas disponibles —
+                contáctanos para renovar y seguir recibiéndolas.
               </div>
             )}
             {error && (

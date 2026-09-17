@@ -132,6 +132,10 @@ export interface AuthUser {
   email: string;
   trialEndsAt: number;
   isPaid: boolean;
+  paidAt: number | null;
+  // Solo informativo (aviso de que hay actualizaciones) — nunca bloquea nada,
+  // a diferencia de hasFullAccess.
+  updatesReminderDue: boolean;
   hasFullAccess: boolean;
 }
 

@@ -112,6 +112,11 @@ function verifyPassword(password, salt, expectedHash) {
 // --- Prueba gratuita y activación manual ---
 
 export const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+// Una vez pagada, la cuenta queda activa para siempre (nunca se vuelve a
+// bloquear por tiempo) — este plazo es solo para el AVISO de que hay
+// actualizaciones nuevas, no una fecha de corte. Reactivar la cuenta
+// (POST /api/admin/activate de nuevo) reinicia este año, como una renovación.
+export const UPDATES_REMINDER_MS = 365 * 24 * 60 * 60 * 1000;
 
 // true si el usuario puede crear/editar (pagó, o su prueba de 14 días sigue
 // vigente); false = modo de solo lectura. Se calcula al vuelo (nunca se
@@ -121,9 +126,13 @@ export function hasFullAccess(user) {
 }
 
 export function accessFieldsFor(user) {
+  const paidAt = user.paid_at ? Number(user.paid_at) : null;
   return {
     trialEndsAt: Number(user.trial_ends_at),
     isPaid: user.is_paid,
+    paidAt,
+    // Solo informativo — nunca bloquea nada, a diferencia de hasFullAccess.
+    updatesReminderDue: user.is_paid && paidAt != null && Date.now() > paidAt + UPDATES_REMINDER_MS,
     hasFullAccess: hasFullAccess(user),
   };
 }
@@ -147,7 +156,7 @@ export async function findUserByEmail(email) {
 
 export async function getUserById(id) {
   const { rows } = await pool.query(
-    "SELECT id, email, created_at, trial_ends_at, is_paid FROM users WHERE id = $1",
+    "SELECT id, email, created_at, trial_ends_at, is_paid, paid_at FROM users WHERE id = $1",
     [id]
   );
   return rows[0] ?? null;
@@ -175,7 +184,6 @@ export async function listUsersWithAccessStatus() {
     id: row.id,
     email: row.email,
     createdAt: Number(row.created_at),
-    paidAt: row.paid_at ? Number(row.paid_at) : null,
     ...accessFieldsFor(row),
   }));
 }
