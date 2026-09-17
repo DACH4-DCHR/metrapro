@@ -176,6 +176,14 @@ export async function setUserPaid(email, isPaid) {
   return rows[0] ?? null;
 }
 
+// Derecho ARCO de cancelación (Política de Privacidad, Ley 29733): borra al
+// usuario y, por ON DELETE CASCADE, sus sesiones, tokens de recuperación,
+// proyectos y elementos.
+export async function deleteUserByEmail(email) {
+  const { rows } = await pool.query("DELETE FROM users WHERE email = $1 RETURNING id, email", [email]);
+  return rows[0] ?? null;
+}
+
 export async function listUsersWithAccessStatus() {
   const { rows } = await pool.query(
     "SELECT id, email, created_at, trial_ends_at, is_paid, paid_at FROM users ORDER BY created_at DESC"

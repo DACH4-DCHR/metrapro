@@ -27,6 +27,7 @@ import {
   hasFullAccess,
   accessFieldsFor,
   setUserPaid,
+  deleteUserByEmail,
   listUsersWithAccessStatus,
   deleteSessionsForUser,
   createPasswordReset,
@@ -314,6 +315,14 @@ app.post("/api/admin/deactivate", requireAdminSecret, async (req, res) => {
   const { email } = req.body ?? {};
   if (typeof email !== "string") return res.status(400).json({ error: "Correo inválido" });
   const user = await setUserPaid(email, false);
+  if (!user) return res.status(404).json({ error: "No existe una cuenta con ese correo" });
+  res.json({ ok: true, user });
+});
+
+app.post("/api/admin/delete-user", requireAdminSecret, async (req, res) => {
+  const { email } = req.body ?? {};
+  if (typeof email !== "string") return res.status(400).json({ error: "Correo inválido" });
+  const user = await deleteUserByEmail(email);
   if (!user) return res.status(404).json({ error: "No existe una cuenta con ese correo" });
   res.json({ ok: true, user });
 });
