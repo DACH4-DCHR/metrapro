@@ -474,6 +474,37 @@ export function DashboardPage() {
                 items={costosCategoria.map((c) => ({ label: c.categoria, value: c.monto, color: c.color }))}
                 valueFormatter={(v) => currencyFormatter.format(v)}
               />
+
+              <div className="mt-4 border-t border-steel-200 pt-3 text-sm">
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-steel-600">Costo directo (S/.)</span>
+                  <span className="font-mono font-medium text-navy-900">
+                    {currencyFormatter.format(presupuesto.costoDirecto)}
+                  </span>
+                </div>
+                {presupuesto.ggOn && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-steel-600">Gastos Generales ({presupuesto.ggPct}%)</span>
+                    <span className="font-mono text-navy-900">{currencyFormatter.format(presupuesto.montoGG)}</span>
+                  </div>
+                )}
+                {presupuesto.utOn && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-steel-600">Utilidad ({presupuesto.utPct}%)</span>
+                    <span className="font-mono text-navy-900">{currencyFormatter.format(presupuesto.montoUT)}</span>
+                  </div>
+                )}
+                {presupuesto.igvOn && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-steel-600">IGV ({presupuesto.igvPct}%)</span>
+                    <span className="font-mono text-navy-900">{currencyFormatter.format(presupuesto.montoIGV)}</span>
+                  </div>
+                )}
+                <div className="mt-1 flex items-center justify-between border-t-2 border-navy-900 pt-2 text-base font-bold text-navy-900">
+                  <span>Total general (S/.)</span>
+                  <span className="font-mono">{currencyFormatter.format(presupuesto.totalGeneral)}</span>
+                </div>
+              </div>
             </SectionCard>
 
             <SectionCard title="Metrados por módulo" icon={<BarChart3 size={16} className="text-navy-700" />}>
