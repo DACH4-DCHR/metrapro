@@ -5,7 +5,7 @@
 // que se ve en pantalla.
 import type { CalculatedElement, MetradoLine, ModuleType } from "./types";
 import { defaultUnitPrice, priceKey } from "./pricing";
-import { consolidateLines, consolidateLinesByModule, type ModuleGroup } from "./consolidate";
+import { consolidateLinesByModule, type ModuleGroup } from "./consolidate";
 import { MODULE_LABELS } from "./moduleLabels";
 
 // Gastos Generales, Utilidad e IGV se guardan como llaves reservadas dentro del
@@ -113,55 +113,68 @@ function consolidarAceroParaPresupuesto(lines: MetradoLine[]): MetradoLine[] {
 // elementos comparten exactamente el mismo texto, se suman entre sí igual que
 // las demás; si no, quedan como líneas separadas dentro del grupo de
 // Movimiento de Tierras.
-const PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS = new Set<string>([
-  "Refine y nivelación de fondo de excavación",
-  "Relleno y compactado con material propio",
-  "Eliminación de material excedente",
-]);
+const PARTIDA_REFINE = "Refine y nivelación de fondo de excavación";
+const PARTIDA_RELLENO = "Relleno y compactado con material propio";
+const PARTIDA_ELIMINACION = "Eliminación de material excedente";
+// Orden constructivo real (excavar, luego rellenar y eliminar excedente), no
+// el orden en que se procesan los módulos internamente.
+const ORDEN_PARTIDAS_COMPARTIDAS = [PARTIDA_REFINE, PARTIDA_RELLENO, PARTIDA_ELIMINACION];
+const PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS = new Set<string>(ORDEN_PARTIDAS_COMPARTIDAS);
 const EXCAVACION_RE = /^Excavación/;
 const MODULO_MOVIMIENTO_TIERRAS: ModuleType = "movimientoTierras";
 
-function esPartidaMovimientoTierras(partida: string): boolean {
-  return PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS.has(partida) || EXCAVACION_RE.test(partida);
-}
-
-// Saca las partidas de movimiento de tierras de cada módulo (excepto
-// Movimiento de Tierras) y las junta dentro de ese grupo, creándolo si el
-// proyecto no tiene elementos de ese módulo directamente.
+// Saca las partidas de movimiento de tierras de todos los módulos (incluido
+// Movimiento de Tierras mismo, para que el orden final no dependa de si su
+// propia excavación ya estaba ahí) y arma el grupo de Movimiento de Tierras
+// con un orden fijo: primero todas las excavaciones (una por cada texto
+// distinto — zapatas, cimiento corrido, vigas de cimentación, ...; las que
+// comparten el mismo texto se suman entre sí), y después refine, relleno y
+// eliminación de material excedente.
 function consolidarMovimientoTierras(groups: ModuleGroup[]): ModuleGroup[] {
-  const extraidas = new Map<string, MetradoLine>();
-  const gruposSinCompartidas = groups.map((group) => {
-    if (group.module === MODULO_MOVIMIENTO_TIERRAS) return group;
+  const excavaciones = new Map<string, MetradoLine>();
+  const compartidas = new Map<string, MetradoLine>();
+  const gruposSinMovimientoTierras = groups.map((group) => {
     const lineasRestantes: MetradoLine[] = [];
     for (const line of group.lines) {
-      if (esPartidaMovimientoTierras(line.partida)) {
-        const key = `${line.partida}__${line.unidad}`;
-        const existing = extraidas.get(key);
-        if (existing) existing.cantidad += line.cantidad;
-        else extraidas.set(key, { ...line });
-      } else {
+      const destino = EXCAVACION_RE.test(line.partida)
+        ? excavaciones
+        : PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS.has(line.partida)
+          ? compartidas
+          : null;
+      if (!destino) {
         lineasRestantes.push(line);
+        continue;
       }
+      const key = `${line.partida}__${line.unidad}`;
+      const existing = destino.get(key);
+      if (existing) existing.cantidad += line.cantidad;
+      else destino.set(key, { ...line });
     }
     return { ...group, lines: lineasRestantes };
   });
 
-  if (extraidas.size === 0) return gruposSinCompartidas;
+  if (excavaciones.size === 0 && compartidas.size === 0) return gruposSinMovimientoTierras;
 
-  const indiceMovimientoTierras = gruposSinCompartidas.findIndex((g) => g.module === MODULO_MOVIMIENTO_TIERRAS);
+  const lineasMovimientoTierras: MetradoLine[] = [
+    ...excavaciones.values(),
+    ...ORDEN_PARTIDAS_COMPARTIDAS.map((partida) =>
+      Array.from(compartidas.values()).find((l) => l.partida === partida)
+    ).filter((l): l is MetradoLine => l !== undefined),
+  ];
+
+  const indiceMovimientoTierras = gruposSinMovimientoTierras.findIndex((g) => g.module === MODULO_MOVIMIENTO_TIERRAS);
   if (indiceMovimientoTierras === -1) {
     const nuevoGrupo: ModuleGroup = {
       module: MODULO_MOVIMIENTO_TIERRAS,
       label: MODULE_LABELS[MODULO_MOVIMIENTO_TIERRAS],
-      lines: Array.from(extraidas.values()),
+      lines: lineasMovimientoTierras,
     };
-    return [nuevoGrupo, ...gruposSinCompartidas];
+    return [nuevoGrupo, ...gruposSinMovimientoTierras];
   }
 
-  return gruposSinCompartidas.map((group, i) => {
-    if (i !== indiceMovimientoTierras) return group;
-    return { ...group, lines: consolidateLines([group.lines, Array.from(extraidas.values())]) };
-  });
+  return gruposSinMovimientoTierras.map((group, i) =>
+    i === indiceMovimientoTierras ? { ...group, lines: [...lineasMovimientoTierras, ...group.lines] } : group
+  );
 }
 
 // Mismas partidas y precios que calcularPresupuesto, pero organizadas por
