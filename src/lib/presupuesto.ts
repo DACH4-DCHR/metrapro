@@ -5,7 +5,8 @@
 // que se ve en pantalla.
 import type { CalculatedElement, MetradoLine, ModuleType } from "./types";
 import { defaultUnitPrice, priceKey } from "./pricing";
-import { consolidateLinesByModule } from "./consolidate";
+import { consolidateLines, consolidateLinesByModule, type ModuleGroup } from "./consolidate";
+import { MODULE_LABELS } from "./moduleLabels";
 
 // Gastos Generales, Utilidad e IGV se guardan como llaves reservadas dentro del
 // mismo mapa "prices" (ya persistido en el backend con setPrice/putPrices) en vez
@@ -103,6 +104,66 @@ function consolidarAceroParaPresupuesto(lines: MetradoLine[]): MetradoLine[] {
   return result;
 }
 
+// Partidas de movimiento de tierras que se generan dentro de otros elementos
+// que excavan (zapatas, cimiento corrido, vigas de cimentación, ...) pero que,
+// en la práctica, se presupuestan como parte de Movimiento de Tierras para
+// toda la obra — no repartidas por elemento. La excavación se reconoce por
+// prefijo (cada módulo trae su propio texto: "Excavación para zapatas
+// aisladas", "Excavación de zanjas para cimiento corrido", etc.) y, si dos
+// elementos comparten exactamente el mismo texto, se suman entre sí igual que
+// las demás; si no, quedan como líneas separadas dentro del grupo de
+// Movimiento de Tierras.
+const PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS = new Set<string>([
+  "Refine y nivelación de fondo de excavación",
+  "Relleno y compactado con material propio",
+  "Eliminación de material excedente",
+]);
+const EXCAVACION_RE = /^Excavación/;
+const MODULO_MOVIMIENTO_TIERRAS: ModuleType = "movimientoTierras";
+
+function esPartidaMovimientoTierras(partida: string): boolean {
+  return PARTIDAS_MOVIMIENTO_TIERRAS_COMPARTIDAS.has(partida) || EXCAVACION_RE.test(partida);
+}
+
+// Saca las partidas de movimiento de tierras de cada módulo (excepto
+// Movimiento de Tierras) y las junta dentro de ese grupo, creándolo si el
+// proyecto no tiene elementos de ese módulo directamente.
+function consolidarMovimientoTierras(groups: ModuleGroup[]): ModuleGroup[] {
+  const extraidas = new Map<string, MetradoLine>();
+  const gruposSinCompartidas = groups.map((group) => {
+    if (group.module === MODULO_MOVIMIENTO_TIERRAS) return group;
+    const lineasRestantes: MetradoLine[] = [];
+    for (const line of group.lines) {
+      if (esPartidaMovimientoTierras(line.partida)) {
+        const key = `${line.partida}__${line.unidad}`;
+        const existing = extraidas.get(key);
+        if (existing) existing.cantidad += line.cantidad;
+        else extraidas.set(key, { ...line });
+      } else {
+        lineasRestantes.push(line);
+      }
+    }
+    return { ...group, lines: lineasRestantes };
+  });
+
+  if (extraidas.size === 0) return gruposSinCompartidas;
+
+  const indiceMovimientoTierras = gruposSinCompartidas.findIndex((g) => g.module === MODULO_MOVIMIENTO_TIERRAS);
+  if (indiceMovimientoTierras === -1) {
+    const nuevoGrupo: ModuleGroup = {
+      module: MODULO_MOVIMIENTO_TIERRAS,
+      label: MODULE_LABELS[MODULO_MOVIMIENTO_TIERRAS],
+      lines: Array.from(extraidas.values()),
+    };
+    return [nuevoGrupo, ...gruposSinCompartidas];
+  }
+
+  return gruposSinCompartidas.map((group, i) => {
+    if (i !== indiceMovimientoTierras) return group;
+    return { ...group, lines: consolidateLines([group.lines, Array.from(extraidas.values())]) };
+  });
+}
+
 // Mismas partidas y precios que calcularPresupuesto, pero organizadas por
 // elemento (zapatas, vigas, losas, ...) en vez de en una sola lista plana —
 // así se ve el Presupuesto Referencial en pantalla y en los reportes. La
@@ -114,7 +175,8 @@ export function agruparPresupuestoPorModulo(
   elements: CalculatedElement[],
   prices: Record<string, number>
 ): PresupuestoModuloGroup[] {
-  return consolidateLinesByModule(elements).map((group) => {
+  const groups = consolidarMovimientoTierras(consolidateLinesByModule(elements));
+  return groups.map((group) => {
     const { rows, total } = valorizarLineas(consolidarAceroParaPresupuesto(group.lines), prices);
     return { module: group.module, label: group.label, rows, subtotal: total };
   });
