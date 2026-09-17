@@ -6,6 +6,7 @@ import type { CalculatedElement, MetradoLine } from "../types";
 import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoTotales, type PresupuestoRow } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
+import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
 
 export interface ExcelSheet {
   name: string;
@@ -122,6 +123,35 @@ export function buildPresupuestoSheet(presupuesto: PresupuestoTotales): ExcelShe
   return { ...buildValorizadoSheet("Presupuesto Referencial", presupuesto.rows, footRows) };
 }
 
+// Mismos datos que los gráficos de barras del Dashboard, en formato de tabla
+// — el Excel de esta app se arma a mano en XML (sin la librería "xlsx", ver
+// nota arriba), así que un gráfico visual real requeriría implementar el
+// formato de gráficos de Office desde cero; la tabla da la misma información.
+export function buildCostoPorCategoriaSheet(items: { categoria: string; monto: number }[]): ExcelSheet {
+  return {
+    name: "Costo por Categoría",
+    headers: ["Categoría", "Monto (S/.)"],
+    rows: items.map((c) => [c.categoria, Number(c.monto.toFixed(2))]),
+    numericCols: [1],
+  };
+}
+
+export function buildMetradosPorModuloSheet(
+  items: { label: string; concreteM3: number; steelKg: number; formworkM2: number }[]
+): ExcelSheet {
+  return {
+    name: "Metrados por Módulo",
+    headers: ["Módulo", "Concreto (m³)", "Acero (kg)", "Encofrado (m²)"],
+    rows: items.map((m) => [
+      m.label,
+      Number(m.concreteM3.toFixed(3)),
+      Number(m.steelKg.toFixed(3)),
+      Number(m.formworkM2.toFixed(3)),
+    ]),
+    numericCols: [1, 2, 3],
+  };
+}
+
 interface ProjectInfoLike {
   nombreObra: string;
   cliente: string;
@@ -157,6 +187,10 @@ export function generateExcelReport(
 
   const metradosSheet = buildMetradoLineasSheet("Metrados Consolidado", consolidated);
 
+  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const costoPorCategoriaSheet = buildCostoPorCategoriaSheet(costosPorCategoria(presupuesto.rows));
+  const metradosPorModuloSheet = buildMetradosPorModuloSheet(cantidadesPorModulo(elements));
+
   const aceroPorModulo = agruparAceroPorModulo(elements);
   const aceroRows: (string | number)[][] = [];
   for (const { module, resumen } of aceroPorModulo) {
@@ -177,7 +211,6 @@ export function generateExcelReport(
     numericCols: [2, 3, 4],
   };
 
-  const presupuesto = calcularPresupuesto(consolidated, prices);
   const presupuestoSheet = buildPresupuestoSheet(presupuesto);
 
   const materialesValorizado = valorizarLineas(materialesLines, prices);
@@ -205,6 +238,8 @@ export function generateExcelReport(
   const safeName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
   downloadExcelWorkbook(`metrado_${safeName}`, [
     resumenSheet,
+    costoPorCategoriaSheet,
+    metradosPorModuloSheet,
     metradosSheet,
     aceroSheet,
     presupuestoSheet,
