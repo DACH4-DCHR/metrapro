@@ -4,6 +4,7 @@ import type { CalculatedElement, MetradoLine } from "../types";
 import { calcularPresupuesto, valorizarLineas, buildPresupuestoFootRows, type PresupuestoRow } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
+import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
 
 interface ProjectInfoLike {
   nombreObra: string;
@@ -30,6 +31,71 @@ function pdfFooter(doc: jsPDF, marginX: number) {
   doc.setFontSize(8);
   doc.setTextColor(...STEEL);
   doc.text(`Generado el ${new Date().toLocaleDateString("es-PE")}`, pageWidth - marginX, pageHeight - 8, { align: "right" });
+}
+
+// Recorta un texto con "…" si no entra en maxWidth (mm), en vez de dejar que
+// se salga de su columna o se monte sobre la barra de al lado.
+function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && doc.getTextWidth(`${t}…`) > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return `${t}…`;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+interface PdfBarItem {
+  label: string;
+  value: number;
+  color: [number, number, number];
+}
+
+// Gráfico de barras horizontales dibujado con las primitivas vectoriales de
+// jsPDF (rectángulos + texto) — mismo look que el gráfico HTML del Dashboard
+// en pantalla, sin depender de html2canvas ni ninguna librería de charts.
+// Devuelve el cursorY después del gráfico.
+function drawBarChart(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  items: PdfBarItem[],
+  valueFormatter: (v: number) => string
+): number {
+  const barHeight = 4.5;
+  const rowGap = 2.5;
+  const labelWidth = 34;
+  const valueWidth = 24;
+  const barAreaWidth = width - labelWidth - valueWidth;
+  const max = Math.max(...items.map((i) => i.value), 0);
+  let cursorY = y;
+
+  for (const item of items) {
+    const barWidth = max > 0 ? Math.max((item.value / max) * barAreaWidth, 1) : 0;
+    const textBaseline = cursorY + barHeight - 1.1;
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...STEEL);
+    doc.text(truncateToWidth(doc, item.label, labelWidth - 2), x, textBaseline);
+
+    doc.setFillColor(232, 236, 240);
+    doc.rect(x + labelWidth, cursorY, barAreaWidth, barHeight, "F");
+    doc.setFillColor(...item.color);
+    doc.rect(x + labelWidth, cursorY, barWidth, barHeight, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text(valueFormatter(item.value), x + labelWidth + barAreaWidth + valueWidth, textBaseline, { align: "right" });
+
+    cursorY += barHeight + rowGap;
+  }
+  return cursorY;
 }
 
 // PDF de una sola tabla simple (partida/unidad/cantidad, sin precios) — lo usa
@@ -156,6 +222,78 @@ function buildReportDoc(
   });
   cursorY += Math.ceil(infoRows.length / 2) * 7 + 6;
 
+  const presupuesto = calcularPresupuesto(consolidated, prices);
+  const costosCategoria = costosPorCategoria(presupuesto.rows);
+  const cantidadesModulo = cantidadesPorModulo(elements);
+  const chartWidth = pageWidth - marginX * 2;
+
+  if (costosCategoria.length > 0) {
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text("Costo Directo por Categoría", marginX, cursorY);
+    cursorY += 5;
+    cursorY = drawBarChart(
+      doc,
+      marginX,
+      cursorY,
+      chartWidth,
+      costosCategoria.map((c) => ({ label: c.categoria, value: c.monto, color: hexToRgb(c.color) })),
+      (v) => currencyFormatter.format(v)
+    );
+    cursorY += 5;
+  }
+
+  const modulosConcreto = cantidadesModulo
+    .filter((m) => m.concreteM3 > 0)
+    .sort((a, b) => b.concreteM3 - a.concreteM3)
+    .map((m) => ({ label: m.label, value: m.concreteM3, color: [42, 120, 214] as [number, number, number] }));
+  const modulosAcero = cantidadesModulo
+    .filter((m) => m.steelKg > 0)
+    .sort((a, b) => b.steelKg - a.steelKg)
+    .map((m) => ({ label: m.label, value: m.steelKg, color: [235, 104, 52] as [number, number, number] }));
+  const modulosEncofrado = cantidadesModulo
+    .filter((m) => m.formworkM2 > 0)
+    .sort((a, b) => b.formworkM2 - a.formworkM2)
+    .map((m) => ({ label: m.label, value: m.formworkM2, color: [27, 175, 122] as [number, number, number] }));
+
+  if (modulosConcreto.length > 0 || modulosAcero.length > 0 || modulosEncofrado.length > 0) {
+    if (cursorY > 230) {
+      doc.addPage();
+      cursorY = 16;
+    }
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text("Metrados por Módulo", marginX, cursorY);
+    cursorY += 6;
+
+    const moduloCharts: [string, typeof modulosConcreto, (v: number) => string][] = [
+      ["Concreto (m³)", modulosConcreto, (v) => `${numberFormatter.format(v)} m³`],
+      ["Acero (kg)", modulosAcero, (v) => `${numberFormatter.format(v)} kg`],
+      ["Encofrado (m²)", modulosEncofrado, (v) => `${numberFormatter.format(v)} m²`],
+    ];
+    for (const [subtitulo, items, fmt] of moduloCharts) {
+      if (items.length === 0) continue;
+      if (cursorY > 260) {
+        doc.addPage();
+        cursorY = 16;
+      }
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...STEEL);
+      doc.text(subtitulo, marginX, cursorY);
+      cursorY += 4;
+      cursorY = drawBarChart(doc, marginX, cursorY, chartWidth, items, fmt);
+      cursorY += 4;
+    }
+  }
+
+  if (cursorY > 250) {
+    doc.addPage();
+    cursorY = 16;
+  }
+
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...NAVY);
@@ -219,10 +357,13 @@ function buildReportDoc(
     cursorY += 4;
   }
 
-  const presupuesto = calcularPresupuesto(consolidated, prices);
   const presupuestoFootRows = buildPresupuestoFootRows(presupuesto, (n) => currencyFormatter.format(n));
 
-  if (cursorY > 250) {
+  // Umbral más conservador que el resto de secciones: esta tabla siempre trae
+  // filas de pie (costo directo/GG/UT/IGV/total), y si arranca con poco
+  // espacio libre, autoTable puede pintar el pie encima de la última fila del
+  // cuerpo en vez de pasar de página — hay que dejarle más aire de entrada.
+  if (cursorY > 200) {
     doc.addPage();
     cursorY = 16;
   }
