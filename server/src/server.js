@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import {
   initSchema,
   createUser,
@@ -27,11 +29,34 @@ import {
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 const app = express();
+// Railway pone la app detrás de un proxy — sin esto, express-rate-limit vería
+// la IP del proxy en vez de la del cliente y limitaría a todos los usuarios
+// juntos como si fueran uno solo.
+app.set("trust proxy", 1);
+app.use(helmet());
 // CORS_ORIGIN: en producción, la URL exacta del frontend (ej. https://mi-app.vercel.app).
 // Sin ella, se refleja cualquier origen (cómodo en desarrollo, pero menos estricto).
 app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
+
+// Límite de intentos en autenticación: sin esto, alguien podría probar miles
+// de contraseñas por segundo contra una cuenta (fuerza bruta) o registrar
+// cuentas falsas en masa. Login y registro tienen cada uno su propio cupo
+// (no comparten instancia) para que agotar uno no bloquee al usuario del otro
+// — ej. alguien que falla su contraseña varias veces todavía puede registrar
+// una cuenta nueva.
+function createAuthLimiter(message) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: message },
+  });
+}
+const loginLimiter = createAuthLimiter("Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo.");
+const registerLimiter = createAuthLimiter("Demasiados intentos de registro. Espera unos minutos e inténtalo de nuevo.");
 
 const SESSION_COOKIE = "mp_sid";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -61,6 +86,9 @@ async function requireAuth(req, res, next) {
 }
 
 // --- Autenticación ---
+
+app.use("/api/auth/register", registerLimiter);
+app.use("/api/auth/login", loginLimiter);
 
 app.post("/api/auth/register", async (req, res) => {
   const { email, password } = req.body ?? {};
