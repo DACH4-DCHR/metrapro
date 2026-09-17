@@ -55,13 +55,44 @@ function rowToElement(row) {
 
 async function createProjectRow(userId) {
   const today = new Date().toISOString().slice(0, 10);
+  // Un proyecto nuevo arranca con los precios del catálogo del usuario (los
+  // últimos que usó en cualquier otro proyecto), en vez de en blanco — así no
+  // hay que volver a escribir los mismos precios unitarios en cada obra.
+  const catalog = await getPriceCatalog(userId);
   const { rows } = await pool.query(
     `INSERT INTO projects (user_id, nombre_obra, cliente, ubicacion, responsable, fecha, prices_json, created_at)
-     VALUES ($1, '', '', '', '', $2, '{}'::jsonb, $3)
+     VALUES ($1, '', '', '', '', $2, $3::jsonb, $4)
      RETURNING id`,
-    [userId, today, Date.now()]
+    [userId, today, JSON.stringify(catalog), Date.now()]
   );
   return rows[0].id;
+}
+
+// Las llaves reservadas (Gastos Generales/Utilidad/IGV, ver GG_ON_KEY etc. en
+// presupuesto.ts del frontend) empiezan con "__" y son ajustes por proyecto,
+// no precios unitarios — se excluyen del catálogo a propósito.
+function isReservedPriceKey(key) {
+  return key.startsWith("__");
+}
+
+export async function getPriceCatalog(userId) {
+  const { rows } = await pool.query("SELECT price_catalog_json FROM users WHERE id = $1", [userId]);
+  return rows[0]?.price_catalog_json ?? {};
+}
+
+// Mezcla (no reemplaza) los precios de partida de "prices" dentro del catálogo
+// del usuario, usando el operador de concatenación jsonb de Postgres para que
+// sea una sola operación atómica (sin leer-modificar-escribir por separado).
+export async function mergeIntoPriceCatalog(userId, prices) {
+  const entries = {};
+  for (const [key, value] of Object.entries(prices ?? {})) {
+    if (!isReservedPriceKey(key)) entries[key] = value;
+  }
+  if (Object.keys(entries).length === 0) return;
+  await pool.query("UPDATE users SET price_catalog_json = price_catalog_json || $1::jsonb WHERE id = $2", [
+    JSON.stringify(entries),
+    userId,
+  ]);
 }
 
 // --- Usuarios y contraseñas ---

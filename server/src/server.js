@@ -17,6 +17,7 @@ import {
   getProject,
   updateProjectInfo,
   setPrices,
+  mergeIntoPriceCatalog,
   setMaterialesCustom,
   addElement,
   removeElement,
@@ -154,7 +155,11 @@ app.delete("/api/projects/:id", requireProjectOwnership, async (req, res) => {
 });
 
 app.put("/api/projects/:id/prices", requireProjectOwnership, async (req, res) => {
-  await setPrices(req.projectId, req.body ?? {});
+  const prices = req.body ?? {};
+  await setPrices(req.projectId, prices);
+  // Cada precio que se guarda en un proyecto también queda en el catálogo del
+  // usuario, para que el próximo proyecto que cree arranque con esos precios.
+  await mergeIntoPriceCatalog(req.userId, prices);
   res.json(await getProject(req.projectId));
 });
 

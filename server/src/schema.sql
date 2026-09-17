@@ -3,8 +3,11 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
+  price_catalog_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at BIGINT NOT NULL
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS price_catalog_json JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
