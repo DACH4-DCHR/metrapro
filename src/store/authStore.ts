@@ -107,7 +107,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ error: null, message: null });
     try {
       await authForgotPassword(email);
-      set({ message: "Si ese correo tiene una cuenta, te enviamos un enlace para recuperar tu contraseña." });
+      set({
+        message:
+          "Si ese correo tiene una cuenta, te enviamos un enlace para recuperar tu contraseña. Si no lo ves en unos minutos, revisa tu carpeta de Spam o Promociones.",
+      });
       return true;
     } catch (e) {
       const message =
