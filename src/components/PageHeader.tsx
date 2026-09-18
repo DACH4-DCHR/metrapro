@@ -15,10 +15,12 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
   const openHelp = useHelpStore((s) => s.open);
   const hasHelp = Boolean(helpKey && HELP_CONTENT[helpKey]);
   const hasActionsRow = hasHelp || actions;
-  // Contraído por defecto expandido: en celular en horizontal, el título +
-  // botones de esta barra (que es "sticky", siempre visible) llegan a tapar
-  // casi media pantalla. En escritorio no cambia nada (el botón solo existe
-  // en mobile, sm:hidden) porque ahí sí sobra espacio vertical.
+  // Expandido por defecto. En celular en horizontal, el título + botones de
+  // esta barra (que es "sticky", siempre visible) llegan a tapar casi media
+  // pantalla — y ese caso tiene el ANCHO de un celular normal (así que un
+  // breakpoint de ancho tipo "sm:hidden" no lo distingue de un monitor
+  // angosto). Por eso el botón de contraer va siempre visible, en cualquier
+  // tamaño: no estorba en escritorio y resuelve el caso real en mobile.
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -35,14 +37,14 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
           <button
             onClick={() => setExpanded((e) => !e)}
             aria-label={expanded ? "Contraer encabezado" : "Expandir encabezado"}
-            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-steel-400 hover:bg-white/10 hover:text-white sm:hidden"
+            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-steel-400 hover:bg-white/10 hover:text-white"
           >
             <ChevronDown size={18} className={`transition-transform ${expanded ? "" : "rotate-180"}`} />
           </button>
         )}
       </div>
       {hasActionsRow && (
-        <div className={`flex-wrap items-center gap-2 ${expanded ? "flex" : "hidden"} sm:flex`}>
+        <div className={`flex-wrap items-center gap-2 ${expanded ? "flex" : "hidden"}`}>
           {hasHelp && (
             <button
               onClick={() => openHelp(helpKey!)}
