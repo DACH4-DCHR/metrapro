@@ -1,9 +1,7 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
-  Box,
   Weight,
-  Frame,
   Layers3,
   RectangleHorizontal,
   MoveUpRight,
@@ -31,13 +29,15 @@ import {
   Plus,
   Send,
   BarChart3,
+  HardHat,
+  Package,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { HorizontalBarChart } from "../components/charts/HorizontalBarChart";
-import { costosPorCategoria, cantidadesPorModulo } from "../lib/dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales } from "../lib/dashboardCharts";
 import { useProjectStore } from "../store/projectStore";
 import {
   calcularPresupuesto,
@@ -128,18 +128,6 @@ export function DashboardPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sharingPdf, setSharingPdf] = useState(false);
 
-  const totals = useMemo(() => {
-    return elements.reduce(
-      (acc, el) => {
-        acc.concreteM3 += el.concreteM3;
-        acc.steelKg += el.steelKg;
-        acc.formworkM2 += el.formworkM2;
-        return acc;
-      },
-      { concreteM3: 0, steelKg: 0, formworkM2: 0 }
-    );
-  }, [elements]);
-
   const consolidated = useMemo(() => consolidateLines(elements.map((e) => e.lines)), [elements]);
 
   const aceroPorModulo = useMemo(() => agruparAceroPorModulo(elements), [elements]);
@@ -184,6 +172,7 @@ export function DashboardPage() {
   );
 
   const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
+  const manoObraMateriales = useMemo(() => manoObraVsMateriales(presupuesto.rows), [presupuesto.rows]);
   const cantidadesModulo = useMemo(() => cantidadesPorModulo(elements), [elements]);
   const concretoPorModulo = useMemo(
     () =>
@@ -433,33 +422,27 @@ export function DashboardPage() {
           </div>
         </SectionCard>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
-            label="Concreto calculado"
-            value={numberFormatter.format(totals.concreteM3)}
-            unit="m³"
-            icon={<Box size={20} />}
+            label="Mano de obra"
+            value={currencyFormatter.format(manoObraMateriales.manoObra)}
+            subLabel={`${manoObraMateriales.pctManoObra.toFixed(1)}% del costo directo`}
+            icon={<HardHat size={26} />}
             accent="navy"
           />
           <StatCard
-            label="Acero calculado"
-            value={numberFormatter.format(totals.steelKg)}
-            unit="kg"
-            icon={<Weight size={20} />}
+            label="Materiales"
+            value={currencyFormatter.format(manoObraMateriales.materiales)}
+            subLabel={`${manoObraMateriales.pctMateriales.toFixed(1)}% del costo directo`}
+            icon={<Package size={26} />}
             accent="steel"
           />
           <StatCard
-            label="Encofrado"
-            value={numberFormatter.format(totals.formworkM2)}
-            unit="m²"
-            icon={<Frame size={20} />}
-            accent="navy"
-          />
-          <StatCard
-            label="Elementos calculados"
-            value={String(elements.length)}
-            icon={<LayoutDashboard size={20} />}
-            accent="amber"
+            label="Presupuesto general"
+            value={currencyFormatter.format(presupuesto.costoDirecto)}
+            subLabel="Mano de obra + materiales"
+            icon={<Wallet size={26} />}
+            accent="dark"
           />
         </div>
 
