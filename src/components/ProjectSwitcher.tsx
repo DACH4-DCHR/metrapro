@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Building2, ChevronDown, Plus, Trash2, Check, CloudOff, RefreshCw } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
+import { useCompactViewport } from "../hooks/useCompactViewport";
 
 export function ProjectSwitcher() {
   const projects = useProjectStore((s) => s.projects);
@@ -11,7 +12,11 @@ export function ProjectSwitcher() {
   const switchProject = useProjectStore((s) => s.switchProject);
   const createProject = useProjectStore((s) => s.createProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
-  const [open, setOpen] = useState(true);
+  const compact = useCompactViewport();
+  // En poca altura arranca cerrada la lista de proyectos — es lo primero que
+  // se puede ocultar sin perder de vista en qué proyecto estás (esa parte de
+  // arriba, "Proyecto activo", siempre queda visible).
+  const [open, setOpen] = useState(!compact);
 
   async function handleDelete(id: number, nombre: string) {
     const label = nombre.trim() || "este proyecto";
@@ -22,7 +27,7 @@ export function ProjectSwitcher() {
   }
 
   return (
-    <div className="border-b border-white/10 px-3 py-3">
+    <div className={`border-b border-white/10 px-3 ${compact ? "py-2" : "py-3"}`}>
       {/* Proyecto activo: siempre visible, fijo, independiente de si la lista está desplegada */}
       <div className="flex items-center gap-2 rounded-md border border-white/10 bg-navy-900 px-3 py-2">
         <Building2 size={16} className="shrink-0 text-amber-500" />

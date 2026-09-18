@@ -33,6 +33,7 @@ import { HELP_CONTENT } from "../lib/helpContent";
 import { HelpPanel } from "./ui/HelpPanel";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { whatsappLink, telegramLink, mailtoLink } from "../lib/contact";
+import { useCompactViewport } from "../hooks/useCompactViewport";
 
 // Orden constructivo/normativo: movimiento de tierras primero (excavación previa a
 // cualquier vaciado), luego cimentación (de abajo hacia arriba: zapatas, cimiento
@@ -139,6 +140,7 @@ export function Layout() {
   // invitación a renovar para seguir recibiendo actualizaciones.
   const avisoActualizaciones = user?.isPaid && user.updatesReminderDue;
   const [menuOpen, setMenuOpen] = useState(false);
+  const compact = useCompactViewport();
   const helpKey = useHelpStore((s) => s.openKey);
   const closeHelp = useHelpStore((s) => s.close);
   const location = useLocation();
@@ -178,17 +180,19 @@ export function Layout() {
       )}
 
       <aside
-        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-navy-950 text-white transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`no-print fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col bg-navy-950 text-white transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
+          compact ? "w-48" : "w-64"
+        } ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center gap-2 border-b border-white/10 px-5 py-5">
+        <div
+          className={`flex items-center gap-2 border-b border-white/10 px-5 ${compact ? "py-3" : "py-5"}`}
+        >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-amber-500">
             <HardHat size={20} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold leading-tight">MetraPro</p>
-            <p className="text-[11px] leading-tight text-steel-400">Metrados Estructurales</p>
+            {!compact && <p className="text-[11px] leading-tight text-steel-400">Metrados Estructurales</p>}
           </div>
           <button
             onClick={() => setMenuOpen(false)}
@@ -201,19 +205,21 @@ export function Layout() {
 
         <ProjectSwitcher />
 
-        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <nav className={`flex-1 overflow-y-auto px-3 ${compact ? "space-y-2 py-2" : "space-y-4 py-4"}`}>
           <NavLink
             to={dashboardItem.to}
             end={dashboardItem.end}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-[10px] pr-3 text-sm font-medium transition-colors ${
+              `flex items-center gap-3 rounded-md border-l-2 pl-[10px] pr-3 font-medium transition-colors ${
+                compact ? "py-1.5 text-xs" : "py-2.5 text-sm"
+              } ${
                 isActive
                   ? "border-amber-500 bg-navy-800 text-white"
                   : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
               }`
             }
           >
-            <dashboardItem.icon size={18} />
+            <dashboardItem.icon size={compact ? 15 : 18} />
             {dashboardItem.label}
           </NavLink>
 
@@ -224,7 +230,9 @@ export function Layout() {
                 <button
                   onClick={() => toggleSection(group.section)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-steel-500 transition-colors hover:bg-navy-800 hover:text-steel-200"
+                  className={`flex w-full items-center justify-between rounded-md px-3 font-semibold uppercase tracking-wide text-steel-500 transition-colors hover:bg-navy-800 hover:text-steel-200 ${
+                    compact ? "py-1 text-[10px]" : "py-1.5 text-[11px]"
+                  }`}
                 >
                   {group.section}
                   <ChevronDown
@@ -244,14 +252,16 @@ export function Layout() {
                         to={item.to}
                         end={false}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-[10px] pr-3 text-sm font-medium transition-colors ${
+                          `flex items-center gap-3 rounded-md border-l-2 pl-[10px] pr-3 font-medium transition-colors ${
+                            compact ? "py-1.5 text-xs" : "py-2.5 text-sm"
+                          } ${
                             isActive
                               ? "border-amber-500 bg-navy-800 text-white"
                               : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
                           }`
                         }
                       >
-                        <item.icon size={18} />
+                        <item.icon size={compact ? 15 : 18} />
                         {item.label}
                       </NavLink>
                     ))}
@@ -262,8 +272,8 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-4 py-3">
-          <div className="mb-2 truncate text-xs text-steel-400">{user?.email}</div>
+        <div className={`border-t border-white/10 px-4 ${compact ? "py-2" : "py-3"}`}>
+          {!compact && <div className="mb-2 truncate text-xs text-steel-400">{user?.email}</div>}
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-steel-300 hover:bg-navy-800 hover:text-white"
@@ -271,6 +281,7 @@ export function Layout() {
             <LogOut size={14} />
             Cerrar sesión
           </button>
+          {!compact && (
           <p className="mt-2 text-center text-[10px] text-steel-500">
             <a href="/terminos" className="hover:text-steel-300 hover:underline">
               Términos
@@ -280,6 +291,7 @@ export function Layout() {
               Privacidad
             </a>
           </p>
+          )}
         </div>
       </aside>
 
