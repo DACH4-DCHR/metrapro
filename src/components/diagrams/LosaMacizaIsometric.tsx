@@ -178,9 +178,9 @@ export function LosaMacizaIsometric({ input }: LosaMacizaIsometricProps) {
       <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">Vista isométrica esquemática (no a escala real)</p>
       <p className="text-center text-xs text-steel-500">
-        Malla inferior Ø{getRebar(input.diametroPrincipalId).diameterMm}/Ø{getRebar(input.diametroTemperaturaId).diameterMm}mm
+        Malla inferior Ø{getRebar(input.diametroPrincipalId).symbol}/Ø{getRebar(input.diametroTemperaturaId).symbol}
         {input.incluirMallaSuperior &&
-          ` · malla superior Ø${getRebar(input.diametroPrincipalSupId).diameterMm}/Ø${getRebar(input.diametroTemperaturaSupId).diameterMm}mm`}
+          ` · malla superior Ø${getRebar(input.diametroPrincipalSupId).symbol}/Ø${getRebar(input.diametroTemperaturaSupId).symbol}`}
       </p>
     </div>
   );

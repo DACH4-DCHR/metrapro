@@ -13,7 +13,7 @@ import { ZapataPlanView } from "../components/diagrams/ZapataPlanView";
 import { ZapataIsometric } from "../components/diagrams/ZapataIsometric";
 import { calcularZapata, type ZapataInput } from "../lib/calc/zapata";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
-import { REBAR_SIZES } from "../lib/materials";
+import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
@@ -91,9 +91,11 @@ export function ZapatasPage() {
       inputsSummary: {
         Cantidad: `${input.numeroZapatas} zapatas`,
         Dimensiones: `${input.largo} x ${input.ancho} x ${input.peralte / 100} m`,
-        "Malla inferior": `Ø${input.diametroInferiorXId}mm@${input.separacionInferiorX}cm / Ø${input.diametroInferiorYId}mm@${input.separacionInferiorY}cm`,
+        "Malla inferior": `Ø${getRebar(input.diametroInferiorXId).symbol}@${input.separacionInferiorX}cm / Ø${getRebar(input.diametroInferiorYId).symbol}@${input.separacionInferiorY}cm`,
         ...(input.incluirMallaSuperior
-          ? { "Malla superior": `Ø${input.diametroSuperiorXId}mm@${input.separacionSuperiorX}cm / Ø${input.diametroSuperiorYId}mm@${input.separacionSuperiorY}cm` }
+          ? {
+              "Malla superior": `Ø${getRebar(input.diametroSuperiorXId).symbol}@${input.separacionSuperiorX}cm / Ø${getRebar(input.diametroSuperiorYId).symbol}@${input.separacionSuperiorY}cm`,
+            }
           : {}),
       },
     };

@@ -25,7 +25,7 @@ function flattenBarras(grupos: BarraGrupo[]): string[] {
 function grupoLabel(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 
@@ -135,7 +135,7 @@ export function VigaCimentacionCrossSection({ input }: VigaCimentacionCrossSecti
       <p className="mt-1 text-xs text-steel-500">
         {grupoLabel(input.barrasInferiores) || "sin barras"} inf. + {grupoLabel(input.barrasSuperiores) || "sin barras"} sup.
         {lateralIds.length > 0 && ` + ${grupoLabel(input.barrasLaterales)} lat.`} · estribo cerrado Ø
-        {getRebar(input.diametroEstribosId).diameterMm}mm @ {fmt(input.separacionEstribos)}cm
+        {getRebar(input.diametroEstribosId).symbol} @ {fmt(input.separacionEstribos)}cm
       </p>
     </div>
   );

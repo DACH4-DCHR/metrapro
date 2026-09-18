@@ -33,7 +33,7 @@ function nextName() {
 function grupoLabel(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 

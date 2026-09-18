@@ -13,7 +13,7 @@ import { LosaMacizaPlanView } from "../components/diagrams/LosaMacizaPlanView";
 import { LosaMacizaIsometric } from "../components/diagrams/LosaMacizaIsometric";
 import { calcularLosaMaciza, type LosaMacizaInput, type TipoApoyoLosaMaciza } from "../lib/calc/losaMaciza";
 import { lineasAceroPorDiametro } from "../lib/calc/aceroResumen";
-import { REBAR_SIZES } from "../lib/materials";
+import { REBAR_SIZES, getRebar } from "../lib/materials";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
@@ -82,7 +82,7 @@ export function LosaMacizaPage() {
       inputsSummary: {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         Espesor: `${input.espesor} cm`,
-        "Malla inferior": `Ø${input.diametroPrincipalId}mm@${input.separacionPrincipal}cm / Ø${input.diametroTemperaturaId}mm@${input.separacionTemperatura}cm`,
+        "Malla inferior": `Ø${getRebar(input.diametroPrincipalId).symbol}@${input.separacionPrincipal}cm / Ø${getRebar(input.diametroTemperaturaId).symbol}@${input.separacionTemperatura}cm`,
         ...(input.incluirMallaSuperior ? { "Malla superior": "sí" } : {}),
       },
     };

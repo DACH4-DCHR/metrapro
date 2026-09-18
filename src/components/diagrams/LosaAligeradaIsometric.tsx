@@ -204,9 +204,9 @@ export function LosaAligeradaIsometric({ input }: LosaAligeradaIsometricProps) {
         Vista isométrica esquemática (segmento representativo de {modules} nervios, no a escala real)
       </p>
       <p className="text-center text-xs text-steel-500">
-        Temperatura Ø{rebarTemp.diameterMm}mm
-        {input.aceroViguetasMetodo === "barras" && ` · vigueta ${input.numeroVarillasPorVigueta}Ø${rebarVigueta.diameterMm}mm`}
-        {input.incluirAceroNegativo && ` · negativo ${input.numeroBastonesPorVigueta}Ø${rebarNegativo.diameterMm}mm sobre apoyos`}
+        Temperatura Ø{rebarTemp.symbol}
+        {input.aceroViguetasMetodo === "barras" && ` · vigueta ${input.numeroVarillasPorVigueta}Ø${rebarVigueta.symbol}`}
+        {input.incluirAceroNegativo && ` · negativo ${input.numeroBastonesPorVigueta}Ø${rebarNegativo.symbol} sobre apoyos`}
       </p>
     </div>
   );

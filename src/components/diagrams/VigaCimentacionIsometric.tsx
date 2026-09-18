@@ -275,7 +275,7 @@ export function VigaCimentacionIsometric({ input }: VigaCimentacionIsometricProp
       </p>
       <p className="text-center text-xs text-steel-500">
         {totalBars} barras ({bottomIds.length} inf. / {topIds.length} sup. / {lateralIds.length} lat.) ·{" "}
-        {numeroEstribosPorViga} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por viga
+        {numeroEstribosPorViga} estribos Ø{getRebar(input.diametroEstribosId).symbol} por viga
       </p>
       {(prolongacionEnInicio || prolongacionEnFin) && (
         <p className="text-center text-xs text-steel-500">

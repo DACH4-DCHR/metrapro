@@ -191,7 +191,7 @@ export function LosaCrossSection({ input }: LosaCrossSectionProps) {
         Corte transversal esquemático (no a escala real) ·{" "}
         {isArcilla ? "ladrillo de arcilla" : "bloque de tecnopor (EPS)"} de {fmt(alturaLadrillo)} cm
         {input.incluirAceroNegativo &&
-          ` · acero negativo Ø${getRebar(input.diametroNegativoId).diameterMm}mm sobre apoyos (parte superior del nervio)`}
+          ` · acero negativo Ø${getRebar(input.diametroNegativoId).symbol} sobre apoyos (parte superior del nervio)`}
       </p>
     </div>
   );

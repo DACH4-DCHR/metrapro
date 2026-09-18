@@ -142,7 +142,7 @@ export function VigaIsometric({ input }: VigaIsometricProps) {
         refleja tus valores de separación{input.incluirConfinamiento ? " y confinamiento" : ""}
       </p>
       <p className="text-center text-xs text-steel-500">
-        {bars.length} barras · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por viga
+        {bars.length} barras · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).symbol} por viga
       </p>
     </div>
   );

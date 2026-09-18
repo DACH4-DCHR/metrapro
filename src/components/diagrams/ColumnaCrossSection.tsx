@@ -26,16 +26,16 @@ function grupoLabel(input: ColumnaInput): string {
   if (input.tipoSeccion === "circular") {
     return input.barrasLongitudinalesCirculares
       .filter((g) => g.cantidad > 0)
-      .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+      .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
       .join(" + ");
   }
-  const partes = [`4Ø${getRebar(input.diametroEsquinaId).diameterMm}mm esq.`];
+  const partes = [`4Ø${getRebar(input.diametroEsquinaId).symbol} esq.`];
   input.barrasCarasPeralteGrupos
     .filter((g) => g.cantidad > 0)
-    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara peralte`));
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).symbol} c/cara peralte`));
   input.barrasCarasBaseGrupos
     .filter((g) => g.cantidad > 0)
-    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara base`));
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).symbol} c/cara base`));
   return partes.join(" + ");
 }
 
@@ -102,7 +102,7 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
         </svg>
         <p className="mt-1 text-xs text-steel-500">
           {grupoLabel(input) || "sin barras"} ({n} und, distribución perimetral) · estribo circular Ø
-          {getRebar(input.diametroEstribosId).diameterMm}mm
+          {getRebar(input.diametroEstribosId).symbol}
         </p>
       </div>
     );
@@ -206,13 +206,13 @@ export function ColumnaCrossSection({ input }: ColumnaCrossSectionProps) {
         <VDim y1={y0} y2={y0 + h} x={x0 - 20} label={`t=${fmt(peralte)}cm`} />
       </svg>
       <p className="mt-1 text-xs text-steel-500">
-        {grupoLabel(input) || "sin barras"} ({n} und total) · estribo Ø{getRebar(input.diametroEstribosId).diameterMm}mm
+        {grupoLabel(input) || "sin barras"} ({n} und total) · estribo Ø{getRebar(input.diametroEstribosId).symbol}
         {input.estribosSuplementarios.length > 0
           ? ` + ${input.estribosSuplementarios
               .map((s) =>
                 s.tipo === "cerrado"
-                  ? `${s.numeroRamas} estribo(s) cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm supl. (encierra ${s.numeroBarrasEncerradas} barras centrales)`
-                  : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
+                  ? `${s.numeroRamas} estribo(s) cerrado(s) Ø${getRebar(s.diametroId).symbol} supl. (encierra ${s.numeroBarrasEncerradas} barras centrales)`
+                  : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).symbol} (cara ${s.cara})`
               )
               .join(" + ")}`
           : ""}

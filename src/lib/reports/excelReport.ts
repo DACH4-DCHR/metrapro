@@ -253,7 +253,7 @@ export function generateExcelReport(
     for (const r of resumen) {
       aceroRows.push([
         MODULE_LABELS[module],
-        `Ø${r.diametroMm}mm`,
+        `Ø ${r.symbol}`,
         Number(r.weightKgPerM.toFixed(3)),
         Number(r.pesoKg.toFixed(2)),
         r.numeroVarillas,

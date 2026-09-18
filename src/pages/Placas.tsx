@@ -37,7 +37,7 @@ function nextName() {
 function grupoLabel(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 
@@ -117,7 +117,7 @@ export function PlacasPage() {
       inputsSummary: {
         Cantidad: `${input.numeroMuros} muros`,
         Dimensiones: `${input.longitud} m x ${input.alturaLibre} m x ${input.espesor} cm`,
-        "Refuerzo distribuido": `V: Ø${getRebar(input.diametroVerticalId).diameterMm}mm@${input.separacionVertical}cm / H: Ø${getRebar(input.diametroHorizontalId).diameterMm}mm@${input.separacionHorizontal}cm`,
+        "Refuerzo distribuido": `V: Ø${getRebar(input.diametroVerticalId).symbol}@${input.separacionVertical}cm / H: Ø${getRebar(input.diametroHorizontalId).symbol}@${input.separacionHorizontal}cm`,
         ...(input.incluirElementoBorde
           ? { "Elemento de borde": grupoLabel(input.barrasElementoBorde) || "-" }
           : {}),

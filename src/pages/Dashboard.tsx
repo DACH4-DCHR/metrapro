@@ -661,7 +661,7 @@ export function DashboardPage() {
                           {resumen.map((r, idx) => (
                             <tr key={r.diametroId} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
                               <td className="px-4 py-2 text-navy-900">
-                                Ø{r.diametroMm}mm <span className="text-xs text-steel-500">({r.weightKgPerM.toFixed(3)} kg/m)</span>
+                                Ø {r.symbol} <span className="text-xs text-steel-500">({r.weightKgPerM.toFixed(3)} kg/m)</span>
                               </td>
                               <td className="px-4 py-2 text-right font-mono text-navy-900">{numberFormatter.format(r.pesoKg)}</td>
                               <td className="px-4 py-2 text-right font-mono text-navy-900">{r.numeroVarillas}</td>

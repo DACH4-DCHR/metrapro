@@ -56,7 +56,7 @@ function nextName() {
 function grupoLabelSimple(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 
@@ -64,13 +64,13 @@ function resumenAceroLongitudinal(input: ColumnaInput): string {
   if (input.tipoSeccion === "circular") {
     return grupoLabelSimple(input.barrasLongitudinalesCirculares) || "-";
   }
-  const partes = [`4Ø${getRebar(input.diametroEsquinaId).diameterMm}mm esq.`];
+  const partes = [`4Ø${getRebar(input.diametroEsquinaId).symbol} esq.`];
   input.barrasCarasPeralteGrupos
     .filter((g) => g.cantidad > 0)
-    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara peralte`));
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).symbol} c/cara peralte`));
   input.barrasCarasBaseGrupos
     .filter((g) => g.cantidad > 0)
-    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm c/cara base`));
+    .forEach((g) => partes.push(`${g.cantidad}Ø${getRebar(g.diametroId).symbol} c/cara base`));
   return partes.join(" + ");
 }
 
@@ -224,8 +224,8 @@ export function ColumnasPage() {
               "Estribos suplementarios": input.estribosSuplementarios
                 .map((s) =>
                   s.tipo === "cerrado"
-                    ? `${s.numeroRamas} cerrado(s) Ø${getRebar(s.diametroId).diameterMm}mm (encierra ${s.numeroBarrasEncerradas} barras centrales)`
-                    : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).diameterMm}mm (cara ${s.cara})`
+                    ? `${s.numeroRamas} cerrado(s) Ø${getRebar(s.diametroId).symbol} (encierra ${s.numeroBarrasEncerradas} barras centrales)`
+                    : `${s.numeroRamas} grapa(s) Ø${getRebar(s.diametroId).symbol} (cara ${s.cara})`
                 )
                 .join(" + "),
             }

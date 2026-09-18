@@ -11,6 +11,7 @@ export const LONGITUD_VARILLA_COMERCIAL_M = 9;
 export interface AceroResumenItem {
   diametroId: string;
   diametroMm: number;
+  symbol: string;
   label: string;
   weightKgPerM: number;
   longitudTotalM: number;
@@ -33,6 +34,7 @@ export function resumirAceroPorDiametro(items: AceroItem[]): AceroResumenItem[] 
       return {
         diametroId,
         diametroMm: rebar.diameterMm,
+        symbol: rebar.symbol,
         label: rebar.label,
         weightKgPerM: rebar.weightKgPerM,
         longitudTotalM,
@@ -51,12 +53,12 @@ export function lineasAceroPorDiametro(items: AceroItem[]): MetradoLine[] {
   const lines: MetradoLine[] = [];
   for (const r of resumen) {
     lines.push({
-      partida: `Acero de refuerzo Ø${r.diametroMm}mm (${r.weightKgPerM.toFixed(3)} kg/m)`,
+      partida: `Acero de refuerzo Ø ${r.symbol} (${r.weightKgPerM.toFixed(3)} kg/m)`,
       unidad: "kg",
       cantidad: r.pesoKg,
     });
     lines.push({
-      partida: `Varillas Ø${r.diametroMm}mm x ${LONGITUD_VARILLA_COMERCIAL_M}m (habilitación)`,
+      partida: `Varillas Ø ${r.symbol} x ${LONGITUD_VARILLA_COMERCIAL_M}m (habilitación)`,
       unidad: "und",
       cantidad: r.numeroVarillas,
     });

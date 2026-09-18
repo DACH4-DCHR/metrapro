@@ -21,22 +21,42 @@ export const CONCRETE_DENSITY_KG_M3 = 2400;
 export interface RebarSize {
   id: string;
   diameterMm: number;
+  // Cómo se nombra en obra en Perú (sin el "Ø", que ya ponen los que lo usan):
+  // en pulgada para las que tienen un calibre comercial estándar (3/8", 1/2",
+  // 5/8", 3/4", 1"), o en mm para los calibres que solo se venden así (6, 8,
+  // 10 y 12 mm — el mercado peruano los ofrece como productos propios, no
+  // como una forma de nombrar la pulgada más cercana).
+  symbol: string;
   label: string;
-  weightKgPerM: number; // peso nominal kg/m (norma ASTM/NTP)
+  weightKgPerM: number; // peso nominal kg/m (norma ASTM A615 / NTP 341.031)
   color: string; // color distintivo por diámetro, usado en las vistas de planta/3D
 }
 
-// Pesos unitarios nominales de barras corrugadas de acero (kg/m). El color es fijo por
-// diámetro (no por rol) para que un mismo Ø se identifique igual en toda la app —
-// cámbialo aquí si se agregan más diámetros.
+// Pesos unitarios nominales de barras corrugadas de acero (kg/m), según
+// ASTM A615 / NTP 341.031 (peso = 0.006165 x diámetro_mm², densidad 7850
+// kg/m³). El color es fijo por diámetro (no por rol) para que un mismo Ø se
+// identifique igual en toda la app — cámbialo aquí si se agregan más
+// diámetros.
+//
+// 6, 8 y 12 mm son calibres reales que se venden en Perú como tales (no son
+// una forma redondeada de nombrar 1/4", 5/16" o 1/2") — por eso conviven con
+// la pulgada real correspondiente en vez de reemplazarla (ids "6", "8" y
+// "12" vs. "1/2" más abajo). 16, 20 y 25 mm SÍ eran, antes de esta
+// corrección, una simplificación del diámetro real de 5/8", 3/4" y 1" —
+// tenían el peso de un Ø literal de 16/20/25 mm en vez del peso real de esas
+// pulgadas (hasta 10% más pesado en el caso de 3/4"), así que se corrigieron
+// al diámetro y peso real de la pulgada. 10 mm no tiene un equivalente en
+// pulgada de uso corriente en Perú (se usa tal cual, típicamente en
+// estribos), así que se deja solo en mm.
 export const REBAR_SIZES: RebarSize[] = [
-  { id: "6", diameterMm: 6, label: 'Ø 6 mm (1/4")', weightKgPerM: 0.222, color: "#0891b2" },
-  { id: "8", diameterMm: 8, label: 'Ø 8 mm (3/8" aprox.)', weightKgPerM: 0.395, color: "#7c3aed" },
-  { id: "10", diameterMm: 10, label: 'Ø 10 mm', weightKgPerM: 0.617, color: "#db2777" },
-  { id: "12", diameterMm: 12, label: 'Ø 12 mm (1/2")', weightKgPerM: 0.888, color: "#2563eb" },
-  { id: "16", diameterMm: 16, label: 'Ø 16 mm (5/8")', weightKgPerM: 1.578, color: "#0b1f3a" },
-  { id: "20", diameterMm: 20, label: 'Ø 20 mm (3/4")', weightKgPerM: 2.466, color: "#16a34a" },
-  { id: "25", diameterMm: 25, label: "Ø 25 mm (1\")", weightKgPerM: 3.853, color: "#dc2626" },
+  { id: "6", diameterMm: 6, symbol: "6mm", label: 'Ø 6 mm (uso equivalente a 1/4")', weightKgPerM: 0.222, color: "#0891b2" },
+  { id: "8", diameterMm: 8, symbol: "8mm", label: 'Ø 8 mm (uso equivalente a 5/16")', weightKgPerM: 0.395, color: "#7c3aed" },
+  { id: "10", diameterMm: 10, symbol: "10mm", label: "Ø 10 mm", weightKgPerM: 0.617, color: "#db2777" },
+  { id: "12", diameterMm: 12, symbol: "12mm", label: 'Ø 12 mm (uso equivalente a 1/2")', weightKgPerM: 0.888, color: "#2563eb" },
+  { id: "12.7", diameterMm: 12.7, symbol: '1/2"', label: 'Ø 1/2" (12.7 mm)', weightKgPerM: 0.994, color: "#1d4ed8" },
+  { id: "16", diameterMm: 15.875, symbol: '5/8"', label: 'Ø 5/8" (15.9 mm)', weightKgPerM: 1.552, color: "#0b1f3a" },
+  { id: "20", diameterMm: 19.05, symbol: '3/4"', label: 'Ø 3/4" (19.1 mm)', weightKgPerM: 2.235, color: "#16a34a" },
+  { id: "25", diameterMm: 25.4, symbol: '1"', label: 'Ø 1" (25.4 mm)', weightKgPerM: 3.973, color: "#dc2626" },
 ];
 
 export function getRebar(id: string): RebarSize {

@@ -185,7 +185,7 @@ export function ColumnaIsometric({ input }: ColumnaIsometricProps) {
         tus valores de separación{input.incluirConfinamiento ? " y confinamiento" : ""}
       </p>
       <p className="text-center text-xs text-steel-500">
-        {rebarLabel || "sin barras"} · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).diameterMm}mm por columna
+        {rebarLabel || "sin barras"} · {estribosReales.length} estribos Ø{getRebar(input.diametroEstribosId).symbol} por columna
         {input.estribosSuplementarios.length > 0 ? " (no incluye ramas suplementarias, ver sección transversal)" : ""}
       </p>
     </div>

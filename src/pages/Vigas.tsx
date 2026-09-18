@@ -49,7 +49,7 @@ function minDiametroMm(grupos: BarraGrupo[]): number {
 function grupoLabel(grupos: BarraGrupo[]): string {
   return grupos
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 
@@ -174,7 +174,7 @@ export function VigasPage() {
         Sección: `${input.base} x ${input.altura} cm`,
         Longitud: `${input.longitud} m`,
         "Acero longitudinal": grupoLabel(input.barrasLongitudinales) || "-",
-        ...(input.incluirAceroPiel ? { "Acero de piel": `${input.pielNumeroBarras}Ø${getRebar(input.pielDiametroId).diameterMm}mm` } : {}),
+        ...(input.incluirAceroPiel ? { "Acero de piel": `${input.pielNumeroBarras}Ø${getRebar(input.pielDiametroId).symbol}` } : {}),
       },
     };
     addElement(el);

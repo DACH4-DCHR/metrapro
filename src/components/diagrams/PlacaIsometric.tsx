@@ -164,7 +164,7 @@ export function PlacaIsometric({ input }: PlacaIsometricProps) {
         Vista isométrica esquemática (no a escala real)
       </p>
       <p className="text-center text-xs text-steel-500">
-        Ø{rebarV.diameterMm}mm vert. + Ø{rebarH.diameterMm}mm horiz.
+        Ø{rebarV.symbol} vert. + Ø{rebarH.symbol} horiz.
         {input.incluirElementoBorde && ` · elementos de borde ${bordeBars.length}Ø c/extremo`}
       </p>
     </div>

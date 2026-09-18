@@ -491,7 +491,7 @@ function buildReportDoc(
         margin: { left: marginX, right: marginX },
         head: [["Diámetro", "Peso (kg/m)", "Peso total (kg)", "Varillas (9 m)"]],
         body: resumen.map((r) => [
-          `Ø${r.diametroMm}mm`,
+          `Ø ${r.symbol}`,
           r.weightKgPerM.toFixed(3),
           numberFormatter.format(r.pesoKg),
           String(r.numeroVarillas),

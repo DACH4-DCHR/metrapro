@@ -244,8 +244,8 @@ export function EscaleraIsometric({ input }: EscaleraIsometricProps) {
         {esMultiTramo && !tramo2 ? " (completa los datos del Tramo 2 y el descanso para verla entera)" : ""}
       </p>
       <p className="text-center text-xs text-steel-500">
-        Principal Ø{rebarPrincipal.diameterMm}mm @ {input.aceroPrincipalSeparacion}cm · distribución Ø{rebarDistribucion.diameterMm}mm @ {input.aceroDistribucionSeparacion}cm
-        {input.incluirAceroSuperior && ` · superior Ø${rebarSuperior.diameterMm}mm @ ${input.separacionSuperior}cm`}
+        Principal Ø{rebarPrincipal.symbol} @ {input.aceroPrincipalSeparacion}cm · distribución Ø{rebarDistribucion.symbol} @ {input.aceroDistribucionSeparacion}cm
+        {input.incluirAceroSuperior && ` · superior Ø${rebarSuperior.symbol} @ ${input.separacionSuperior}cm`}
       </p>
     </div>
   );

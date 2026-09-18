@@ -71,8 +71,8 @@ export function PlacaElevation({ input }: PlacaElevationProps) {
       </svg>
       <p className="mt-1 text-xs text-steel-500">
         Refuerzo distribuido {input.numeroCapas === 2 ? "(2 capas)" : "(1 capa)"} — Ø
-        {getRebar(input.diametroVerticalId).diameterMm}mm@{fmt(input.separacionVertical)}cm vert. · Ø
-        {getRebar(input.diametroHorizontalId).diameterMm}mm@{fmt(input.separacionHorizontal)}cm horiz.
+        {getRebar(input.diametroVerticalId).symbol}@{fmt(input.separacionVertical)}cm vert. · Ø
+        {getRebar(input.diametroHorizontalId).symbol}@{fmt(input.separacionHorizontal)}cm horiz.
         {input.incluirElementoBorde && " · zonas sombreadas: elementos de borde"}
       </p>
     </div>

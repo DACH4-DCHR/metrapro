@@ -171,9 +171,9 @@ export function ZapataIsometric({ input }: ZapataIsometricProps) {
       <RotationSlider value={azimuth} onChange={setAzimuth} />
       <p className="mt-1 text-center text-xs text-steel-500">Vista isométrica esquemática (no a escala real)</p>
       <p className="text-center text-xs text-steel-500">
-        Malla inferior Ø{getRebar(input.diametroInferiorXId).diameterMm}/Ø{getRebar(input.diametroInferiorYId).diameterMm}mm
+        Malla inferior Ø{getRebar(input.diametroInferiorXId).symbol}/Ø{getRebar(input.diametroInferiorYId).symbol}
         {input.incluirMallaSuperior &&
-          ` · malla superior Ø${getRebar(input.diametroSuperiorXId).diameterMm}/Ø${getRebar(input.diametroSuperiorYId).diameterMm}mm`}
+          ` · malla superior Ø${getRebar(input.diametroSuperiorXId).symbol}/Ø${getRebar(input.diametroSuperiorYId).symbol}`}
       </p>
     </div>
   );

@@ -27,7 +27,7 @@ function flattenBarras(input: VigaInput): number[] {
 function grupoLabel(input: VigaInput): string {
   return input.barrasLongitudinales
     .filter((g) => g.cantidad > 0)
-    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).diameterMm}mm`)
+    .map((g) => `${g.cantidad}Ø${getRebar(g.diametroId).symbol}`)
     .join(" + ");
 }
 
@@ -155,8 +155,8 @@ export function VigaCrossSection({ input }: VigaCrossSectionProps) {
       </svg>
       <p className="mt-1 text-xs text-steel-500">
         {grupoLabel(input) || "sin barras"} ({bottomBars.length} inf. / {topBars.length} sup., distribución
-        referencial) · estribo Ø{getRebar(input.diametroEstribosId).diameterMm}mm
-        {pielCount > 0 && ` · piel ${pielCount}Ø${pielDb}mm`}
+        referencial) · estribo Ø{getRebar(input.diametroEstribosId).symbol}
+        {pielCount > 0 && ` · piel ${pielCount}Ø${getRebar(input.pielDiametroId).symbol}`}
       </p>
     </div>
   );
