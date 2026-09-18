@@ -495,7 +495,7 @@ export function DashboardPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Metrados por módulo" icon={<BarChart3 size={16} className="text-navy-700" />}>
+            <SectionCard title="Metrados por módulo" icon={<BarChart3 size={16} className="text-navy-700" />} collapsible>
               <p className="mb-3 text-xs text-steel-500">
                 Concreto, acero y encofrado por módulo — cada magnitud en su propia escala, ya que no se pueden
                 comparar entre sí.
