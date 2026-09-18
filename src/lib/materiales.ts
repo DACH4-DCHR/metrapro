@@ -107,7 +107,7 @@ export function materialesALineas(materiales: MaterialesResumen): MetradoLine[] 
 // AceroResumenItem.numeroVarillas), no como otra fila valorizada, para no tener
 // que inventarle un precio "por varilla" distinto al precio por kg.
 export function aceroALineas(materiales: MaterialesResumen): MetradoLine[] {
-  return materiales.acero.map((r) => ({ partida: `Acero corrugado Ø${r.diametroMm}mm`, unidad: "kg", cantidad: r.pesoKg }));
+  return materiales.acero.map((r) => ({ partida: `Acero corrugado Ø ${r.symbol}`, unidad: "kg", cantidad: r.pesoKg }));
 }
 
 // Material agregado manualmente por el usuario (no derivado del metrado), para

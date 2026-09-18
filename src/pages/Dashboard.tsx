@@ -215,7 +215,7 @@ export function DashboardPage() {
 
   const materialesFootRowsExcel = useMemo(() => {
     const rows: (string | number)[][] = materiales.acero.map((r) => [
-      `Varillas Ø${r.diametroMm}mm x 9m (habilitación)`,
+      `Varillas Ø ${r.symbol} x 9m (habilitación)`,
       "und",
       r.numeroVarillas,
       "",
@@ -841,7 +841,7 @@ export function DashboardPage() {
                 onPdf={async () => {
                   const { downloadValorizadoPdf } = await import("../lib/reports/pdfReport");
                   const footRows: (string | number)[][] = materiales.acero.map((r) => [
-                    `Varillas Ø${r.diametroMm}mm x 9m (habilitación)`,
+                    `Varillas Ø ${r.symbol} x 9m (habilitación)`,
                     "und",
                     String(r.numeroVarillas),
                     "",
@@ -967,7 +967,7 @@ export function DashboardPage() {
                         const r = materiales.acero[idx];
                         return (
                           <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
-                            <td className="px-4 py-2 text-navy-900">Ø{r.diametroMm}mm</td>
+                            <td className="px-4 py-2 text-navy-900">Ø {r.symbol}</td>
                             <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
                             <td className="px-4 py-2 text-right font-mono">{r.numeroVarillas}</td>
                             <td className="px-4 py-2 text-right">
