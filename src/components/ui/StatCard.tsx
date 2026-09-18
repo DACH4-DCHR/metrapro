@@ -23,7 +23,7 @@ export function StatCard({ label, value, subLabel, subLabelColor, icon, accentCo
       </div>
       <div className="min-w-0">
         <p className="text-sm font-extrabold uppercase tracking-wide text-steel-300">{label}</p>
-        <p className="truncate text-lg font-extrabold text-white sm:text-2xl">{value}</p>
+        <p className="truncate text-2xl font-extrabold text-white">{value}</p>
         {subLabel && (
           <p className="mt-0.5 truncate text-xs font-bold" style={{ color: subLabelColor ?? accentColor }}>
             {subLabel}
