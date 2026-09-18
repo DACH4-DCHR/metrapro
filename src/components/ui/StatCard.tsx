@@ -3,41 +3,31 @@ import type { ReactNode } from "react";
 interface StatCardProps {
   label: string;
   value: string;
-  unit?: string;
   subLabel?: string;
+  subLabelColor?: string;
   icon: ReactNode;
-  accent?: "navy" | "steel" | "amber" | "dark";
+  accentColor: string;
 }
 
-const iconStyles: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  navy: "bg-navy-900 text-white",
-  steel: "bg-steel-700 text-white",
-  amber: "bg-amber-500 text-white",
-  dark: "bg-white/10 text-amber-400",
-};
-
-export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }: StatCardProps) {
-  const isDark = accent === "dark";
+export function StatCard({ label, value, subLabel, subLabelColor, icon, accentColor }: StatCardProps) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg border p-4 shadow-sm ${
-        isDark ? "border-navy-950 bg-navy-950" : "border-steel-200 bg-white"
-      }`}
+      className="flex items-center gap-3 rounded-lg border border-navy-800 bg-navy-950 py-4 pl-4 pr-5"
+      style={{ borderLeftWidth: 4, borderLeftColor: accentColor }}
     >
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg lg:h-14 lg:w-14 ${iconStyles[accent]}`}>
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white lg:h-14 lg:w-14"
+        style={{ backgroundColor: accentColor }}
+      >
         {icon}
       </div>
       <div className="min-w-0">
-        <p
-          className={`text-xs font-semibold uppercase tracking-wide ${isDark ? "text-steel-300" : "text-steel-500"}`}
-        >
-          {label}
-        </p>
-        <p className={`truncate text-base font-bold sm:text-xl sm:font-extrabold ${isDark ? "text-white" : "text-navy-900"}`}>
-          {value} {unit && <span className="text-sm font-medium text-steel-500">{unit}</span>}
-        </p>
+        <p className="text-sm font-extrabold uppercase tracking-wide text-steel-300">{label}</p>
+        <p className="truncate text-lg font-extrabold text-white sm:text-2xl">{value}</p>
         {subLabel && (
-          <p className={`text-xs font-medium ${isDark ? "text-steel-300" : "text-steel-500"}`}>{subLabel}</p>
+          <p className="mt-0.5 truncate text-xs font-bold" style={{ color: subLabelColor ?? accentColor }}>
+            {subLabel}
+          </p>
         )}
       </div>
     </div>

@@ -29,8 +29,7 @@ import {
   Plus,
   Send,
   BarChart3,
-  HardHat,
-  Package,
+  Users,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -426,23 +425,24 @@ export function DashboardPage() {
           <StatCard
             label="Mano de obra"
             value={currencyFormatter.format(manoObraMateriales.manoObra)}
-            subLabel={`${manoObraMateriales.pctManoObra.toFixed(1)}% del costo directo`}
-            icon={<HardHat size={26} />}
-            accent="navy"
+            subLabel={`${manoObraMateriales.pctManoObra.toFixed(1)}%`}
+            icon={<Users size={26} />}
+            accentColor="#2a78d6"
           />
           <StatCard
             label="Materiales"
             value={currencyFormatter.format(manoObraMateriales.materiales)}
-            subLabel={`${manoObraMateriales.pctMateriales.toFixed(1)}% del costo directo`}
-            icon={<Package size={26} />}
-            accent="steel"
+            subLabel={`${manoObraMateriales.pctMateriales.toFixed(1)}%`}
+            icon={<BrickWall size={26} />}
+            accentColor="#eb6834"
           />
           <StatCard
             label="Presupuesto general"
             value={currencyFormatter.format(presupuesto.costoDirecto)}
             subLabel="Mano de obra + materiales"
+            subLabelColor="#8695a3"
             icon={<Wallet size={26} />}
-            accent="dark"
+            accentColor="#d98c2b"
           />
         </div>
 
