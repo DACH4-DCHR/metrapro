@@ -24,7 +24,7 @@ export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }
         isDark ? "border-navy-950 bg-navy-950" : "border-steel-200 bg-white"
       }`}
     >
-      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg ${iconStyles[accent]}`}>
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg lg:h-14 lg:w-14 ${iconStyles[accent]}`}>
         {icon}
       </div>
       <div className="min-w-0">
@@ -33,7 +33,7 @@ export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }
         >
           {label}
         </p>
-        <p className={`truncate text-2xl font-extrabold ${isDark ? "text-white" : "text-navy-900"}`}>
+        <p className={`truncate text-lg font-extrabold sm:text-xl ${isDark ? "text-white" : "text-navy-900"}`}>
           {value} {unit && <span className="text-sm font-medium text-steel-500">{unit}</span>}
         </p>
         {subLabel && (
