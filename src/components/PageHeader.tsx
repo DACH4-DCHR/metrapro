@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Sparkles } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Sparkles, ChevronDown } from "lucide-react";
 import { HELP_CONTENT, type HelpKey } from "../lib/helpContent";
 import { useHelpStore } from "../store/helpStore";
 
@@ -14,6 +14,12 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHeaderProps) {
   const openHelp = useHelpStore((s) => s.open);
   const hasHelp = Boolean(helpKey && HELP_CONTENT[helpKey]);
+  const hasActionsRow = hasHelp || actions;
+  // Contraído por defecto expandido: en celular en horizontal, el título +
+  // botones de esta barra (que es "sticky", siempre visible) llegan a tapar
+  // casi media pantalla. En escritorio no cambia nada (el botón solo existe
+  // en mobile, sm:hidden) porque ahí sí sobra espacio vertical.
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="no-print sticky top-0 z-10 flex flex-col gap-2 bg-navy-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
@@ -25,9 +31,18 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
           <h1 className="truncate text-sm font-bold text-white sm:text-lg">{title}</h1>
           {subtitle && <p className="hidden text-sm text-steel-400 sm:block">{subtitle}</p>}
         </div>
+        {hasActionsRow && (
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? "Contraer encabezado" : "Expandir encabezado"}
+            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-steel-400 hover:bg-white/10 hover:text-white sm:hidden"
+          >
+            <ChevronDown size={18} className={`transition-transform ${expanded ? "" : "rotate-180"}`} />
+          </button>
+        )}
       </div>
-      {(hasHelp || actions) && (
-        <div className="flex flex-wrap items-center gap-2">
+      {hasActionsRow && (
+        <div className={`flex-wrap items-center gap-2 ${expanded ? "flex" : "hidden"} sm:flex`}>
           {hasHelp && (
             <button
               onClick={() => openHelp(helpKey!)}
