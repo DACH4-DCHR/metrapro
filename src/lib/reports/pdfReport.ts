@@ -17,7 +17,7 @@ import {
 } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
-import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales } from "../dashboardCharts";
 
 interface ProjectInfoLike {
   nombreObra: string;
@@ -109,6 +109,46 @@ function drawBarChart(
     cursorY += barHeight + rowGap;
   }
   return cursorY;
+}
+
+// Tarjetas Mano de Obra / Materiales / Presupuesto General del Dashboard —
+// mismos 3 datos, en el mismo orden, para que el PDF no se quede corto
+// respecto a lo que se ve en pantalla.
+function drawStatCards(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  cards: { label: string; value: string; subLabel: string; color: [number, number, number] }[]
+): number {
+  const gap = 4;
+  const cardHeight = 20;
+  const cardWidth = (width - gap * (cards.length - 1)) / cards.length;
+
+  cards.forEach((card, i) => {
+    const cx = x + i * (cardWidth + gap);
+    doc.setFillColor(...card.color);
+    doc.rect(cx, y, 1.5, cardHeight, "F");
+    doc.setFillColor(248, 250, 252);
+    doc.rect(cx + 1.5, y, cardWidth - 1.5, cardHeight, "F");
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...STEEL);
+    doc.text(truncateToWidth(doc, card.label.toUpperCase(), cardWidth - 6), cx + 4, y + 6);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...NAVY);
+    doc.text(truncateToWidth(doc, card.value, cardWidth - 6), cx + 4, y + 13);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...card.color);
+    doc.text(truncateToWidth(doc, card.subLabel, cardWidth - 6), cx + 4, y + 18);
+  });
+
+  return y + cardHeight + 6;
 }
 
 // PDF de una sola tabla simple (partida/unidad/cantidad, sin precios) — lo usa
@@ -312,6 +352,30 @@ function buildReportDoc(
   const costosCategoria = costosPorCategoria(presupuesto.rows);
   const cantidadesModulo = cantidadesPorModulo(elements);
   const chartWidth = pageWidth - marginX * 2;
+
+  if (presupuesto.costoDirecto > 0) {
+    const manoObraMateriales = manoObraVsMateriales(presupuesto.rows);
+    cursorY = drawStatCards(doc, marginX, cursorY, chartWidth, [
+      {
+        label: "Mano de obra",
+        value: currencyFormatter.format(manoObraMateriales.manoObra),
+        subLabel: `${manoObraMateriales.pctManoObra.toFixed(1)}%`,
+        color: [42, 120, 214],
+      },
+      {
+        label: "Materiales",
+        value: currencyFormatter.format(manoObraMateriales.materiales),
+        subLabel: `${manoObraMateriales.pctMateriales.toFixed(1)}%`,
+        color: [235, 104, 52],
+      },
+      {
+        label: "Presupuesto general",
+        value: currencyFormatter.format(presupuesto.costoDirecto),
+        subLabel: "Mano de obra + materiales",
+        color: [217, 140, 43],
+      },
+    ]);
+  }
 
   if (costosCategoria.length > 0) {
     doc.setFontSize(12);
