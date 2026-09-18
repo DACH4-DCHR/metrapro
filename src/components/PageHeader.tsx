@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Sparkles, ChevronDown } from "lucide-react";
 import { HELP_CONTENT, type HelpKey } from "../lib/helpContent";
 import { useHelpStore } from "../store/helpStore";
@@ -21,9 +21,26 @@ export function PageHeader({ title, subtitle, icon, actions, helpKey }: PageHead
   // esta barra "sticky" realmente estorba. En cualquier otro caso arranca
   // expandida, como siempre.
   const [expanded, setExpanded] = useState(!compact);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  // Publica la altura REAL de este header como variable CSS — StickyViewsRow
+  // (la franja de vistas 2D/3D que queda pegada debajo) la usa para su propio
+  // offset "top". Antes ese offset era un número fijo que asumía el header
+  // siempre mide lo mismo; al hacerse contraíble, dejaba un hueco (o una
+  // superposición) cada vez que el alto real cambiaba.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const setVar = () => document.documentElement.style.setProperty("--page-header-height", `${el.offsetHeight}px`);
+    setVar();
+    const observer = new ResizeObserver(setVar);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [expanded, compact]);
 
   return (
     <div
+      ref={headerRef}
       className={`no-print sticky top-0 z-10 flex flex-col gap-2 bg-navy-950 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 ${
         compact ? "py-2" : "py-3 sm:py-5"
       }`}
