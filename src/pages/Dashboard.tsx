@@ -447,7 +447,7 @@ export function DashboardPage() {
         </div>
 
         {(costosCategoria.length > 0 || cantidadesModulo.length > 0) && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             <SectionCard title="Costo directo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
               <p className="mb-3 text-xs text-steel-500">
                 Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) entre concreto,
