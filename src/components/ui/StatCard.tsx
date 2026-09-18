@@ -20,7 +20,7 @@ export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }
   const isDark = accent === "dark";
   return (
     <div
-      className={`flex items-center gap-4 rounded-lg border p-4 shadow-sm ${
+      className={`flex items-center gap-3 rounded-lg border p-4 shadow-sm ${
         isDark ? "border-navy-950 bg-navy-950" : "border-steel-200 bg-white"
       }`}
     >
@@ -33,7 +33,7 @@ export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }
         >
           {label}
         </p>
-        <p className={`truncate text-base font-extrabold sm:text-xl ${isDark ? "text-white" : "text-navy-900"}`}>
+        <p className={`truncate text-base font-bold sm:text-xl sm:font-extrabold ${isDark ? "text-white" : "text-navy-900"}`}>
           {value} {unit && <span className="text-sm font-medium text-steel-500">{unit}</span>}
         </p>
         {subLabel && (
