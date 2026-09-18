@@ -33,7 +33,7 @@ export function StatCard({ label, value, unit, subLabel, icon, accent = "navy" }
         >
           {label}
         </p>
-        <p className={`truncate text-lg font-extrabold sm:text-xl ${isDark ? "text-white" : "text-navy-900"}`}>
+        <p className={`truncate text-base font-extrabold sm:text-xl ${isDark ? "text-white" : "text-navy-900"}`}>
           {value} {unit && <span className="text-sm font-medium text-steel-500">{unit}</span>}
         </p>
         {subLabel && (
