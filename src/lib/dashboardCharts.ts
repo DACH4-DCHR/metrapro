@@ -49,6 +49,55 @@ export interface CostoCategoriaItem {
   color: string;
 }
 
+// Mismo criterio que Movilización: color propio, no parte del ramp de las 5
+// secciones — se exporta para que Dashboard.tsx arme la barra de
+// "Movilización de Equipo" con el mismo color que usa el resto de la app.
+export const MOVILIZACION_COLOR = CATEGORIA_COLOR["Movilización"];
+export const OTROS_COLOR = CATEGORIA_COLOR["Otros"];
+
+// Agrupa cada ModuleType estructural en la misma sección que ya se ve en el
+// menú (navGroups de Layout.tsx) — Movimiento de Tierras, Cimentación,
+// Elementos Verticales, Superestructura, Tabiquería — para desglosar
+// "Metrados Estructurales" en el gráfico de costos por esas 5 secciones
+// reales en vez de por tipo de material (concreto/acero/encofrado), que
+// mezclaba elementos muy distintos en una sola barra sin decir a qué parte
+// de la obra pertenecen.
+export const ESTRUCTURAL_SECCION_POR_MODULO: Partial<Record<ModuleType, string>> = {
+  movimientoTierras: "Movimiento de Tierras",
+  zapata: "Cimentación",
+  cimientoCorrido: "Cimentación",
+  sobrecimiento: "Cimentación",
+  vigaCimentacion: "Cimentación",
+  columna: "Elementos Verticales",
+  placa: "Elementos Verticales",
+  muroAlbanileria: "Elementos Verticales",
+  viga: "Superestructura",
+  losa: "Superestructura",
+  losaMaciza: "Superestructura",
+  escalera: "Superestructura",
+  muroArquitectura: "Tabiquería",
+};
+
+export const ESTRUCTURAL_SECCIONES_ORDEN = [
+  "Movimiento de Tierras",
+  "Cimentación",
+  "Elementos Verticales",
+  "Superestructura",
+  "Tabiquería",
+] as const;
+
+// Ramp secuencial (un solo matiz azul, oscuro→claro) para las 5 secciones,
+// mismo criterio que ACABADOS_MODULO_COLOR — son sub-partes de una misma
+// familia ("Metrados Estructurales"), no identidades tan distintas entre sí
+// como para merecer 5 matices categóricos nuevos.
+export const ESTRUCTURAL_SECCION_COLOR: Record<(typeof ESTRUCTURAL_SECCIONES_ORDEN)[number], string> = {
+  "Movimiento de Tierras": "#2a78d6",
+  Cimentación: "#4f91e0",
+  "Elementos Verticales": "#74aae9",
+  Superestructura: "#9ac3f0",
+  Tabiquería: "#c0dbf7",
+};
+
 // Ramp secuencial (un solo matiz violeta, claro→oscuro) para desglosar
 // "Acabados y Adicionales" en sus módulos reales dentro del gráfico de costos
 // del Dashboard — a diferencia de las categorías estructurales (identidades

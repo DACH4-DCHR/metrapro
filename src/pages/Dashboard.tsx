@@ -41,7 +41,16 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { HorizontalBarChart } from "../components/charts/HorizontalBarChart";
-import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales, ACABADOS_MODULO_COLOR } from "../lib/dashboardCharts";
+import {
+  costosPorCategoria,
+  cantidadesPorModulo,
+  manoObraVsMateriales,
+  ACABADOS_MODULO_COLOR,
+  ESTRUCTURAL_SECCION_POR_MODULO,
+  ESTRUCTURAL_SECCIONES_ORDEN,
+  ESTRUCTURAL_SECCION_COLOR,
+  MOVILIZACION_COLOR,
+} from "../lib/dashboardCharts";
 import { useProjectStore } from "../store/projectStore";
 import {
   calcularPresupuesto,
@@ -283,19 +292,50 @@ export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
   const otrosCategoriaItem = useMemo(() => costosCategoria.find((c) => c.categoria === "Otros"), [costosCategoria]);
   const otrosAcabadosMonto = presupuestoCustomValorizadoAcabados.total;
   const otrosEstructuralMonto = Math.max((otrosCategoriaItem?.monto ?? 0) - otrosAcabadosMonto, 0);
+  // A diferencia de la versión anterior (categorías por tipo de trabajo:
+  // concreto, acero, encofrado...), acá se desglosa por SECCIÓN REAL del menú
+  // (Movimiento de Tierras, Cimentación, Elementos Verticales,
+  // Superestructura, Tabiquería) — el mismo subtotal exacto que ya se ve en
+  // el Presupuesto Referencial (presupuestoPorModulo), agrupado por
+  // ESTRUCTURAL_SECCION_POR_MODULO. Movilización va siempre primero y Otros
+  // siempre al final, igual que en el Presupuesto Referencial.
   const costosEstructurales = useMemo(() => {
-    const base = costosCategoria.filter((c) => c.categoria !== "Acabados" && c.categoria !== "Otros");
-    if (otrosEstructuralMonto <= 0) return base;
-    return [
-      ...base,
-      {
-        categoria: "Otros" as const,
+    const totalesPorSeccion = new Map<string, number>();
+    for (const g of presupuestoPorModulo) {
+      const seccion = ESTRUCTURAL_SECCION_POR_MODULO[g.module];
+      if (!seccion) continue;
+      totalesPorSeccion.set(seccion, (totalesPorSeccion.get(seccion) ?? 0) + g.subtotal);
+    }
+    const secciones = ESTRUCTURAL_SECCIONES_ORDEN.map((seccion) => {
+      const monto = totalesPorSeccion.get(seccion) ?? 0;
+      return {
+        categoria: seccion as string,
+        monto,
+        pct: presupuesto.costoDirecto > 0 ? (monto / presupuesto.costoDirecto) * 100 : 0,
+        color: ESTRUCTURAL_SECCION_COLOR[seccion],
+      };
+    }).filter((c) => c.monto > 0);
+
+    const movilizacionMonto = movilizacionValorizado.total;
+    const items = [...secciones];
+    if (movilizacionMonto > 0) {
+      items.unshift({
+        categoria: MOVILIZACION_LABEL,
+        monto: movilizacionMonto,
+        pct: presupuesto.costoDirecto > 0 ? (movilizacionMonto / presupuesto.costoDirecto) * 100 : 0,
+        color: MOVILIZACION_COLOR,
+      });
+    }
+    if (otrosEstructuralMonto > 0) {
+      items.push({
+        categoria: PRESUPUESTO_CUSTOM_LABEL,
         monto: otrosEstructuralMonto,
         pct: presupuesto.costoDirecto > 0 ? (otrosEstructuralMonto / presupuesto.costoDirecto) * 100 : 0,
         color: otrosCategoriaItem?.color ?? "#008300",
-      },
-    ];
-  }, [costosCategoria, otrosEstructuralMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
+      });
+    }
+    return items;
+  }, [presupuestoPorModulo, presupuesto.costoDirecto, movilizacionValorizado, otrosEstructuralMonto, otrosCategoriaItem]);
   // A diferencia de Metrados Estructurales (categorías por tipo de trabajo:
   // concreto, acero...), acá se desglosa por MÓDULO REAL de Acabados y
   // Adicionales (Tarrajeo de Interiores, Exteriores, Escalera, Pisos y
@@ -686,9 +726,8 @@ export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             <SectionCard title="Costo directo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
               <p className="mb-3 text-xs text-steel-500">
-                Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV): en Metrados
-                Estructurales, por tipo de trabajo (concreto, acero, encofrado, movimiento de tierras, movilización);
-                en Acabados y Adicionales, por módulo (tarrajeos, pisos, pintura).
+                Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) por sección real de
+                obra, igual que en el menú y el Presupuesto Referencial.
               </p>
               {costosEstructurales.length > 0 && (
                 <div className={costosAcabadosCategoria.length > 0 ? "mb-5" : ""}>
