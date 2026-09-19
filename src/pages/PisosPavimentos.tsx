@@ -43,7 +43,7 @@ export function PisosPavimentosPage() {
 
   const lines: MetradoLine[] = [];
   if (input.incluirContrapiso) {
-    lines.push({ partida: "Contrapiso de mortero e=4cm", unidad: "m²", cantidad: result.areaPiso });
+    lines.push({ partida: "Contrapiso de mortero, mezcla C:A 1:5, e=4cm", unidad: "m²", cantidad: result.areaPiso });
   }
   lines.push({ partida: TIPO_PISO_LABEL[input.tipoPiso], unidad: "m²", cantidad: result.areaPiso });
 

@@ -77,7 +77,11 @@ export function AcabadosPage() {
     });
   }
   if (input.incluirTarrajeoCielorraso) {
-    lines.push({ partida: "Tarrajeo de cielorraso, mezcla C:A 1:5", unidad: "m²", cantidad: result.areaCielorraso });
+    lines.push({
+      partida: "Tarrajeo de cielorraso, mezcla C:A 1:5, e=1.5cm",
+      unidad: "m²",
+      cantidad: result.areaCielorraso,
+    });
   }
   if (incluirColumnas) {
     lines.push({ partida: "Tarrajeo de columnas, mezcla C:A 1:5, e=1.5cm", unidad: "m²", cantidad: areaColumnas });
