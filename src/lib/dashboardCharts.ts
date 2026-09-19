@@ -49,6 +49,24 @@ export interface CostoCategoriaItem {
   color: string;
 }
 
+// Ramp secuencial (un solo matiz violeta, claro→oscuro) para desglosar
+// "Acabados y Adicionales" en sus módulos reales dentro del gráfico de costos
+// del Dashboard — a diferencia de las categorías estructurales (identidades
+// distintas entre sí: concreto, acero, encofrado...), estos 5 son subtipos de
+// una misma familia, así que un ramp secuencial sobre el mismo matiz de
+// "Acabados" comunica mejor esa relación que inventarles colores categóricos
+// nuevos (que ya no caben en la paleta fija de 8 matices del proyecto).
+export const ACABADOS_MODULO_COLOR: Record<
+  "tarrajeoInteriores" | "tarrajeoExteriores" | "tarrajeoEscalera" | "pisosPavimentos" | "pintura",
+  string
+> = {
+  tarrajeoInteriores: "#4a3aa7",
+  tarrajeoExteriores: "#6c5cc4",
+  tarrajeoEscalera: "#8f7ad9",
+  pisosPavimentos: "#b3a3e8",
+  pintura: "#d6cef2",
+};
+
 // Costo directo del presupuesto (sin GG/Utilidad/IGV, que son porcentajes
 // sobre el total y no se pueden repartir por categoría) agrupado en 6
 // categorías fijas, para el gráfico "Costo directo por categoría".

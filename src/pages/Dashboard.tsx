@@ -41,7 +41,7 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { HorizontalBarChart } from "../components/charts/HorizontalBarChart";
-import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales } from "../lib/dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales, ACABADOS_MODULO_COLOR } from "../lib/dashboardCharts";
 import { useProjectStore } from "../store/projectStore";
 import {
   calcularPresupuesto,
@@ -296,19 +296,32 @@ export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
       },
     ];
   }, [costosCategoria, otrosEstructuralMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
+  // A diferencia de Metrados Estructurales (categorías por tipo de trabajo:
+  // concreto, acero...), acá se desglosa por MÓDULO REAL de Acabados y
+  // Adicionales (Tarrajeo de Interiores, Exteriores, Escalera, Pisos y
+  // Pavimentos, Pintura) — el mismo subtotal exacto que ya se ve en el
+  // Presupuesto Referencial (presupuestoPorModulo), no una categorización por
+  // texto de partida.
   const costosAcabadosCategoria = useMemo(() => {
-    const base = costosCategoria.filter((c) => c.categoria === "Acabados");
-    if (otrosAcabadosMonto <= 0) return base;
+    const modulos = presupuestoPorModulo
+      .filter((g) => MODULE_GROUP[g.module] === "acabados" && g.subtotal > 0)
+      .map((g) => ({
+        categoria: g.label,
+        monto: g.subtotal,
+        pct: presupuesto.costoDirecto > 0 ? (g.subtotal / presupuesto.costoDirecto) * 100 : 0,
+        color: ACABADOS_MODULO_COLOR[g.module as keyof typeof ACABADOS_MODULO_COLOR] ?? "#4a3aa7",
+      }));
+    if (otrosAcabadosMonto <= 0) return modulos;
     return [
-      ...base,
+      ...modulos,
       {
-        categoria: "Otros" as const,
+        categoria: PRESUPUESTO_CUSTOM_LABEL,
         monto: otrosAcabadosMonto,
         pct: presupuesto.costoDirecto > 0 ? (otrosAcabadosMonto / presupuesto.costoDirecto) * 100 : 0,
         color: otrosCategoriaItem?.color ?? "#008300",
       },
     ];
-  }, [costosCategoria, otrosAcabadosMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
+  }, [presupuestoPorModulo, otrosAcabadosMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
   const subtotalCostosEstructurales = useMemo(
     () => costosEstructurales.reduce((acc, c) => acc + c.monto, 0),
     [costosEstructurales]
@@ -673,8 +686,9 @@ export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             <SectionCard title="Costo directo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
               <p className="mb-3 text-xs text-steel-500">
-                Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) entre concreto,
-                acero, encofrado, movimiento de tierras, movilización y el resto de partidas.
+                Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV): en Metrados
+                Estructurales, por tipo de trabajo (concreto, acero, encofrado, movimiento de tierras, movilización);
+                en Acabados y Adicionales, por módulo (tarrajeos, pisos, pintura).
               </p>
               {costosEstructurales.length > 0 && (
                 <div className={costosAcabadosCategoria.length > 0 ? "mb-5" : ""}>
