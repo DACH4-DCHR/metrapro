@@ -12,7 +12,11 @@ export type ModuleType =
   | "muroAlbanileria"
   | "losaMaciza"
   | "muroArquitectura"
-  | "acabados";
+  | "tarrajeoInteriores"
+  | "tarrajeoExteriores"
+  | "tarrajeoEscalera"
+  | "pisosPavimentos"
+  | "pintura";
 
 export interface MetradoLine {
   partida: string;

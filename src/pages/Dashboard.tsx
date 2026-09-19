@@ -31,6 +31,10 @@ import {
   BarChart3,
   Users,
   PaintRoller,
+  Paintbrush,
+  PaintBucket,
+  Grid3x3,
+  Home,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -97,7 +101,11 @@ const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = 
   muroAlbanileria: { label: MODULE_LABELS.muroAlbanileria, icon: BrickWall },
   losaMaciza: { label: MODULE_LABELS.losaMaciza, icon: LayoutPanelTop },
   muroArquitectura: { label: MODULE_LABELS.muroArquitectura, icon: Grid2x2 },
-  acabados: { label: MODULE_LABELS.acabados, icon: PaintRoller },
+  tarrajeoInteriores: { label: MODULE_LABELS.tarrajeoInteriores, icon: PaintRoller },
+  tarrajeoExteriores: { label: MODULE_LABELS.tarrajeoExteriores, icon: Home },
+  tarrajeoEscalera: { label: MODULE_LABELS.tarrajeoEscalera, icon: Paintbrush },
+  pisosPavimentos: { label: MODULE_LABELS.pisosPavimentos, icon: Grid3x3 },
+  pintura: { label: MODULE_LABELS.pintura, icon: PaintBucket },
 };
 
 const MAX_LOGO_BYTES = 1_000_000;

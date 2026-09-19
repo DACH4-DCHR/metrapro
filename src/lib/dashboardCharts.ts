@@ -38,7 +38,7 @@ function categorizarPartida(partida: string): CategoriaCosto {
   if (/encofrado/i.test(partida)) return "Encofrado";
   if (partida === MOVILIZACION_PARTIDA) return "Movilización";
   if (esPartidaMovimientoTierras(partida)) return "Movimiento de Tierras";
-  if (/tarrajeo|pintura/i.test(partida)) return "Acabados";
+  if (/tarrajeo|pintura|piso|contrapiso|vestidura|garganta/i.test(partida)) return "Acabados";
   return "Otros";
 }
 

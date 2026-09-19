@@ -17,6 +17,10 @@ import { MurosAlbanileriaPage } from "./pages/MurosAlbanileria";
 import { LosaMacizaPage } from "./pages/LosaMaciza";
 import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
 import { AcabadosPage } from "./pages/Acabados";
+import { TarrajeoExterioresPage } from "./pages/TarrajeoExteriores";
+import { TarrajeoEscaleraPage } from "./pages/TarrajeoEscalera";
+import { PisosPavimentosPage } from "./pages/PisosPavimentos";
+import { PinturaPage } from "./pages/Pintura";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { TermsPage, PrivacyPage } from "./pages/Legal";
@@ -82,6 +86,10 @@ function ProjectGate() {
           <Route path="/losa-maciza" element={<LosaMacizaPage />} />
           <Route path="/muros-arquitectura" element={<MurosArquitecturaPage />} />
           <Route path="/acabados" element={<AcabadosPage />} />
+          <Route path="/tarrajeo-exteriores" element={<TarrajeoExterioresPage />} />
+          <Route path="/tarrajeo-escalera" element={<TarrajeoEscaleraPage />} />
+          <Route path="/pisos-pavimentos" element={<PisosPavimentosPage />} />
+          <Route path="/pintura" element={<PinturaPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

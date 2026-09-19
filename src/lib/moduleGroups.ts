@@ -24,5 +24,9 @@ export const MODULE_GROUP: Record<ModuleType, ModuleFamily> = {
   losaMaciza: "estructural",
   escalera: "estructural",
   muroArquitectura: "estructural",
-  acabados: "acabados",
+  tarrajeoInteriores: "acabados",
+  tarrajeoExteriores: "acabados",
+  tarrajeoEscalera: "acabados",
+  pisosPavimentos: "acabados",
+  pintura: "acabados",
 };

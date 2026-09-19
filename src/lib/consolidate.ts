@@ -22,7 +22,11 @@ export const MODULE_ORDER: ModuleType[] = [
   "losaMaciza",
   "escalera",
   "muroArquitectura",
-  "acabados",
+  "tarrajeoInteriores",
+  "tarrajeoExteriores",
+  "tarrajeoEscalera",
+  "pisosPavimentos",
+  "pintura",
 ];
 
 // Suma cantidades de partidas repetidas (mismo texto + unidad) dentro de una

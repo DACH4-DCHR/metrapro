@@ -26,6 +26,10 @@ import {
   Send,
   Phone,
   PaintRoller,
+  Home,
+  Paintbrush,
+  Grid3x3,
+  PaintBucket,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -82,14 +86,20 @@ const navGroups: {
     ],
   },
   {
-    section: "Arquitectura",
+    section: "Tabiquería",
     items: [{ to: "/muros-arquitectura", label: "Muros de Arquitectura", icon: Grid2x2 }],
   },
   {
-    section: "Acabados",
+    section: "Arquitectura",
     macroTitle: "Acabados y Adicionales",
     macroTo: "/dashboard-acabados",
-    items: [{ to: "/acabados", label: "Tarrajeo y Pintura", icon: PaintRoller }],
+    items: [
+      { to: "/acabados", label: "Tarrajeo de Interiores", icon: PaintRoller },
+      { to: "/tarrajeo-exteriores", label: "Tarrajeo de Exteriores", icon: Home },
+      { to: "/tarrajeo-escalera", label: "Tarrajeo de Escalera", icon: Paintbrush },
+      { to: "/pisos-pavimentos", label: "Pisos y Pavimentos", icon: Grid3x3 },
+      { to: "/pintura", label: "Pintura", icon: PaintBucket },
+    ],
   },
 ];
 

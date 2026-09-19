@@ -14,5 +14,9 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   muroAlbanileria: "Muro de Albañilería",
   losaMaciza: "Losa Maciza",
   muroArquitectura: "Muro de Arquitectura",
-  acabados: "Acabados (Tarrajeo y Pintura)",
+  tarrajeoInteriores: "Tarrajeo de Interiores",
+  tarrajeoExteriores: "Tarrajeo de Exteriores",
+  tarrajeoEscalera: "Tarrajeo de Escalera",
+  pisosPavimentos: "Pisos y Pavimentos",
+  pintura: "Pintura",
 };

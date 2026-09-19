@@ -1,25 +1,22 @@
 import { useMemo, useState } from "react";
-import { PaintRoller, Save, Tag, Ruler, Eye, Layers3, Calculator, ClipboardList, ListChecks } from "lucide-react";
+import { PaintBucket, Save, Tag, Ruler, Calculator, ClipboardList, ListChecks } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { NumberField } from "../components/ui/NumberField";
 import { ResultTable } from "../components/ui/ResultTable";
 import { ResultMetric } from "../components/ui/ResultMetric";
 import { WarningsBox } from "../components/ui/WarningsBox";
-import { StickyViewsRow } from "../components/ui/StickyViewsRow";
 import { ModuleElementsList } from "../components/ModuleElementsList";
-import { AcabadosPlanView } from "../components/diagrams/AcabadosPlanView";
-import { AcabadosMurosElevation } from "../components/diagrams/AcabadosMurosElevation";
 import { calcularAcabados, type AcabadosInput } from "../lib/calc/acabados";
 import { useProjectStore } from "../store/projectStore";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
 function nextName() {
-  const count = useProjectStore.getState().elements.filter((e) => e.module === "tarrajeoInteriores").length;
+  const count = useProjectStore.getState().elements.filter((e) => e.module === "pintura").length;
   return `Ambiente ${count + 1}`;
 }
 
-export function AcabadosPage() {
+export function PinturaPage() {
   const addElement = useProjectStore((s) => s.addElement);
   const [saved, setSaved] = useState(false);
   const [nombre, setNombre] = useState(nextName);
@@ -37,14 +34,10 @@ export function AcabadosPage() {
 
   const lines: MetradoLine[] = [];
   if (input.incluirTarrajeoMuros) {
-    lines.push({
-      partida: "Tarrajeo de muros interiores, mezcla C:A 1:5, e=1.5cm",
-      unidad: "m²",
-      cantidad: result.areaMurosNeta,
-    });
+    lines.push({ partida: "Pintura látex 2 manos en muros", unidad: "m²", cantidad: result.areaMurosNeta });
   }
   if (input.incluirTarrajeoCielorraso) {
-    lines.push({ partida: "Tarrajeo de cielorraso, mezcla C:A 1:5", unidad: "m²", cantidad: result.areaCielorraso });
+    lines.push({ partida: "Pintura látex 2 manos en cielorraso", unidad: "m²", cantidad: result.areaCielorraso });
   }
 
   function update<K extends keyof AcabadosInput>(key: K, value: AcabadosInput[K]) {
@@ -55,7 +48,7 @@ export function AcabadosPage() {
   function handleSave() {
     const el: CalculatedElement = {
       id: crypto.randomUUID(),
-      module: "tarrajeoInteriores",
+      module: "pintura",
       name: nombre || "Ambiente",
       createdAt: Date.now(),
       concreteM3: 0,
@@ -66,7 +59,7 @@ export function AcabadosPage() {
         Dimensiones: `${input.largo} x ${input.ancho} x ${input.altura} m`,
         "Área de vanos": `${input.areaVanos} m²`,
         Partidas:
-          [input.incluirTarrajeoMuros && "tarrajeo de muros", input.incluirTarrajeoCielorraso && "tarrajeo de cielorraso"]
+          [input.incluirTarrajeoMuros && "pintura de muros", input.incluirTarrajeoCielorraso && "pintura de cielorraso"]
             .filter(Boolean)
             .join(", ") || "ninguna seleccionada",
       },
@@ -79,10 +72,10 @@ export function AcabadosPage() {
   return (
     <div>
       <PageHeader
-        title="Tarrajeo de Interiores"
-        subtitle="Tarrajeo de muros y cielorraso, por ambiente (cuarto, baño, sala, etc.)"
-        icon={<PaintRoller size={20} />}
-        helpKey="tarrajeoInteriores"
+        title="Pintura"
+        subtitle="Pintura de muros y cielorraso, por ambiente (cuarto, baño, sala, etc.)"
+        icon={<PaintBucket size={20} />}
+        helpKey="pintura"
         actions={
           <button
             onClick={handleSave}
@@ -95,16 +88,6 @@ export function AcabadosPage() {
       />
 
       <div className="p-6">
-        <StickyViewsRow>
-          <SectionCard title="Vista en planta (vista en vivo)" icon={<Eye size={16} className="text-navy-700" />} collapsible>
-            <AcabadosPlanView input={input} />
-          </SectionCard>
-
-          <SectionCard title="Desarrollo de muros" icon={<Layers3 size={16} className="text-navy-700" />} collapsible>
-            <AcabadosMurosElevation input={input} />
-          </SectionCard>
-        </StickyViewsRow>
-
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
           <div className="flex flex-col gap-6">
             <SectionCard title="Identificación" icon={<Tag size={16} className="text-navy-700" />}>
@@ -132,15 +115,15 @@ export function AcabadosPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Partidas a incluir" icon={<PaintRoller size={16} className="text-navy-700" />}>
+            <SectionCard title="Partidas a incluir" icon={<PaintBucket size={16} className="text-navy-700" />}>
               <div className="flex flex-col gap-3">
                 <CheckboxField
-                  label="Tarrajeo de muros interiores"
+                  label="Pintura de muros"
                   checked={input.incluirTarrajeoMuros}
                   onChange={(v) => update("incluirTarrajeoMuros", v)}
                 />
                 <CheckboxField
-                  label="Tarrajeo de cielorraso"
+                  label="Pintura de cielorraso"
                   checked={input.incluirTarrajeoCielorraso}
                   onChange={(v) => update("incluirTarrajeoCielorraso", v)}
                 />
@@ -153,8 +136,6 @@ export function AcabadosPage() {
 
             <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-                <ResultMetric label="Perímetro" value={result.perimetro} unit="m" />
-                <ResultMetric label="Área de muros (bruta)" value={result.areaMurosBruta} unit="m²" />
                 <ResultMetric label="Área de muros (neta)" value={result.areaMurosNeta} unit="m²" accent="navy" />
                 <ResultMetric label="Área de cielorraso" value={result.areaCielorraso} unit="m²" accent="amber" />
               </div>
@@ -166,7 +147,7 @@ export function AcabadosPage() {
 
             <SectionCard title="Ambientes registrados en este proyecto" icon={<ListChecks size={16} className="text-navy-700" />}>
               <ModuleElementsList
-                module="tarrajeoInteriores"
+                module="pintura"
                 emptyLabel="Aún no has agregado ningún ambiente. Calcula arriba y presiona 'Agregar a la lista'."
               />
             </SectionCard>

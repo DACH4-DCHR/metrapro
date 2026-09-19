@@ -1,7 +1,8 @@
-// Tarrajeo y pintura por ambiente: a diferencia de los módulos estructurales,
-// acá no hay acero ni concreto que calcular — solo áreas (muros y cielorraso)
-// derivadas de las dimensiones del ambiente, que es como se metra en la
-// práctica (Reglamento Nacional de Edificaciones, partidas de acabados).
+// Tarrajeo de interiores por ambiente: a diferencia de los módulos
+// estructurales, acá no hay acero ni concreto que calcular — solo áreas
+// (muros y cielorraso) derivadas de las dimensiones del ambiente, que es como
+// se metra en la práctica (Reglamento Nacional de Edificaciones, partidas de
+// acabados).
 export interface AcabadosInput {
   largo: number; // m
   ancho: number; // m
@@ -9,8 +10,6 @@ export interface AcabadosInput {
   areaVanos: number; // m², puertas y ventanas a descontar del área bruta de muros
   incluirTarrajeoMuros: boolean;
   incluirTarrajeoCielorraso: boolean;
-  incluirPinturaMuros: boolean;
-  incluirPinturaCielorraso: boolean;
 }
 
 export interface AcabadosResult {

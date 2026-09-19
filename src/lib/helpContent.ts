@@ -434,19 +434,19 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
     ],
   },
 
-  acabados: {
-    title: "Acabados: Tarrajeo y Pintura",
+  tarrajeoInteriores: {
+    title: "Tarrajeo de Interiores",
     summary:
-      "Metra el tarrajeo y la pintura de un ambiente (cuarto, baño, sala, etc.) a partir de sus dimensiones: el área de muros y de cielorraso se calculan solas.",
+      "Metra el tarrajeo de muros y cielorraso de un ambiente interior (cuarto, baño, sala, etc.) a partir de sus dimensiones: el área se calcula sola.",
     sections: [
       {
         heading: "Dimensiones del ambiente",
         items: [
-          { label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de piso/cielorraso." },
+          { label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de cielorraso." },
           { label: "Altura", text: "Del piso terminado al cielorraso; junto al perímetro da el área bruta de muros." },
           {
             label: "Área de vanos",
-            text: "Área de puertas y ventanas del ambiente, para descontarla del área de muros — si no la descuentas, el tarrajeo y la pintura salen sobrestimados.",
+            text: "Área de puertas y ventanas del ambiente, para descontarla del área de muros — si no la descuentas, el tarrajeo sale sobrestimado.",
           },
         ],
       },
@@ -454,10 +454,65 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
         heading: "Partidas a incluir",
         items: [
           {
-            label: "Tarrajeo / Pintura de muros y de cielorraso",
-            text: "Actívalas por separado según lo que necesite tu proyecto — por ejemplo, puedes tarrajear sin pintar todavía, o pintar un cielorraso de drywall sin tarrajearlo.",
+            label: "Tarrajeo de muros / de cielorraso",
+            text: "Actívalas por separado según lo que necesite tu proyecto — por ejemplo, un cielorraso de drywall no necesita tarrajeo.",
           },
         ],
+      },
+    ],
+  },
+
+  tarrajeoExteriores: {
+    title: "Tarrajeo de Exteriores",
+    summary: "Metra el tarrajeo de una fachada o muro exterior a partir de su longitud y altura.",
+    sections: [
+      {
+        heading: "Dimensiones",
+        items: [
+          { label: "Longitud / Altura", text: "Las medidas del paño de fachada a tarrajear." },
+          {
+            label: "Área de vanos",
+            text: "Área de puertas y ventanas de esa fachada, para descontarla del área bruta.",
+          },
+        ],
+      },
+    ],
+  },
+
+  tarrajeoEscalera: {
+    title: "Tarrajeo de Escalera",
+    summary: "Metra el tarrajeo de los muros y la cara inferior (garganta) de una escalera.",
+    sections: [
+      {
+        heading: "Área a tarrajear",
+        items: [
+          {
+            label: "Área",
+            text: "El área de superficie a tarrajear (muros laterales y/o garganta de la escalera).",
+          },
+        ],
+      },
+    ],
+  },
+
+  pisosPavimentos: {
+    title: "Pisos y Pavimentos",
+    summary: "Metra el piso terminado (cerámico, porcelanato, cemento pulido, etc.) de un ambiente, a partir de su área.",
+    sections: [
+      {
+        heading: "Dimensiones del ambiente",
+        items: [{ label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de piso." }],
+      },
+    ],
+  },
+
+  pintura: {
+    title: "Pintura",
+    summary: "Metra la pintura de una superficie (muros, cielorraso, fachada) a partir de su área.",
+    sections: [
+      {
+        heading: "Área a pintar",
+        items: [{ label: "Área", text: "El área de superficie a pintar, en m²." }],
       },
     ],
   },
