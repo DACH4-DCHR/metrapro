@@ -185,6 +185,20 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
   );
 
   const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
+  // Solo para el Dashboard general (con todo junto): separa las categorías
+  // en los mismos 2 grupos que ya se ven en el menú y en los dashboards
+  // independientes, para que "Acabados" no quede mezclado con las categorías
+  // estructurales en el mismo gráfico — aunque el dashboard sí junte todo.
+  const costosEstructurales = useMemo(() => costosCategoria.filter((c) => c.categoria !== "Acabados"), [costosCategoria]);
+  const costosAcabadosCategoria = useMemo(() => costosCategoria.filter((c) => c.categoria === "Acabados"), [costosCategoria]);
+  const subtotalCostosEstructurales = useMemo(
+    () => costosEstructurales.reduce((acc, c) => acc + c.monto, 0),
+    [costosEstructurales]
+  );
+  const subtotalCostosAcabados = useMemo(
+    () => costosAcabadosCategoria.reduce((acc, c) => acc + c.monto, 0),
+    [costosAcabadosCategoria]
+  );
   const manoObraMateriales = useMemo(() => manoObraVsMateriales(presupuesto.rows), [presupuesto.rows]);
   const cantidadesModulo = useMemo(() => cantidadesPorModulo(elements), [elements]);
   const concretoPorModulo = useMemo(
@@ -496,15 +510,45 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
                 Reparto del costo directo del presupuesto (sin Gastos Generales, Utilidad ni IGV) entre concreto,
                 acero, encofrado, movimiento de tierras, movilización y el resto de partidas.
               </p>
-              <HorizontalBarChart
-                items={costosCategoria.map((c) => ({
-                  label: c.categoria,
-                  value: c.monto,
-                  color: c.color,
-                  subLabel: `${c.pct.toFixed(1)}%`,
-                }))}
-                valueFormatter={(v) => currencyFormatter.format(v)}
-              />
+              {costosEstructurales.length > 0 && (
+                <div className={costosAcabadosCategoria.length > 0 ? "mb-5" : ""}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-600">Metrados Estructurales</p>
+                    <span className="font-mono text-xs font-semibold text-steel-500">
+                      {currencyFormatter.format(subtotalCostosEstructurales)}
+                    </span>
+                  </div>
+                  <HorizontalBarChart
+                    items={costosEstructurales.map((c) => ({
+                      label: c.categoria,
+                      value: c.monto,
+                      color: c.color,
+                      subLabel: `${c.pct.toFixed(1)}%`,
+                    }))}
+                    valueFormatter={(v) => currencyFormatter.format(v)}
+                  />
+                </div>
+              )}
+
+              {costosAcabadosCategoria.length > 0 && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-600">Acabados y Adicionales</p>
+                    <span className="font-mono text-xs font-semibold text-steel-500">
+                      {currencyFormatter.format(subtotalCostosAcabados)}
+                    </span>
+                  </div>
+                  <HorizontalBarChart
+                    items={costosAcabadosCategoria.map((c) => ({
+                      label: c.categoria,
+                      value: c.monto,
+                      color: c.color,
+                      subLabel: `${c.pct.toFixed(1)}%`,
+                    }))}
+                    valueFormatter={(v) => currencyFormatter.format(v)}
+                  />
+                </div>
+              )}
 
               <div className="mt-4 rounded-lg border border-steel-200 bg-steel-50 p-3 text-sm">
                 <div className="flex items-center justify-between py-1">
