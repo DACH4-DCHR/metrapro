@@ -43,9 +43,14 @@ import { useCompactViewport } from "../hooks/useCompactViewport";
 // visual en el menú.
 const dashboardItem = { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true };
 
-const navGroups: { section: string; items: { to: string; label: string; icon: typeof Layers3 }[] }[] = [
+const navGroups: {
+  section: string;
+  macroTitle?: string;
+  items: { to: string; label: string; icon: typeof Layers3 }[];
+}[] = [
   {
     section: "Movimiento de Tierras",
+    macroTitle: "Metrados Estructurales",
     items: [{ to: "/movimiento-tierras", label: "Movimiento de Tierras", icon: Shovel }],
   },
   {
@@ -80,6 +85,7 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
   },
   {
     section: "Acabados",
+    macroTitle: "Acabados y Adicionales",
     items: [{ to: "/acabados", label: "Tarrajeo y Pintura", icon: PaintRoller }],
   },
 ];
@@ -228,10 +234,21 @@ export function Layout() {
             {dashboardItem.label}
           </NavLink>
 
-          {navGroups.map((group) => {
+          {navGroups.map((group, idx) => {
             const isOpen = openSections[group.section] ?? false;
             return (
               <div key={group.section}>
+                {group.macroTitle && (
+                  <div className={`px-3 ${idx === 0 ? "pb-1" : "mt-4 border-t border-white/10 pb-1 pt-4"}`}>
+                    <p
+                      className={`font-extrabold uppercase tracking-widest text-amber-400 ${
+                        compact ? "text-[10px]" : "text-xs"
+                      }`}
+                    >
+                      {group.macroTitle}
+                    </p>
+                  </div>
+                )}
                 <button
                   onClick={() => toggleSection(group.section)}
                   aria-expanded={isOpen}
