@@ -437,16 +437,25 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
   tarrajeoInteriores: {
     title: "Tarrajeo de Interiores",
     summary:
-      "Metra el tarrajeo de muros y cielorraso de un ambiente interior (cuarto, baño, sala, etc.) a partir de sus dimensiones: el área se calcula sola.",
+      "Metra el tarrajeo de muros, cielorraso, columnas y vigas de un ambiente interior a partir de sus dimensiones: las áreas se calculan solas.",
     sections: [
       {
         heading: "Dimensiones del ambiente",
         items: [
           { label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de cielorraso." },
           { label: "Altura", text: "Del piso terminado al cielorraso; junto al perímetro da el área bruta de muros." },
+        ],
+      },
+      {
+        heading: "Vanos (puertas y ventanas)",
+        items: [
           {
-            label: "Área de vanos",
-            text: "Área de puertas y ventanas del ambiente, para descontarla del área de muros — si no la descuentas, el tarrajeo sale sobrestimado.",
+            label: "Cantidad / Ancho / Alto",
+            text: "Agrupa puertas y ventanas por tamaño típico y cantidad. El área se descuenta del tarrajeo de muros — si no la descuentas, sale sobrestimado.",
+          },
+          {
+            label: "Vestidura de derrames",
+            text: "Se calcula sola a partir de los vanos, en metros lineales (perímetro de jambas y dintel). La puerta no suma derrame en la base porque llega al piso; la ventana sí suma los 4 lados.",
           },
         ],
       },
@@ -456,6 +465,14 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
           {
             label: "Tarrajeo de muros / de cielorraso",
             text: "Actívalas por separado según lo que necesite tu proyecto — por ejemplo, un cielorraso de drywall no necesita tarrajeo.",
+          },
+          {
+            label: "Tarrajeo de columnas",
+            text: "Ingresa cantidad, sección (ancho × profundidad) y altura. Se asume la columna libre en sus 4 caras.",
+          },
+          {
+            label: "Tarrajeo de vigas",
+            text: "Ingresa cantidad, sección (ancho × peralte) y longitud. Solo se tarrajean el fondo y las 2 caras laterales — la cara superior se une a la losa.",
           },
         ],
       },
