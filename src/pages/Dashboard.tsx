@@ -265,8 +265,42 @@ export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
   // en los mismos 2 grupos que ya se ven en el menú y en los dashboards
   // independientes, para que "Acabados" no quede mezclado con las categorías
   // estructurales en el mismo gráfico — aunque el dashboard sí junte todo.
-  const costosEstructurales = useMemo(() => costosCategoria.filter((c) => c.categoria !== "Acabados"), [costosCategoria]);
-  const costosAcabadosCategoria = useMemo(() => costosCategoria.filter((c) => c.categoria === "Acabados"), [costosCategoria]);
+  //
+  // "Otros" es un caso especial: categorizarPartida() no distingue el grupo
+  // que el usuario eligió para cada partida manual (esa info no llega hasta
+  // acá, se pierde en el camino a MetradoLine/PresupuestoRow) — por eso se
+  // reparte "a mano" usando el subtotal ya calculado de cada lado
+  // (presupuestoCustomValorizadoEstructural/Acabados), en vez de mandar todo
+  // "Otros" a un solo lado como si nunca se pudiera elegir.
+  const otrosCategoriaItem = useMemo(() => costosCategoria.find((c) => c.categoria === "Otros"), [costosCategoria]);
+  const otrosAcabadosMonto = presupuestoCustomValorizadoAcabados.total;
+  const otrosEstructuralMonto = Math.max((otrosCategoriaItem?.monto ?? 0) - otrosAcabadosMonto, 0);
+  const costosEstructurales = useMemo(() => {
+    const base = costosCategoria.filter((c) => c.categoria !== "Acabados" && c.categoria !== "Otros");
+    if (otrosEstructuralMonto <= 0) return base;
+    return [
+      ...base,
+      {
+        categoria: "Otros" as const,
+        monto: otrosEstructuralMonto,
+        pct: presupuesto.costoDirecto > 0 ? (otrosEstructuralMonto / presupuesto.costoDirecto) * 100 : 0,
+        color: otrosCategoriaItem?.color ?? "#008300",
+      },
+    ];
+  }, [costosCategoria, otrosEstructuralMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
+  const costosAcabadosCategoria = useMemo(() => {
+    const base = costosCategoria.filter((c) => c.categoria === "Acabados");
+    if (otrosAcabadosMonto <= 0) return base;
+    return [
+      ...base,
+      {
+        categoria: "Otros" as const,
+        monto: otrosAcabadosMonto,
+        pct: presupuesto.costoDirecto > 0 ? (otrosAcabadosMonto / presupuesto.costoDirecto) * 100 : 0,
+        color: otrosCategoriaItem?.color ?? "#008300",
+      },
+    ];
+  }, [costosCategoria, otrosAcabadosMonto, presupuesto.costoDirecto, otrosCategoriaItem]);
   const subtotalCostosEstructurales = useMemo(
     () => costosEstructurales.reduce((acc, c) => acc + c.monto, 0),
     [costosEstructurales]
