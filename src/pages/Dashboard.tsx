@@ -74,7 +74,7 @@ import {
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
 import { MODULE_GROUP, type ModuleGroup } from "../lib/moduleGroups";
-import type { ModuleType } from "../lib/types";
+import type { ModuleType, CalculatedElement } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("es-PE", {
@@ -143,6 +143,28 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
 
   const consolidated = useMemo(() => consolidateLines(elements.map((e) => e.lines)), [elements]);
 
+  // Igual que el gráfico de costo por categoría: separa por familia de módulo
+  // (ver moduleGroups.ts) para que el Dashboard general no mezcle Metrados
+  // Estructurales con Acabados en "Elementos guardados" ni en "Cuadro de
+  // Metrados Consolidado". En los dashboards ya filtrados por scope, uno de
+  // los dos siempre sale vacío — el filtro no hace nada raro ahí.
+  const elementosEstructuralesGuardados = useMemo(
+    () => elements.filter((e) => MODULE_GROUP[e.module] === "estructural"),
+    [elements]
+  );
+  const elementosAcabadosGuardados = useMemo(
+    () => elements.filter((e) => MODULE_GROUP[e.module] === "acabados"),
+    [elements]
+  );
+  const consolidatedEstructural = useMemo(
+    () => consolidateLines(elementosEstructuralesGuardados.map((e) => e.lines)),
+    [elementosEstructuralesGuardados]
+  );
+  const consolidatedAcabadosLines = useMemo(
+    () => consolidateLines(elementosAcabadosGuardados.map((e) => e.lines)),
+    [elementosAcabadosGuardados]
+  );
+
   const aceroPorModulo = useMemo(() => agruparAceroPorModulo(elements), [elements]);
 
   const elementosSinDesglose = useMemo(
@@ -182,6 +204,34 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
       },
     ],
     [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizado]
+  );
+
+  // Mismo criterio que el resto del Dashboard general: Movilización y "Otros"
+  // no pertenecen a ningún módulo puntual, así que se quedan del lado de
+  // Metrados Estructurales (como ya era antes de que existiera Acabados).
+  const presupuestoSeccionesEstructural = useMemo<PresupuestoSeccion[]>(
+    () => [
+      { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
+      ...presupuestoPorModulo.filter((g) => MODULE_GROUP[g.module] === "estructural"),
+      {
+        label: PRESUPUESTO_CUSTOM_LABEL,
+        rows: presupuestoCustomValorizado.rows,
+        subtotal: presupuestoCustomValorizado.total,
+      },
+    ],
+    [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizado]
+  );
+  const presupuestoSeccionesAcabados = useMemo<PresupuestoSeccion[]>(
+    () => presupuestoPorModulo.filter((g) => MODULE_GROUP[g.module] === "acabados"),
+    [presupuestoPorModulo]
+  );
+  const subtotalPresupuestoEstructural = useMemo(
+    () => presupuestoSeccionesEstructural.reduce((acc, g) => acc + g.subtotal, 0),
+    [presupuestoSeccionesEstructural]
+  );
+  const subtotalPresupuestoAcabados = useMemo(
+    () => presupuestoSeccionesAcabados.reduce((acc, g) => acc + g.subtotal, 0),
+    [presupuestoSeccionesAcabados]
   );
 
   const costosCategoria = useMemo(() => costosPorCategoria(presupuesto.rows), [presupuesto.rows]);
@@ -283,6 +333,54 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
   }
   function removeCustomPresupuestoLine(id: string) {
     setPresupuestoCustomStore(presupuestoCustom.filter((p) => p.id !== id));
+  }
+
+  // Un grupo (Movilización, un módulo puntual, u "Otros") del Presupuesto
+  // Referencial: banda con el nombre, sus filas editables, y su subtotal.
+  // Reutilizada 2 veces (Metrados Estructurales / Acabados y Adicionales) en
+  // vez de duplicar el bloque, para que el Dashboard general no las mezcle.
+  function renderPresupuestoGrupo(group: PresupuestoSeccion) {
+    const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
+    return (
+      <Fragment key={group.label}>
+        <tr className="bg-amber-500/10">
+          <td className="px-4 py-1.5 font-semibold uppercase tracking-wide text-navy-800" colSpan={6}>
+            {group.label}
+          </td>
+        </tr>
+        {group.rows.map((row, idx) => (
+          <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+            <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
+            <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
+            <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
+            <td className="px-4 py-2 text-right">
+              <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
+            </td>
+            <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
+              {currencyFormatter.format(row.subtotal)}
+            </td>
+            <td className="px-4 py-2 no-print">
+              {esOtros && (
+                <button
+                  onClick={() => removeCustomPresupuestoLine(presupuestoCustom[idx].id)}
+                  aria-label="Quitar partida"
+                  className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </td>
+          </tr>
+        ))}
+        <tr className="bg-steel-100/70 text-xs font-medium text-steel-600">
+          <td className="px-4 py-1.5" colSpan={4}>
+            Subtotal {group.label} (S/.)
+          </td>
+          <td className="px-4 py-1.5 text-right font-mono">{currencyFormatter.format(group.subtotal)}</td>
+          <td className="no-print" />
+        </tr>
+      </Fragment>
+    );
   }
 
   const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
@@ -631,47 +729,27 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
                   : 'Aún no has guardado ningún elemento. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y presiona "Agregar a la lista".'}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-steel-200 text-left text-steel-500">
-                    <th className="py-2 pr-4 font-medium">Elemento</th>
-                    <th className="py-2 pr-4 font-medium">Módulo</th>
-                    <th className="py-2 pr-4 text-right font-medium">Concreto (m³)</th>
-                    <th className="py-2 pr-4 text-right font-medium">Acero (kg)</th>
-                    <th className="py-2 pr-4 text-right font-medium">Encofrado (m²)</th>
-                    <th className="py-2 pr-4 text-right font-medium no-print">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {elements.map((el) => {
-                    const Meta = moduleMeta[el.module];
-                    return (
-                      <tr key={el.id} className="border-b border-steel-100">
-                        <td className="py-2 pr-4 font-medium text-navy-900">{el.name}</td>
-                        <td className="py-2 pr-4 text-steel-600">
-                          <span className="flex items-center gap-1.5">
-                            <Meta.icon size={14} />
-                            {Meta.label}
-                          </span>
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.concreteM3)}</td>
-                        <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.steelKg)}</td>
-                        <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.formworkM2)}</td>
-                        <td className="py-2 pr-4 text-right no-print">
-                          <button
-                            onClick={() => removeElement(el.id)}
-                            className="rounded p-1.5 text-steel-500 hover:bg-red-50 hover:text-red-600"
-                            aria-label="Eliminar elemento"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex flex-col gap-5">
+              {elementosEstructuralesGuardados.length > 0 && (
+                <div>
+                  {elementosAcabadosGuardados.length > 0 && (
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-amber-600">
+                      Metrados Estructurales
+                    </p>
+                  )}
+                  <ElementosGuardadosTable items={elementosEstructuralesGuardados} onRemove={removeElement} />
+                </div>
+              )}
+              {elementosAcabadosGuardados.length > 0 && (
+                <div>
+                  {elementosEstructuralesGuardados.length > 0 && (
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-amber-600">
+                      Acabados y Adicionales
+                    </p>
+                  )}
+                  <ElementosGuardadosTable items={elementosAcabadosGuardados} onRemove={removeElement} />
+                </div>
+              )}
             </div>
           )}
         </SectionCard>
@@ -695,7 +773,28 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
               />
             }
           >
-            <ResultTable lines={consolidated} />
+            <div className="flex flex-col gap-5">
+              {consolidatedEstructural.length > 0 && (
+                <div>
+                  {consolidatedAcabadosLines.length > 0 && (
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-amber-600">
+                      Metrados Estructurales
+                    </p>
+                  )}
+                  <ResultTable lines={consolidatedEstructural} />
+                </div>
+              )}
+              {consolidatedAcabadosLines.length > 0 && (
+                <div>
+                  {consolidatedEstructural.length > 0 && (
+                    <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-amber-600">
+                      Acabados y Adicionales
+                    </p>
+                  )}
+                  <ResultTable lines={consolidatedAcabadosLines} />
+                </div>
+              )}
+            </div>
           </SectionCard>
         )}
 
@@ -814,49 +913,33 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
                 </tr>
               </thead>
               <tbody>
-                {presupuestoSecciones.map((group) => {
-                  const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
-                  return (
-                    <Fragment key={group.label}>
-                      <tr className="bg-amber-500/10">
-                        <td className="px-4 py-1.5 font-semibold uppercase tracking-wide text-navy-800" colSpan={6}>
-                          {group.label}
-                        </td>
-                      </tr>
-                      {group.rows.map((row, idx) => (
-                        <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
-                          <td className="px-4 py-2 text-navy-900">{row.line.partida}</td>
-                          <td className="px-4 py-2 text-steel-600">{row.line.unidad}</td>
-                          <td className="px-4 py-2 text-right font-mono">{numberFormatter.format(row.line.cantidad)}</td>
-                          <td className="px-4 py-2 text-right">
-                            <PriceInput value={row.price} onChange={(v) => setPrice(row.key, v)} />
-                          </td>
-                          <td className="px-4 py-2 text-right font-mono font-medium text-navy-900">
-                            {currencyFormatter.format(row.subtotal)}
-                          </td>
-                          <td className="px-4 py-2 no-print">
-                            {esOtros && (
-                              <button
-                                onClick={() => removeCustomPresupuestoLine(presupuestoCustom[idx].id)}
-                                aria-label="Quitar partida"
-                                className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="bg-steel-100/70 text-xs font-medium text-steel-600">
-                        <td className="px-4 py-1.5" colSpan={4}>
-                          Subtotal {group.label} (S/.)
-                        </td>
-                        <td className="px-4 py-1.5 text-right font-mono">{currencyFormatter.format(group.subtotal)}</td>
-                        <td className="no-print" />
-                      </tr>
-                    </Fragment>
-                  );
-                })}
+                {presupuestoSeccionesAcabados.length > 0 && (
+                  <tr className="bg-navy-900">
+                    <td className="px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-amber-400" colSpan={4}>
+                      Metrados Estructurales
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-xs font-bold text-white">
+                      {currencyFormatter.format(subtotalPresupuestoEstructural)}
+                    </td>
+                    <td className="no-print" />
+                  </tr>
+                )}
+                {presupuestoSeccionesEstructural.map(renderPresupuestoGrupo)}
+
+                {presupuestoSeccionesAcabados.length > 0 && (
+                  <>
+                    <tr className="bg-navy-900">
+                      <td className="px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-amber-400" colSpan={4}>
+                        Acabados y Adicionales
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-xs font-bold text-white">
+                        {currencyFormatter.format(subtotalPresupuestoAcabados)}
+                      </td>
+                      <td className="no-print" />
+                    </tr>
+                    {presupuestoSeccionesAcabados.map(renderPresupuestoGrupo)}
+                  </>
+                )}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-navy-900 bg-steel-100 font-semibold text-navy-900">
@@ -1095,6 +1178,62 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
           </SectionCard>
         )}
       </div>
+    </div>
+  );
+}
+
+// Tabla de "Elementos guardados" para un grupo (Metrados Estructurales o
+// Acabados y Adicionales) — la misma tabla de siempre, factorizada para no
+// duplicarla cuando el Dashboard general las muestra por separado.
+function ElementosGuardadosTable({
+  items,
+  onRemove,
+}: {
+  items: CalculatedElement[];
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-steel-200 text-left text-steel-500">
+            <th className="py-2 pr-4 font-medium">Elemento</th>
+            <th className="py-2 pr-4 font-medium">Módulo</th>
+            <th className="py-2 pr-4 text-right font-medium">Concreto (m³)</th>
+            <th className="py-2 pr-4 text-right font-medium">Acero (kg)</th>
+            <th className="py-2 pr-4 text-right font-medium">Encofrado (m²)</th>
+            <th className="py-2 pr-4 text-right font-medium no-print">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((el) => {
+            const Meta = moduleMeta[el.module];
+            return (
+              <tr key={el.id} className="border-b border-steel-100">
+                <td className="py-2 pr-4 font-medium text-navy-900">{el.name}</td>
+                <td className="py-2 pr-4 text-steel-600">
+                  <span className="flex items-center gap-1.5">
+                    <Meta.icon size={14} />
+                    {Meta.label}
+                  </span>
+                </td>
+                <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.concreteM3)}</td>
+                <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.steelKg)}</td>
+                <td className="py-2 pr-4 text-right font-mono">{numberFormatter.format(el.formworkM2)}</td>
+                <td className="py-2 pr-4 text-right no-print">
+                  <button
+                    onClick={() => onRemove(el.id)}
+                    className="rounded p-1.5 text-steel-500 hover:bg-red-50 hover:text-red-600"
+                    aria-label="Eliminar elemento"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
