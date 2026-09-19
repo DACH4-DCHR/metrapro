@@ -38,17 +38,27 @@ export function PisosPavimentosPage() {
     tipoPiso: "ceramico",
     incluirContrapiso: true,
   });
+  const [espesorContrapiso, setEspesorContrapiso] = useState(5);
 
   const result = useMemo(() => calcularPisosPavimentos(input), [input]);
 
   const lines: MetradoLine[] = [];
   if (input.incluirContrapiso) {
-    lines.push({ partida: "Contrapiso de mortero, mezcla C:A 1:5, e=4cm", unidad: "m²", cantidad: result.areaPiso });
+    lines.push({
+      partida: `Contrapiso de mortero, mezcla C:A 1:5, e=${espesorContrapiso}cm`,
+      unidad: "m²",
+      cantidad: result.areaPiso,
+    });
   }
   lines.push({ partida: TIPO_PISO_LABEL[input.tipoPiso], unidad: "m²", cantidad: result.areaPiso });
 
   function update<K extends keyof PisosPavimentosInput>(key: K, value: PisosPavimentosInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function updateEspesorContrapiso(value: number) {
+    setEspesorContrapiso(value);
     setSaved(false);
   }
 
@@ -65,7 +75,7 @@ export function PisosPavimentosPage() {
       inputsSummary: {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         "Tipo de piso": TIPO_PISO_LABEL[input.tipoPiso],
-        Contrapiso: input.incluirContrapiso ? "sí" : "no",
+        Contrapiso: input.incluirContrapiso ? `sí, e=${espesorContrapiso}cm` : "no",
       },
     };
     addElement(el);
@@ -122,6 +132,16 @@ export function PisosPavimentosPage() {
                   />
                   <span className="text-sm font-medium text-navy-800">Incluir contrapiso (mortero de base)</span>
                 </label>
+                {input.incluirContrapiso && (
+                  <NumberField
+                    label="Espesor de contrapiso"
+                    unit="cm"
+                    step={0.5}
+                    value={espesorContrapiso}
+                    onChange={updateEspesorContrapiso}
+                    helper="Por defecto 5cm; ajústalo si tu proyecto usa otro"
+                  />
+                )}
               </div>
             </SectionCard>
           </div>

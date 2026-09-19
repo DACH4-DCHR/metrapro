@@ -26,15 +26,25 @@ export function TarrajeoExterioresPage() {
     altura: 2.8,
     areaVanos: 2,
   });
+  const [espesor, setEspesor] = useState(2);
 
   const result = useMemo(() => calcularTarrajeoExteriores(input), [input]);
 
   const lines: MetradoLine[] = [
-    { partida: "Tarrajeo de muros exteriores, mezcla C:A 1:5, e=2cm", unidad: "m²", cantidad: result.areaNeta },
+    {
+      partida: `Tarrajeo de muros exteriores, mezcla C:A 1:5, e=${espesor}cm`,
+      unidad: "m²",
+      cantidad: result.areaNeta,
+    },
   ];
 
   function update<K extends keyof TarrajeoExterioresInput>(key: K, value: TarrajeoExterioresInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function updateEspesor(value: number) {
+    setEspesor(value);
     setSaved(false);
   }
 
@@ -51,6 +61,7 @@ export function TarrajeoExterioresPage() {
       inputsSummary: {
         Dimensiones: `${input.longitud} x ${input.altura} m`,
         "Área de vanos": `${input.areaVanos} m²`,
+        Espesor: `${espesor} cm`,
       },
     };
     addElement(el);
@@ -99,6 +110,14 @@ export function TarrajeoExterioresPage() {
                   value={input.areaVanos}
                   onChange={(v) => update("areaVanos", v)}
                   helper="Puertas y ventanas del paño, a descontar"
+                />
+                <NumberField
+                  label="Espesor de tarrajeo"
+                  unit="cm"
+                  step={0.5}
+                  value={espesor}
+                  onChange={updateEspesor}
+                  helper="Por defecto 2cm (exteriores); ajústalo si tu proyecto usa otro"
                 />
               </div>
             </SectionCard>

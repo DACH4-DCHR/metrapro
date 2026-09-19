@@ -491,6 +491,10 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
             label: "Área de vanos",
             text: "Área de puertas y ventanas de esa fachada, para descontarla del área bruta.",
           },
+          {
+            label: "Espesor de tarrajeo",
+            text: "Por defecto 2cm (más grueso que interiores, por la exposición a la intemperie); ajústalo si tu proyecto usa otro.",
+          },
         ],
       },
     ],
@@ -519,6 +523,15 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
       {
         heading: "Dimensiones del ambiente",
         items: [{ label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de piso." }],
+      },
+      {
+        heading: "Contrapiso",
+        items: [
+          {
+            label: "Espesor de contrapiso",
+            text: "Por defecto 5cm; ajústalo si tu proyecto usa otro. Solo aparece si activas 'Incluir contrapiso'.",
+          },
+        ],
       },
     ],
   },
