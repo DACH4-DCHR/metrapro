@@ -7,6 +7,7 @@ import type { CalculatedElement, MetradoLine, ModuleType } from "./types";
 import { defaultUnitPrice, priceKey } from "./pricing";
 import { consolidateLinesByModule, type ModuleGroup } from "./consolidate";
 import { MODULE_LABELS } from "./moduleLabels";
+import type { ModuleFamily } from "./moduleGroups";
 
 // Gastos Generales, Utilidad e IGV se guardan como llaves reservadas dentro del
 // mismo mapa "prices" (ya persistido en el backend con setPrice/putPrices) en vez
@@ -275,6 +276,10 @@ export interface PresupuestoCustomLine {
   partida: string;
   unidad: string;
   cantidad: number;
+  // Opcional: partidas agregadas antes de que existiera Acabados no lo
+  // tienen — se tratan como "estructural" (ver Dashboard.tsx), igual que
+  // siempre se venían mostrando.
+  grupo?: ModuleFamily;
 }
 export const PRESUPUESTO_CUSTOM_LABEL = "Otros / Partidas Adicionales";
 

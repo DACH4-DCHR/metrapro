@@ -5,9 +5,12 @@ import type { ModuleType } from "./types";
 // 2 dashboards independientes para filtrar qué elementos les corresponden.
 // Todo módulo nuevo que se agregue bajo "Acabados y Adicionales" (pisos,
 // carpintería, aparatos sanitarios, etc.) debe sumarse aquí también.
-export type ModuleGroup = "estructural" | "acabados";
+// Nombrado "ModuleFamily" (no "ModuleGroup") para no chocar con el
+// ModuleGroup ya existente en consolidate.ts, que es otra cosa (un grupo de
+// líneas de un módulo puntual, no una de estas 2 familias).
+export type ModuleFamily = "estructural" | "acabados";
 
-export const MODULE_GROUP: Record<ModuleType, ModuleGroup> = {
+export const MODULE_GROUP: Record<ModuleType, ModuleFamily> = {
   movimientoTierras: "estructural",
   zapata: "estructural",
   cimientoCorrido: "estructural",

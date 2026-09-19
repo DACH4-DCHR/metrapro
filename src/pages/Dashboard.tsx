@@ -73,7 +73,7 @@ import {
 } from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
-import { MODULE_GROUP, type ModuleGroup } from "../lib/moduleGroups";
+import { MODULE_GROUP, type ModuleFamily } from "../lib/moduleGroups";
 import type { ModuleType, CalculatedElement } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
@@ -122,7 +122,7 @@ function isStandaloneApp(): boolean {
 // exportar del encabezado (Descargar PDF/Exportar Excel/Enviar) son la
 // excepción: siempre traen el proyecto completo, sin importar la vista
 // actual, porque son el documento real que se comparte con el cliente.
-export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
+export function DashboardPage({ scope }: { scope?: ModuleFamily } = {}) {
   const projectInfo = useProjectStore((s) => s.projectInfo);
   const setProjectInfo = useProjectStore((s) => s.setProjectInfo);
   const allElements = useProjectStore((s) => s.elements);
@@ -206,25 +206,51 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
     [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizado]
   );
 
-  // Mismo criterio que el resto del Dashboard general: Movilización y "Otros"
-  // no pertenecen a ningún módulo puntual, así que se quedan del lado de
-  // Metrados Estructurales (como ya era antes de que existiera Acabados).
+  // "Otros" se reparte según el grupo que el usuario elige al agregar cada
+  // partida (por defecto "estructural" en líneas guardadas antes de que
+  // existiera ese selector) — a diferencia de Movilización, que no tiene
+  // dueño y se queda siempre del lado de Metrados Estructurales.
+  const presupuestoCustomEstructural = useMemo(
+    () => presupuestoCustom.filter((p) => (p.grupo ?? "estructural") === "estructural"),
+    [presupuestoCustom]
+  );
+  const presupuestoCustomAcabados = useMemo(
+    () => presupuestoCustom.filter((p) => p.grupo === "acabados"),
+    [presupuestoCustom]
+  );
+  const presupuestoCustomValorizadoEstructural = useMemo(
+    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomEstructural), prices),
+    [presupuestoCustomEstructural, prices]
+  );
+  const presupuestoCustomValorizadoAcabados = useMemo(
+    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomAcabados), prices),
+    [presupuestoCustomAcabados, prices]
+  );
+
   const presupuestoSeccionesEstructural = useMemo<PresupuestoSeccion[]>(
     () => [
       { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
       ...presupuestoPorModulo.filter((g) => MODULE_GROUP[g.module] === "estructural"),
       {
         label: PRESUPUESTO_CUSTOM_LABEL,
-        rows: presupuestoCustomValorizado.rows,
-        subtotal: presupuestoCustomValorizado.total,
+        rows: presupuestoCustomValorizadoEstructural.rows,
+        subtotal: presupuestoCustomValorizadoEstructural.total,
       },
     ],
-    [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizado]
+    [movilizacionValorizado, presupuestoPorModulo, presupuestoCustomValorizadoEstructural]
   );
-  const presupuestoSeccionesAcabados = useMemo<PresupuestoSeccion[]>(
-    () => presupuestoPorModulo.filter((g) => MODULE_GROUP[g.module] === "acabados"),
-    [presupuestoPorModulo]
-  );
+  const presupuestoSeccionesAcabados = useMemo<PresupuestoSeccion[]>(() => {
+    const grupos = presupuestoPorModulo.filter((g) => MODULE_GROUP[g.module] === "acabados");
+    if (presupuestoCustomAcabados.length === 0) return grupos;
+    return [
+      ...grupos,
+      {
+        label: PRESUPUESTO_CUSTOM_LABEL,
+        rows: presupuestoCustomValorizadoAcabados.rows,
+        subtotal: presupuestoCustomValorizadoAcabados.total,
+      },
+    ];
+  }, [presupuestoPorModulo, presupuestoCustomAcabados, presupuestoCustomValorizadoAcabados]);
   const subtotalPresupuestoEstructural = useMemo(
     () => presupuestoSeccionesEstructural.reduce((acc, g) => acc + g.subtotal, 0),
     [presupuestoSeccionesEstructural]
@@ -327,8 +353,8 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
     setMaterialesCustomStore(materialesCustom.filter((m) => m.id !== id));
   }
 
-  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number) {
-    const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad };
+  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number, grupo?: ModuleFamily) {
+    const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad, grupo };
     setPresupuestoCustomStore([...presupuestoCustom, item]);
   }
   function removeCustomPresupuestoLine(id: string) {
@@ -339,7 +365,7 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
   // Referencial: banda con el nombre, sus filas editables, y su subtotal.
   // Reutilizada 2 veces (Metrados Estructurales / Acabados y Adicionales) en
   // vez de duplicar el bloque, para que el Dashboard general no las mezcle.
-  function renderPresupuestoGrupo(group: PresupuestoSeccion) {
+  function renderPresupuestoGrupo(group: PresupuestoSeccion, customItems: PresupuestoCustomLine[] = presupuestoCustom) {
     const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
     return (
       <Fragment key={group.label}>
@@ -362,7 +388,7 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
             <td className="px-4 py-2 no-print">
               {esOtros && (
                 <button
-                  onClick={() => removeCustomPresupuestoLine(presupuestoCustom[idx].id)}
+                  onClick={() => removeCustomPresupuestoLine(customItems[idx].id)}
                   aria-label="Quitar partida"
                   className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
                 >
@@ -924,7 +950,7 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
                     <td className="no-print" />
                   </tr>
                 )}
-                {presupuestoSeccionesEstructural.map(renderPresupuestoGrupo)}
+                {presupuestoSeccionesEstructural.map((g) => renderPresupuestoGrupo(g, presupuestoCustomEstructural))}
 
                 {presupuestoSeccionesAcabados.length > 0 && (
                   <>
@@ -937,7 +963,7 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
                       </td>
                       <td className="no-print" />
                     </tr>
-                    {presupuestoSeccionesAcabados.map(renderPresupuestoGrupo)}
+                    {presupuestoSeccionesAcabados.map((g) => renderPresupuestoGrupo(g, presupuestoCustomAcabados))}
                   </>
                 )}
               </tbody>
@@ -958,6 +984,7 @@ export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
             placeholder="Ej. Movilización de personal, cerco perimétrico, etc."
             buttonLabel="Agregar partida"
             onAdd={addCustomPresupuestoLine}
+            showGroupSelector
           />
 
           <div className="mt-4 flex flex-col gap-2 border-t border-steel-200 pt-4">
@@ -1318,20 +1345,28 @@ function AddCustomLineForm({
   placeholder,
   buttonLabel,
   onAdd,
+  showGroupSelector = false,
 }: {
   itemLabel: string;
   placeholder: string;
   buttonLabel: string;
-  onAdd: (partida: string, unidad: string, cantidad: number) => void;
+  onAdd: (partida: string, unidad: string, cantidad: number, grupo?: ModuleFamily) => void;
+  // Solo el "Agregar partida" del Presupuesto Referencial lo necesita — ahí
+  // sí importa si la partida es de Metrados Estructurales o de Acabados,
+  // porque el Dashboard general las muestra por separado. "Agregar
+  // material" (Metrado de Materiales) no lo usa: esa sección es siempre de
+  // Metrados Estructurales (Acabados no genera cemento/arena/acero).
+  showGroupSelector?: boolean;
 }) {
   const [partida, setPartida] = useState("");
   const [unidad, setUnidad] = useState("und");
   const [cantidad, setCantidad] = useState(1);
+  const [grupo, setGrupo] = useState<ModuleFamily>("estructural");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!partida.trim() || cantidad <= 0) return;
-    onAdd(partida.trim(), unidad.trim() || "und", cantidad);
+    onAdd(partida.trim(), unidad.trim() || "und", cantidad, showGroupSelector ? grupo : undefined);
     setPartida("");
     setUnidad("und");
     setCantidad(1);
@@ -1369,6 +1404,19 @@ function AddCustomLineForm({
           className="w-full rounded-md border border-steel-200 px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
         />
       </div>
+      {showGroupSelector && (
+        <div className="w-44">
+          <label className="mb-1 block text-xs font-medium text-navy-800">Grupo</label>
+          <select
+            value={grupo}
+            onChange={(e) => setGrupo(e.target.value as ModuleFamily)}
+            className="w-full rounded-md border border-steel-200 bg-white px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+          >
+            <option value="estructural">Metrados Estructurales</option>
+            <option value="acabados">Acabados y Adicionales</option>
+          </select>
+        </div>
+      )}
       <button
         type="submit"
         className="flex items-center gap-1.5 rounded-md bg-navy-900 px-3 py-2 text-xs font-semibold text-white hover:bg-navy-700"
