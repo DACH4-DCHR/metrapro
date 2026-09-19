@@ -434,6 +434,34 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
     ],
   },
 
+  acabados: {
+    title: "Acabados: Tarrajeo y Pintura",
+    summary:
+      "Metra el tarrajeo y la pintura de un ambiente (cuarto, baño, sala, etc.) a partir de sus dimensiones: el área de muros y de cielorraso se calculan solas.",
+    sections: [
+      {
+        heading: "Dimensiones del ambiente",
+        items: [
+          { label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de piso/cielorraso." },
+          { label: "Altura", text: "Del piso terminado al cielorraso; junto al perímetro da el área bruta de muros." },
+          {
+            label: "Área de vanos",
+            text: "Área de puertas y ventanas del ambiente, para descontarla del área de muros — si no la descuentas, el tarrajeo y la pintura salen sobrestimados.",
+          },
+        ],
+      },
+      {
+        heading: "Partidas a incluir",
+        items: [
+          {
+            label: "Tarrajeo / Pintura de muros y de cielorraso",
+            text: "Actívalas por separado según lo que necesite tu proyecto — por ejemplo, puedes tarrajear sin pintar todavía, o pintar un cielorraso de drywall sin tarrajearlo.",
+          },
+        ],
+      },
+    ],
+  },
+
   viga: {
     title: "Vigas",
     summary: "Metra el concreto, encofrado y acero (longitudinal + estribos) de un grupo de vigas rectangulares, T o de sección personalizada.",

@@ -16,6 +16,7 @@ import { PlacasPage } from "./pages/Placas";
 import { MurosAlbanileriaPage } from "./pages/MurosAlbanileria";
 import { LosaMacizaPage } from "./pages/LosaMaciza";
 import { MurosArquitecturaPage } from "./pages/MurosArquitectura";
+import { AcabadosPage } from "./pages/Acabados";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { TermsPage, PrivacyPage } from "./pages/Legal";
@@ -78,6 +79,7 @@ function ProjectGate() {
           <Route path="/muros-albanileria" element={<MurosAlbanileriaPage />} />
           <Route path="/losa-maciza" element={<LosaMacizaPage />} />
           <Route path="/muros-arquitectura" element={<MurosArquitecturaPage />} />
+          <Route path="/acabados" element={<AcabadosPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

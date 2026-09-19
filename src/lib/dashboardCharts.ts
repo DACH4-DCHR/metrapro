@@ -5,7 +5,15 @@ import { esPartidaMovimientoTierras, MOVILIZACION_PARTIDA, type PresupuestoRow }
 import type { CalculatedElement, ModuleType } from "./types";
 import { MODULE_LABELS } from "./moduleLabels";
 
-const CATEGORIAS_COSTO = ["Concreto", "Acero", "Encofrado", "Movimiento de Tierras", "Movilización", "Otros"] as const;
+const CATEGORIAS_COSTO = [
+  "Concreto",
+  "Acero",
+  "Encofrado",
+  "Movimiento de Tierras",
+  "Movilización",
+  "Acabados",
+  "Otros",
+] as const;
 export type CategoriaCosto = (typeof CATEGORIAS_COSTO)[number];
 
 // Mismo orden y colores siempre (paleta categórica fija, nunca ciclada): así
@@ -20,6 +28,7 @@ const CATEGORIA_COLOR: Record<CategoriaCosto, string> = {
   Encofrado: "#1baf7a",
   "Movimiento de Tierras": "#eda100",
   Movilización: "#e87ba4",
+  Acabados: "#4a3aa7",
   Otros: "#008300",
 };
 
@@ -29,6 +38,7 @@ function categorizarPartida(partida: string): CategoriaCosto {
   if (/encofrado/i.test(partida)) return "Encofrado";
   if (partida === MOVILIZACION_PARTIDA) return "Movilización";
   if (esPartidaMovimientoTierras(partida)) return "Movimiento de Tierras";
+  if (/tarrajeo|pintura/i.test(partida)) return "Acabados";
   return "Otros";
 }
 
@@ -49,6 +59,7 @@ export function costosPorCategoria(rows: PresupuestoRow[]): CostoCategoriaItem[]
     Encofrado: 0,
     "Movimiento de Tierras": 0,
     Movilización: 0,
+    Acabados: 0,
     Otros: 0,
   };
   let total = 0;
@@ -78,6 +89,7 @@ const PCT_MANO_OBRA: Record<CategoriaCosto, number> = {
   Encofrado: 0.55,
   "Movimiento de Tierras": 0.45,
   Movilización: 0.1,
+  Acabados: 0.55,
   Otros: 0.4,
 };
 

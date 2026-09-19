@@ -25,6 +25,7 @@ import {
   Mail,
   Send,
   Phone,
+  PaintRoller,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -76,6 +77,10 @@ const navGroups: { section: string; items: { to: string; label: string; icon: ty
   {
     section: "Arquitectura",
     items: [{ to: "/muros-arquitectura", label: "Muros de Arquitectura", icon: Grid2x2 }],
+  },
+  {
+    section: "Acabados",
+    items: [{ to: "/acabados", label: "Tarrajeo y Pintura", icon: PaintRoller }],
   },
 ];
 

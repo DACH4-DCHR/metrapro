@@ -11,7 +11,8 @@ export type ModuleType =
   | "placa"
   | "muroAlbanileria"
   | "losaMaciza"
-  | "muroArquitectura";
+  | "muroArquitectura"
+  | "acabados";
 
 export interface MetradoLine {
   partida: string;
