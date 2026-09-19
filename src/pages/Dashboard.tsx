@@ -73,6 +73,7 @@ import {
 } from "../lib/reports/excelReport";
 import { agruparAceroPorModulo, LONGITUD_VARILLA_COMERCIAL_M } from "../lib/calc/aceroResumen";
 import { MODULE_LABELS } from "../lib/moduleLabels";
+import { MODULE_GROUP, type ModuleGroup } from "../lib/moduleGroups";
 import type { ModuleType } from "../lib/types";
 
 const numberFormatter = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
@@ -114,10 +115,21 @@ function isStandaloneApp(): boolean {
   return displayModeStandalone || iosStandalone;
 }
 
-export function DashboardPage() {
+// scope=undefined muestra el proyecto completo (Dashboard general); con
+// scope, solo los elementos de esa familia de módulos (ver moduleGroups.ts)
+// — así "Metrados Estructurales" y "Acabados y Adicionales" son vistas
+// independientes, sin mezclar datos de una en la otra. Los botones de
+// exportar del encabezado (Descargar PDF/Exportar Excel/Enviar) son la
+// excepción: siempre traen el proyecto completo, sin importar la vista
+// actual, porque son el documento real que se comparte con el cliente.
+export function DashboardPage({ scope }: { scope?: ModuleGroup } = {}) {
   const projectInfo = useProjectStore((s) => s.projectInfo);
   const setProjectInfo = useProjectStore((s) => s.setProjectInfo);
-  const elements = useProjectStore((s) => s.elements);
+  const allElements = useProjectStore((s) => s.elements);
+  const elements = useMemo(
+    () => (scope ? allElements.filter((e) => MODULE_GROUP[e.module] === scope) : allElements),
+    [allElements, scope]
+  );
   const removeElement = useProjectStore((s) => s.removeElement);
   const prices = useProjectStore((s) => s.prices);
   const setPrice = useProjectStore((s) => s.setPrice);
@@ -215,6 +227,22 @@ export function DashboardPage() {
     [materialesLines, customLineas, aceroLineas]
   );
 
+  // Solo para los botones de exportar del encabezado (ver comentario junto a
+  // "scope" más arriba): el mismo cálculo de arriba, pero sobre TODOS los
+  // elementos del proyecto, sin importar en qué dashboard estés parado.
+  const consolidatedFull = useMemo(
+    () => (scope ? consolidateLines(allElements.map((e) => e.lines)) : consolidated),
+    [scope, allElements, consolidated]
+  );
+  const materialesFull = useMemo(
+    () => (scope ? calcularMetradoMateriales(consolidatedFull, allElements) : materiales),
+    [scope, consolidatedFull, allElements, materiales]
+  );
+  const materialesExportLinesFull = useMemo(() => {
+    if (!scope) return materialesExportLines;
+    return [...materialesALineas(materialesFull), ...customLineas, ...aceroALineas(materialesFull)];
+  }, [scope, materialesExportLines, materialesFull, customLineas]);
+
   const materialesFootRowsExcel = useMemo(() => {
     const rows: (string | number)[][] = materiales.acero.map((r) => [
       `Varillas Ø ${r.symbol} x 9m (habilitación)`,
@@ -274,11 +302,11 @@ export function DashboardPage() {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
       generatePdfReport(
         projectInfo,
-        elements,
-        consolidated,
+        allElements,
+        consolidatedFull,
         prices,
-        materialesExportLines,
-        materiales.totalVarillas,
+        materialesExportLinesFull,
+        materialesFull.totalVarillas,
         presupuestoCustom
       );
     } finally {
@@ -296,11 +324,11 @@ export function DashboardPage() {
         const { generatePdfReport } = await import("../lib/reports/pdfReport");
         generatePdfReport(
           projectInfo,
-          elements,
-          consolidated,
+          allElements,
+          consolidatedFull,
           prices,
-          materialesExportLines,
-          materiales.totalVarillas,
+          materialesExportLinesFull,
+          materialesFull.totalVarillas,
           presupuestoCustom
         );
         alert(
@@ -312,11 +340,11 @@ export function DashboardPage() {
       const { sharePdfReport } = await import("../lib/reports/pdfReport");
       const shared = await sharePdfReport(
         projectInfo,
-        elements,
-        consolidated,
+        allElements,
+        consolidatedFull,
         prices,
-        materialesExportLines,
-        materiales.totalVarillas,
+        materialesExportLinesFull,
+        materialesFull.totalVarillas,
         presupuestoCustom
       );
       if (!shared) {
@@ -331,11 +359,24 @@ export function DashboardPage() {
     }
   }
 
+  const headerTitle =
+    scope === "estructural"
+      ? "Dashboard de Metrados Estructurales"
+      : scope === "acabados"
+        ? "Dashboard de Acabados y Adicionales"
+        : "Dashboard del Proyecto";
+  const headerSubtitle =
+    scope === "estructural"
+      ? "Solo zapatas, columnas, vigas, losas y demás metrados estructurales de este proyecto"
+      : scope === "acabados"
+        ? "Solo acabados y otros metrados no estructurales de este proyecto"
+        : "Resumen general de metrados calculados";
+
   return (
     <div>
       <PageHeader
-        title="Dashboard del Proyecto"
-        subtitle="Resumen general de metrados calculados"
+        title={headerTitle}
+        subtitle={headerSubtitle}
         icon={<LayoutDashboard size={20} />}
         helpKey="dashboard"
         actions={
@@ -344,15 +385,15 @@ export function DashboardPage() {
               onClick={() =>
                 generateExcelReport(
                   projectInfo,
-                  elements,
-                  consolidated,
+                  allElements,
+                  consolidatedFull,
                   prices,
-                  materialesExportLines,
-                  materiales.totalVarillas,
+                  materialesExportLinesFull,
+                  materialesFull.totalVarillas,
                   presupuestoCustom
                 )
               }
-              disabled={consolidated.length === 0}
+              disabled={consolidatedFull.length === 0}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileSpreadsheet size={16} />
@@ -360,7 +401,7 @@ export function DashboardPage() {
             </button>
             <button
               onClick={handleDownloadPdf}
-              disabled={consolidated.length === 0 || generatingPdf}
+              disabled={consolidatedFull.length === 0 || generatingPdf}
               className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileDown size={16} />
@@ -368,7 +409,7 @@ export function DashboardPage() {
             </button>
             <button
               onClick={handleSharePdf}
-              disabled={consolidated.length === 0 || sharingPdf}
+              disabled={consolidatedFull.length === 0 || sharingPdf}
               className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send size={16} />
@@ -539,8 +580,11 @@ export function DashboardPage() {
         <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />} collapsible>
           {elements.length === 0 ? (
             <p className="py-6 text-center text-sm text-steel-500">
-              Aún no has guardado ningún elemento. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y
-              presiona "Agregar a la lista".
+              {scope === "acabados"
+                ? 'Aún no has guardado ningún elemento de Acabados. Ve al módulo de Tarrajeo y Pintura, calcula y presiona "Agregar a la lista".'
+                : scope === "estructural"
+                  ? 'Aún no has guardado ningún elemento estructural. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y presiona "Agregar a la lista".'
+                  : 'Aún no has guardado ningún elemento. Ve a un módulo (Losa Aligerada, Vigas o Escaleras), calcula y presiona "Agregar a la lista".'}
             </p>
           ) : (
             <div className="overflow-x-auto">

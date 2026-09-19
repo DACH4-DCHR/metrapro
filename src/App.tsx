@@ -66,6 +66,8 @@ function ProjectGate() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="/dashboard-estructural" element={<DashboardPage scope="estructural" />} />
+          <Route path="/dashboard-acabados" element={<DashboardPage scope="acabados" />} />
           <Route path="/losa-aligerada" element={<LosaAligeradaPage />} />
           <Route path="/vigas" element={<VigasPage />} />
           <Route path="/escaleras" element={<EscalerasPage />} />

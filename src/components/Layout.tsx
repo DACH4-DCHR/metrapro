@@ -46,11 +46,13 @@ const dashboardItem = { to: "/", label: "Dashboard", icon: LayoutDashboard, end:
 const navGroups: {
   section: string;
   macroTitle?: string;
+  macroTo?: string;
   items: { to: string; label: string; icon: typeof Layers3 }[];
 }[] = [
   {
     section: "Movimiento de Tierras",
     macroTitle: "Metrados Estructurales",
+    macroTo: "/dashboard-estructural",
     items: [{ to: "/movimiento-tierras", label: "Movimiento de Tierras", icon: Shovel }],
   },
   {
@@ -86,6 +88,7 @@ const navGroups: {
   {
     section: "Acabados",
     macroTitle: "Acabados y Adicionales",
+    macroTo: "/dashboard-acabados",
     items: [{ to: "/acabados", label: "Tarrajeo y Pintura", icon: PaintRoller }],
   },
 ];
@@ -240,13 +243,26 @@ export function Layout() {
               <div key={group.section}>
                 {group.macroTitle && (
                   <div className={`px-3 ${idx === 0 ? "pb-1" : "mt-4 border-t border-white/10 pb-1 pt-4"}`}>
-                    <p
-                      className={`font-extrabold uppercase tracking-widest text-amber-400 ${
-                        compact ? "text-[10px]" : "text-xs"
-                      }`}
-                    >
-                      {group.macroTitle}
-                    </p>
+                    {group.macroTo ? (
+                      <NavLink
+                        to={group.macroTo}
+                        className={({ isActive }) =>
+                          `block font-extrabold uppercase tracking-widest transition-colors hover:text-amber-300 ${
+                            compact ? "text-[10px]" : "text-xs"
+                          } ${isActive ? "text-amber-300 underline underline-offset-2" : "text-amber-400"}`
+                        }
+                      >
+                        {group.macroTitle}
+                      </NavLink>
+                    ) : (
+                      <p
+                        className={`font-extrabold uppercase tracking-widest text-amber-400 ${
+                          compact ? "text-[10px]" : "text-xs"
+                        }`}
+                      >
+                        {group.macroTitle}
+                      </p>
+                    )}
                   </div>
                 )}
                 <button
