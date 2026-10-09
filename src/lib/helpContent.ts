@@ -3,7 +3,7 @@
 // formulario. Se muestra desde PageHeader (prop helpKey) en un panel lateral.
 import type { ModuleType } from "./types";
 
-export type HelpKey = ModuleType | "dashboard";
+export type HelpKey = ModuleType | "dashboard" | "metrados" | "presupuesto";
 
 export interface HelpItem {
   label: string;
@@ -23,28 +23,77 @@ export interface HelpContent {
 
 export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
   dashboard: {
-    title: "Dashboard del proyecto",
+    title: "Resumen del proyecto",
     summary:
-      "Aquí se juntan todos los elementos que calculaste y guardaste en los distintos módulos: el resumen general, el cuadro de metrados consolidado, el acero por diámetro y el presupuesto referencial.",
+      "Datos generales de la obra y los totales principales (mano de obra, materiales, presupuesto). El detalle de metrados y presupuesto vive en sus propias páginas: ve a 'Metrados' o 'Presupuesto' en el menú.",
     sections: [
       {
         heading: "Cómo funciona",
         items: [
           {
+            label: "Datos del proyecto",
+            text: "Nombre de obra, cliente, ubicación, responsable, fecha y logo — se usan en el encabezado de los reportes PDF/Excel.",
+          },
+          {
+            label: "Mano de obra / Materiales / Presupuesto general",
+            text: "Totales del costo directo de todo el proyecto, repartidos entre mano de obra y materiales según cada categoría de partida.",
+          },
+          {
+            label: "Exportar Excel / PDF / Enviar",
+            text: "Genera el reporte completo del proyecto (metrados + presupuesto + materiales), usando los datos de arriba.",
+          },
+        ],
+      },
+    ],
+  },
+
+  metrados: {
+    title: "Metrados",
+    summary:
+      "Elementos guardados, cuadro de metrados consolidado, acero por diámetro y metrado de materiales — todo lo que calculaste, en un solo lugar.",
+    sections: [
+      {
+        heading: "Cómo funciona",
+        items: [
+          {
+            label: "Pestañas Todo / Estructural / Acabados",
+            text: "Filtran las tablas de abajo para ver solo un lado del proyecto a la vez, sin perder de vista que ambos existen.",
+          },
+          {
             label: "Elementos guardados",
-            text: "Cada vez que calculas algo en un módulo (zapatas, vigas, losas, etc.) y presionas 'Agregar a la lista', aparece aquí como una fila. Puedes tener varios elementos del mismo módulo (ej. 2 grupos de zapatas distintos).",
+            text: "Cada vez que calculas algo en un módulo y presionas 'Agregar a la lista', aparece aquí como una fila.",
           },
           {
             label: "Cuadro de metrados consolidado",
             text: "Suma automáticamente las partidas repetidas de todos los elementos guardados (ej. si dos módulos usan Ø8mm, el kg total se suma en una sola línea).",
           },
           {
-            label: "Presupuesto referencial",
-            text: "Cada partida trae un precio unitario editable (S/.). Puedes activar Gastos Generales, Utilidad e IGV con su checkbox y porcentaje, para llegar a un Total General.",
+            label: "Metrado de materiales",
+            text: "Siempre junta estructural y acabados, sin importar la pestaña — el cemento y la arena se compran igual para ambos, no tiene sentido separarlos.",
+          },
+        ],
+      },
+    ],
+  },
+
+  presupuesto: {
+    title: "Presupuesto",
+    summary: "Costo directo por categoría y presupuesto referencial completo, con Gastos Generales, Utilidad e IGV.",
+    sections: [
+      {
+        heading: "Cómo funciona",
+        items: [
+          {
+            label: "Pestañas Todo / Estructural / Acabados",
+            text: "Filtran el gráfico y la tabla de partidas para ver solo un lado del proyecto a la vez.",
           },
           {
-            label: "Exportar Excel / PDF",
-            text: "Genera un archivo descargable con todo lo anterior, usando los datos del proyecto (nombre de obra, cliente, logo) que llenes arriba.",
+            label: "Presupuesto referencial",
+            text: "Cada partida trae un precio unitario editable (S/.).",
+          },
+          {
+            label: "Gastos Generales / Utilidad / IGV",
+            text: "Se calculan siempre sobre el costo directo TOTAL del proyecto, sin importar qué pestaña tengas activa — son un cálculo financiero único, no se reparte por vista.",
           },
         ],
       },

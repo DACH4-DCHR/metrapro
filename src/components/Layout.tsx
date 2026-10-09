@@ -30,6 +30,8 @@ import {
   Paintbrush,
   Grid3x3,
   PaintBucket,
+  ClipboardList,
+  Wallet,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -45,18 +47,20 @@ import { useCompactViewport } from "../hooks/useCompactViewport";
 // corrido, sobrecimiento, vigas de cimentación), luego la superestructura (vigas,
 // losas) y finalmente escaleras. Los módulos de un mismo grupo comparten sección
 // visual en el menú.
-const dashboardItem = { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true };
+const topItems = [
+  { to: "/", label: "Resumen", icon: LayoutDashboard, end: true },
+  { to: "/metrados", label: "Metrados", icon: ClipboardList, end: false },
+  { to: "/presupuesto", label: "Presupuesto", icon: Wallet, end: false },
+];
 
 const navGroups: {
   section: string;
   macroTitle?: string;
-  macroTo?: string;
   items: { to: string; label: string; icon: typeof Layers3 }[];
 }[] = [
   {
     section: "Movimiento de Tierras",
     macroTitle: "Metrados Estructurales",
-    macroTo: "/dashboard-estructural",
     items: [{ to: "/movimiento-tierras", label: "Movimiento de Tierras", icon: Shovel }],
   },
   {
@@ -92,7 +96,6 @@ const navGroups: {
   {
     section: "Arquitectura",
     macroTitle: "Acabados y Adicionales",
-    macroTo: "/dashboard-acabados",
     items: [
       { to: "/acabados", label: "Tarrajeo de Interiores", icon: PaintRoller },
       { to: "/tarrajeo-exteriores", label: "Tarrajeo de Exteriores", icon: Home },
@@ -230,22 +233,27 @@ export function Layout() {
         <ProjectSwitcher />
 
         <nav className={`flex-1 overflow-y-auto px-3 ${compact ? "space-y-2 py-2" : "space-y-4 py-4"}`}>
-          <NavLink
-            to={dashboardItem.to}
-            end={dashboardItem.end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md border-l-2 pl-[10px] pr-3 font-medium transition-colors ${
-                compact ? "py-1.5 text-xs" : "py-2.5 text-sm"
-              } ${
-                isActive
-                  ? "border-amber-500 bg-navy-800 text-white"
-                  : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
-              }`
-            }
-          >
-            <dashboardItem.icon size={compact ? 15 : 18} />
-            {dashboardItem.label}
-          </NavLink>
+          <div className="space-y-1">
+            {topItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-md border-l-2 pl-[10px] pr-3 font-medium transition-colors ${
+                    compact ? "py-1.5 text-xs" : "py-2.5 text-sm"
+                  } ${
+                    isActive
+                      ? "border-amber-500 bg-navy-800 text-white"
+                      : "border-transparent text-steel-300 hover:bg-navy-800 hover:text-white"
+                  }`
+                }
+              >
+                <item.icon size={compact ? 15 : 18} />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
 
           {navGroups.map((group, idx) => {
             const isOpen = openSections[group.section] ?? false;
@@ -253,26 +261,13 @@ export function Layout() {
               <div key={group.section}>
                 {group.macroTitle && (
                   <div className={`px-3 ${idx === 0 ? "pb-1" : "mt-4 border-t border-white/10 pb-1 pt-4"}`}>
-                    {group.macroTo ? (
-                      <NavLink
-                        to={group.macroTo}
-                        className={({ isActive }) =>
-                          `block font-extrabold uppercase tracking-widest transition-colors hover:text-amber-300 ${
-                            compact ? "text-[10px]" : "text-xs"
-                          } ${isActive ? "text-amber-300 underline underline-offset-2" : "text-amber-400"}`
-                        }
-                      >
-                        {group.macroTitle}
-                      </NavLink>
-                    ) : (
-                      <p
-                        className={`font-extrabold uppercase tracking-widest text-amber-400 ${
-                          compact ? "text-[10px]" : "text-xs"
-                        }`}
-                      >
-                        {group.macroTitle}
-                      </p>
-                    )}
+                    <p
+                      className={`font-extrabold uppercase tracking-widest text-amber-400 ${
+                        compact ? "text-[10px]" : "text-xs"
+                      }`}
+                    >
+                      {group.macroTitle}
+                    </p>
                   </div>
                 )}
                 <button

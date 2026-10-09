@@ -1,0 +1,43 @@
+import {
+  Layers3,
+  RectangleHorizontal,
+  MoveUpRight,
+  Square,
+  StretchHorizontal,
+  Rows3,
+  GitCommitHorizontal,
+  RectangleVertical,
+  PanelLeft,
+  BrickWall,
+  LayoutPanelTop,
+  Grid2x2,
+  Shovel,
+  PaintRoller,
+  Home,
+  Paintbrush,
+  Grid3x3,
+  PaintBucket,
+} from "lucide-react";
+import { MODULE_LABELS } from "../../lib/moduleLabels";
+import type { ModuleType } from "../../lib/types";
+
+export const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers3 }> = {
+  losa: { label: MODULE_LABELS.losa, icon: Layers3 },
+  viga: { label: MODULE_LABELS.viga, icon: RectangleHorizontal },
+  escalera: { label: MODULE_LABELS.escalera, icon: MoveUpRight },
+  movimientoTierras: { label: MODULE_LABELS.movimientoTierras, icon: Shovel },
+  zapata: { label: MODULE_LABELS.zapata, icon: Square },
+  cimientoCorrido: { label: MODULE_LABELS.cimientoCorrido, icon: StretchHorizontal },
+  sobrecimiento: { label: MODULE_LABELS.sobrecimiento, icon: Rows3 },
+  vigaCimentacion: { label: MODULE_LABELS.vigaCimentacion, icon: GitCommitHorizontal },
+  columna: { label: MODULE_LABELS.columna, icon: RectangleVertical },
+  placa: { label: MODULE_LABELS.placa, icon: PanelLeft },
+  muroAlbanileria: { label: MODULE_LABELS.muroAlbanileria, icon: BrickWall },
+  losaMaciza: { label: MODULE_LABELS.losaMaciza, icon: LayoutPanelTop },
+  muroArquitectura: { label: MODULE_LABELS.muroArquitectura, icon: Grid2x2 },
+  tarrajeoInteriores: { label: MODULE_LABELS.tarrajeoInteriores, icon: PaintRoller },
+  tarrajeoExteriores: { label: MODULE_LABELS.tarrajeoExteriores, icon: Home },
+  tarrajeoEscalera: { label: MODULE_LABELS.tarrajeoEscalera, icon: Paintbrush },
+  pisosPavimentos: { label: MODULE_LABELS.pisosPavimentos, icon: Grid3x3 },
+  pintura: { label: MODULE_LABELS.pintura, icon: PaintBucket },
+};
