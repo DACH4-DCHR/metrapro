@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -11,6 +11,7 @@ import {
   FileDown,
   Send,
   BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -46,9 +47,25 @@ function Field({
   );
 }
 
+const TOP_PARTIDAS_COUNT = 6;
+
 export function DashboardPage() {
   const d = useProjectData();
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Ranking de las partidas con mayor impacto en el costo directo de todo el
+  // proyecto — se arma a partir de presupuestoSecciones (mismas filas que el
+  // Presupuesto Referencial, ya con el acero consolidado por módulo en una
+  // sola partida) en vez de presupuesto.rows "plano", para poder mostrar de
+  // qué módulo/sección viene cada una.
+  const topPartidas = useMemo(() => {
+    return d.presupuestoSecciones
+      .flatMap((g) => g.rows.map((r) => ({ ...r, grupo: g.label })))
+      .filter((r) => r.subtotal > 0)
+      .sort((a, b) => b.subtotal - a.subtotal)
+      .slice(0, TOP_PARTIDAS_COUNT);
+  }, [d.presupuestoSecciones]);
+  const maxTopPartida = topPartidas[0]?.subtotal ?? 0;
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -186,6 +203,43 @@ export function DashboardPage() {
               centerLabel="Costo directo"
               valueFormatter={(v) => currencyFormatter.format(v)}
             />
+          </SectionCard>
+        )}
+
+        {topPartidas.length > 0 && (
+          <SectionCard title="Partidas más costosas" icon={<TrendingUp size={16} className="text-navy-700" />}>
+            <p className="mb-4 text-xs text-steel-500">
+              Las partidas con mayor impacto en el costo directo de todo el proyecto.
+            </p>
+            <div className="flex flex-col gap-3">
+              {topPartidas.map((row, idx) => {
+                const pct = maxTopPartida > 0 ? (row.subtotal / maxTopPartida) * 100 : 0;
+                return (
+                  <div key={row.key} className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-bold text-white">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-navy-900">{row.line.partida}</p>
+                        <p className="shrink-0 font-mono text-sm font-bold text-navy-900">
+                          {currencyFormatter.format(row.subtotal)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-steel-100">
+                          <div
+                            className="h-full rounded-full bg-amber-500"
+                            style={{ width: `${Math.max(pct, 4)}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-[11px] text-steel-500">{row.grupo}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </SectionCard>
         )}
       </div>
