@@ -23,7 +23,7 @@ export interface HelpContent {
 
 export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
   dashboard: {
-    title: "Resumen del proyecto",
+    title: "Dashboard del proyecto",
     summary:
       "Datos generales de la obra y los totales principales (mano de obra, materiales, presupuesto). El detalle de metrados y presupuesto vive en sus propias páginas: ve a 'Metrados' o 'Presupuesto' en el menú.",
     sections: [

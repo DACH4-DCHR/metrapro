@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Loader2, ServerCrash } from "lucide-react";
 import { Layout } from "./components/Layout";
-import { ResumenPage } from "./pages/Resumen";
+import { DashboardPage } from "./pages/Dashboard";
 import { MetradosPage } from "./pages/Metrados";
 import { PresupuestoPage } from "./pages/Presupuesto";
 import { LosaAligeradaPage } from "./pages/LosaAligerada";
@@ -71,7 +71,7 @@ function ProjectGate() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<ResumenPage />} />
+          <Route index element={<DashboardPage />} />
           <Route path="/metrados" element={<MetradosPage />} />
           <Route path="/presupuesto" element={<PresupuestoPage />} />
           <Route path="/losa-aligerada" element={<LosaAligeradaPage />} />

@@ -1,5 +1,4 @@
 import { useRef } from "react";
-import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Building2,
@@ -11,12 +10,12 @@ import {
   FileSpreadsheet,
   FileDown,
   Send,
-  ClipboardList,
-  ArrowRight,
+  BarChart3,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatCard } from "../components/ui/StatCard";
+import { DonutChart } from "../components/charts/DonutChart";
 import { useProjectData } from "../hooks/useProjectData";
 import { currencyFormatter } from "../lib/formatters";
 import { generateExcelReport } from "../lib/reports/excelReport";
@@ -47,7 +46,7 @@ function Field({
   );
 }
 
-export function ResumenPage() {
+export function DashboardPage() {
   const d = useProjectData();
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,8 +66,8 @@ export function ResumenPage() {
   return (
     <div>
       <PageHeader
-        title="Resumen del Proyecto"
-        subtitle="Datos generales y acceso rápido a Metrados y Presupuesto"
+        title="Dashboard del Proyecto"
+        subtitle="Resumen general de metrados calculados"
         icon={<LayoutDashboard size={20} />}
         helpKey="dashboard"
         actions={
@@ -176,38 +175,19 @@ export function ResumenPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Link
-            to="/metrados"
-            className="group flex items-center justify-between rounded-lg border border-steel-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-navy-900 text-white">
-                <ClipboardList size={20} />
-              </span>
-              <div>
-                <p className="font-bold text-navy-900">Metrados</p>
-                <p className="text-xs text-steel-500">Elementos guardados, cuadro consolidado, acero y materiales</p>
-              </div>
-            </div>
-            <ArrowRight size={18} className="text-steel-400 transition-transform group-hover:translate-x-1" />
-          </Link>
-          <Link
-            to="/presupuesto"
-            className="group flex items-center justify-between rounded-lg border border-steel-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-amber-500 text-navy-950">
-                <Wallet size={20} />
-              </span>
-              <div>
-                <p className="font-bold text-navy-900">Presupuesto</p>
-                <p className="text-xs text-steel-500">Costo por categoría y presupuesto referencial</p>
-              </div>
-            </div>
-            <ArrowRight size={18} className="text-steel-400 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </div>
+        {d.costosCategoria.length > 0 && (
+          <SectionCard title="Costo por categoría" icon={<BarChart3 size={16} className="text-navy-700" />}>
+            <p className="mb-4 text-xs text-steel-500">
+              Reparto del costo directo por tipo de recurso. Pasa el mouse (o toca) una categoría para ver su porcentaje.
+            </p>
+            <DonutChart
+              items={d.costosCategoria.map((c) => ({ label: c.categoria, value: c.monto, pct: c.pct, color: c.color }))}
+              centerValue={currencyFormatter.format(d.presupuesto.costoDirecto)}
+              centerLabel="Costo directo"
+              valueFormatter={(v) => currencyFormatter.format(v)}
+            />
+          </SectionCard>
+        )}
       </div>
     </div>
   );

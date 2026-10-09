@@ -48,7 +48,7 @@ import { useCompactViewport } from "../hooks/useCompactViewport";
 // losas) y finalmente escaleras. Los módulos de un mismo grupo comparten sección
 // visual en el menú.
 const topItems = [
-  { to: "/", label: "Resumen", icon: LayoutDashboard, end: true },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/metrados", label: "Metrados", icon: ClipboardList, end: false },
   { to: "/presupuesto", label: "Presupuesto", icon: Wallet, end: false },
 ];
