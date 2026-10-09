@@ -12,6 +12,7 @@ import {
   Send,
   BarChart3,
   TrendingUp,
+  Scale,
 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -203,6 +204,33 @@ export function DashboardPage() {
               centerLabel="Costo directo"
               valueFormatter={(v) => currencyFormatter.format(v)}
             />
+          </SectionCard>
+        )}
+
+        {d.presupuesto.costoDirecto > 0 && (
+          <SectionCard title="Estructural vs. Acabados" icon={<Scale size={16} className="text-navy-700" />}>
+            <div className="mb-3 flex h-3.5 overflow-hidden rounded-full">
+              <div
+                className="h-full bg-navy-900"
+                style={{ width: `${(d.subtotalCostosEstructurales / d.presupuesto.costoDirecto) * 100}%` }}
+              />
+              <div
+                className="h-full bg-amber-500"
+                style={{ width: `${(d.subtotalCostosAcabados / d.presupuesto.costoDirecto) * 100}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="flex items-center gap-1.5 text-navy-900">
+                <span className="h-2 w-2 shrink-0 rounded-sm bg-navy-900" />
+                Estructural · {currencyFormatter.format(d.subtotalCostosEstructurales)} (
+                {((d.subtotalCostosEstructurales / d.presupuesto.costoDirecto) * 100).toFixed(1)}%)
+              </span>
+              <span className="flex items-center gap-1.5 text-navy-900">
+                <span className="h-2 w-2 shrink-0 rounded-sm bg-amber-500" />
+                Acabados · {currencyFormatter.format(d.subtotalCostosAcabados)} (
+                {((d.subtotalCostosAcabados / d.presupuesto.costoDirecto) * 100).toFixed(1)}%)
+              </span>
+            </div>
           </SectionCard>
         )}
 
