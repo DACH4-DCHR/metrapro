@@ -34,7 +34,8 @@ export function PresupuestoPage() {
   };
 
   return (
-    <div>
+    <div className="flex min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
       <PageHeader title="Presupuesto" subtitle="Costo directo por categoría y presupuesto referencial" icon={<Wallet size={20} />} helpKey="presupuesto" />
 
       <div className="flex flex-col gap-6 p-6">
@@ -183,6 +184,7 @@ export function PresupuestoPage() {
             </div>
           </div>
         </SectionCard>
+      </div>
       </div>
 
       <ApuDrawer row={apuDrawerRow} onClose={() => setApuDrawerKey(null)} onApuChange={d.setApuOverride} />
