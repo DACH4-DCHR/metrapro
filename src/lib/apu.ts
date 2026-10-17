@@ -75,10 +75,13 @@ function herramientas3pct(): ApuEquipoItem {
 }
 
 // --- Plantillas por tipo de partida --------------------------------------
-// Cobertura inicial: las partidas con mayor peso en el costo de un proyecto
-// típico (concreto, acero, encofrado, excavación, tarrajeo). Una partida sin
-// plantilla simplemente no trae APU por defecto — sigue funcionando como
-// hoy (precio unitario manual + % referencial por categoría).
+// Cobertura: estructura (concreto, concreto ciclópeo, acero, encofrado,
+// excavación, relleno, eliminación, refine) y acabados (tarrajeo, muro de
+// albañilería/tabique, contrapiso, pisos cerámico/porcelanato/cemento
+// pulido/vinílico, pintura). Una partida sin plantilla (ej. movilización —
+// es una suma alzada, no tiene sentido un APU por unidad) simplemente no
+// trae APU por defecto — sigue funcionando como hoy (precio unitario manual
+// + % referencial por categoría).
 
 function apuConcreto(): ApuDef {
   return {
@@ -154,17 +157,190 @@ function apuTarrajeo(): ApuDef {
   };
 }
 
+// Concreto ciclópeo (f'c=140 + % P.G.): NO reusar apuConcreto() — al llevar
+// piedra grande reemplazando parte del volumen, consume bastante menos
+// cemento por m³ que un concreto estructural normal.
+function apuConcretoCiclopeo(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Cemento Portland Tipo I", unidad: "bolsas", cantidad: 6.4, precio: 26 },
+      { insumo: "Arena gruesa", unidad: "m³", cantidad: 0.34, precio: 90 },
+      { insumo: "Piedra chancada 1/2\"", unidad: "m³", cantidad: 0.5, precio: 95 },
+      { insumo: "Piedra grande (P.G.)", unidad: "m³", cantidad: 0.3, precio: 40 },
+      { insumo: "Agua", unidad: "m³", cantidad: 0.13, precio: 5 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 18, jornal: JORNAL.Operario },
+      { categoria: "Oficial", cuadrilla: 1, rendimiento: 18, jornal: JORNAL.Oficial },
+      { categoria: "Peón", cuadrilla: 5, rendimiento: 18, jornal: JORNAL.Peón },
+    ],
+    equipos: [{ insumo: "Mezcladora de concreto 11p3", cantidad: 0.06, precio: 220 }, herramientas3pct()],
+  };
+}
+
+function apuRelleno(): ApuDef {
+  return {
+    materiales: [],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 0.25, rendimiento: 15, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 2, rendimiento: 15, jornal: JORNAL.Peón },
+    ],
+    equipos: [
+      { insumo: "Compactadora vibratoria tipo plancha 4HP", cantidad: 0.07, precio: 150 },
+      herramientas3pct(),
+    ],
+  };
+}
+
+function apuEliminacion(): ApuDef {
+  return {
+    materiales: [],
+    manoObra: [{ categoria: "Peón", cuadrilla: 4, rendimiento: 40, jornal: JORNAL.Peón }],
+    equipos: [
+      { insumo: "Volquete 15 m³ (flete a botadero)", cantidad: 0.05, precio: 180 },
+      herramientas3pct(),
+    ],
+  };
+}
+
+function apuRefine(): ApuDef {
+  return {
+    materiales: [],
+    manoObra: [{ categoria: "Peón", cuadrilla: 1, rendimiento: 25, jornal: JORNAL.Peón }],
+    equipos: [herramientas3pct()],
+  };
+}
+
+// Mismo template para muro portante (soga) y tabique no portante — la
+// diferencia estructural (columnetas/solera de confinamiento) ya es otra
+// partida de concreto/encofrado, detectada aparte.
+function apuMuroAlbanileria(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Ladrillo King Kong 18 huecos", unidad: "und", cantidad: 39, precio: 0.75 },
+      { insumo: "Cemento Portland Tipo I", unidad: "bolsas", cantidad: 0.23, precio: 26 },
+      { insumo: "Arena gruesa", unidad: "m³", cantidad: 0.032, precio: 90 },
+      { insumo: "Agua", unidad: "m³", cantidad: 0.006, precio: 5 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 9, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 0.75, rendimiento: 9, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuPintura(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Pintura látex", unidad: "gal", cantidad: 0.04, precio: 70 },
+      { insumo: "Sellador/Imprimante", unidad: "gal", cantidad: 0.02, precio: 55 },
+      { insumo: "Lija", unidad: "und", cantidad: 0.1, precio: 2 },
+    ],
+    manoObra: [{ categoria: "Operario", cuadrilla: 1, rendimiento: 25, jornal: JORNAL.Operario }],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuContrapiso(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Cemento Portland Tipo I", unidad: "bolsas", cantidad: 0.4, precio: 26 },
+      { insumo: "Arena gruesa", unidad: "m³", cantidad: 0.035, precio: 90 },
+      { insumo: "Agua", unidad: "m³", cantidad: 0.012, precio: 5 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 15, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 1, rendimiento: 15, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuPisoCeramico(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Cerámico 30x30cm", unidad: "m²", cantidad: 1.05, precio: 35 },
+      { insumo: "Pegamento para cerámico", unidad: "kg", cantidad: 5, precio: 2.2 },
+      { insumo: "Fragua (porcelana para junta)", unidad: "kg", cantidad: 0.5, precio: 4 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 12, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 0.5, rendimiento: 12, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuPisoPorcelanato(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Porcelanato 60x60cm", unidad: "m²", cantidad: 1.08, precio: 65 },
+      { insumo: "Pegamento para porcelanato", unidad: "kg", cantidad: 5, precio: 2.8 },
+      { insumo: "Fragua (porcelana para junta)", unidad: "kg", cantidad: 0.3, precio: 4.5 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 10, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 0.5, rendimiento: 10, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuPisoCementoPulido(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Cemento Portland Tipo I", unidad: "bolsas", cantidad: 0.45, precio: 26 },
+      { insumo: "Arena gruesa", unidad: "m³", cantidad: 0.04, precio: 90 },
+      { insumo: "Endurecedor de piso", unidad: "kg", cantidad: 1, precio: 4 },
+    ],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 20, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 1, rendimiento: 20, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuPisoVinilico(): ApuDef {
+  return {
+    materiales: [
+      { insumo: "Piso vinílico (losetas/rollo)", unidad: "m²", cantidad: 1.08, precio: 45 },
+      { insumo: "Pegamento para vinílico", unidad: "kg", cantidad: 0.3, precio: 12 },
+    ],
+    manoObra: [{ categoria: "Operario", cuadrilla: 1, rendimiento: 25, jornal: JORNAL.Operario }],
+    equipos: [herramientas3pct()],
+  };
+}
+
 // Detecta el tipo de partida por su texto (mismo criterio por regex que
 // categorizarPartida en dashboardCharts.ts y volumenEfectivoConcreto en
 // materiales.ts) y devuelve su plantilla — así un APU por defecto cubre
 // TODAS las partidas de ese tipo (ej. concreto en columnas, en vigas, en
 // zapatas...) sin repetir una plantilla por cada texto exacto de partida.
+//
+// Si se agrega un tipo de partida nuevo a algún módulo (ej. una partida de
+// acabado que hoy no existe), hay que sumar aquí su propio chequeo — el
+// matching es por texto/unidad, no se detecta solo.
 export function defaultApuFor(partida: string, unidad: string): ApuDef | null {
+  // Más específico primero: concreto ciclópeo NO debe caer en la plantilla
+  // de concreto estructural normal (consume mucho menos cemento).
+  if (unidad === "m³" && /concreto\s+cicl[oó]peo/i.test(partida)) return apuConcretoCiclopeo();
   if (unidad === "m³" && /concreto/i.test(partida) && /f'?c\s*=\s*\d+/i.test(partida)) return apuConcreto();
   if (unidad === "kg" && /acero/i.test(partida)) return apuAceroHabilitadoYColocado();
   if (unidad === "m²" && /encofrado/i.test(partida)) return apuEncofrado();
   if (unidad === "m³" && /excavaci[oó]n/i.test(partida)) return apuExcavacion();
+  if (unidad === "m³" && /relleno.*compactado/i.test(partida)) return apuRelleno();
+  if (unidad === "m³" && /eliminaci[oó]n de material excedente/i.test(partida)) return apuEliminacion();
+  if (unidad === "m²" && /refine.*nivelaci[oó]n/i.test(partida)) return apuRefine();
+  if (unidad === "m²" && /contrapiso/i.test(partida)) return apuContrapiso();
   if (unidad === "m²" && /tarrajeo/i.test(partida) && /mezcla\s+C:A/i.test(partida)) return apuTarrajeo();
+  if (unidad === "m²" && (/muro de soga/i.test(partida) || /tabique de alba/i.test(partida))) return apuMuroAlbanileria();
+  if (unidad === "m²" && /pintura/i.test(partida)) return apuPintura();
+  if (unidad === "m²" && /cer[aá]mico/i.test(partida)) return apuPisoCeramico();
+  if (unidad === "m²" && /porcelanato/i.test(partida)) return apuPisoPorcelanato();
+  if (unidad === "m²" && /cemento pulido/i.test(partida)) return apuPisoCementoPulido();
+  if (unidad === "m²" && /vin[ií]lico/i.test(partida)) return apuPisoVinilico();
   return null;
 }
 
