@@ -7,6 +7,7 @@ import { ExportSectionButtons } from "../components/dashboard/ExportSectionButto
 import { AddCustomLineForm } from "../components/dashboard/AddCustomLineForm";
 import { BudgetLineRow } from "../components/dashboard/BudgetLineRow";
 import { PresupuestoGrupoRows } from "../components/dashboard/PresupuestoGrupoRows";
+import { ApuDrawer } from "../components/dashboard/ApuDrawer";
 import { ScopeTabs, type ScopeTab } from "../components/dashboard/ScopeTabs";
 import { useProjectData } from "../hooks/useProjectData";
 import { currencyFormatter } from "../lib/formatters";
@@ -16,9 +17,13 @@ import { GG_PCT_KEY, UT_PCT_KEY, IGV_PCT_KEY } from "../lib/presupuesto";
 export function PresupuestoPage() {
   const d = useProjectData();
   const [tab, setTab] = useState<ScopeTab>("todo");
+  const [apuDrawerKey, setApuDrawerKey] = useState<string | null>(null);
 
   const secciones =
     tab === "estructural" ? d.presupuestoSeccionesEstructural : tab === "acabados" ? d.presupuestoSeccionesAcabados : d.presupuestoSecciones;
+  const apuDrawerRow = apuDrawerKey
+    ? secciones.flatMap((g) => g.rows).find((r) => r.key === apuDrawerKey) ?? null
+    : null;
   const costoDirectoVista =
     tab === "estructural" ? d.subtotalPresupuestoEstructural : tab === "acabados" ? d.subtotalPresupuestoAcabados : d.presupuesto.costoDirecto;
   const customItemsPorGrupo = (label: string) => {
@@ -116,7 +121,8 @@ export function PresupuestoPage() {
                     customItems={customItemsPorGrupo(g.label)}
                     onPriceChange={d.setPrice}
                     onRemoveCustom={d.removeCustomPresupuestoLine}
-                    onApuChange={d.setApuOverride}
+                    onOpenApu={setApuDrawerKey}
+                    activeApuKey={apuDrawerKey}
                   />
                 ))}
               </tbody>
@@ -178,6 +184,8 @@ export function PresupuestoPage() {
           </div>
         </SectionCard>
       </div>
+
+      <ApuDrawer row={apuDrawerRow} onClose={() => setApuDrawerKey(null)} onApuChange={d.setApuOverride} />
     </div>
   );
 }
