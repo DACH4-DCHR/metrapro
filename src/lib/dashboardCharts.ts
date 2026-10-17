@@ -170,11 +170,20 @@ export interface ManoObraMateriales {
 // Reparto del costo directo real del presupuesto (no un valor de ejemplo)
 // entre mano de obra y materiales, para las tarjetas del Dashboard — más
 // relevante para el cliente que ver m³ de concreto o kg de acero.
+//
+// Cuando una partida tiene APU (ver lib/apu.ts), el reparto sale del APU real
+// (equipos/herramientas se suma al lado de materiales, ya que no es trabajo
+// en obra) en vez del % referencial por categoría — más exacto mientras más
+// partidas tengan su propio APU.
 export function manoObraVsMateriales(rows: PresupuestoRow[]): ManoObraMateriales {
   let manoObra = 0;
   let total = 0;
   for (const row of rows) {
-    manoObra += row.subtotal * PCT_MANO_OBRA[categorizarPartida(row.line.partida)];
+    if (row.apuBreakdown) {
+      manoObra += row.apuBreakdown.manoObra;
+    } else {
+      manoObra += row.subtotal * PCT_MANO_OBRA[categorizarPartida(row.line.partida)];
+    }
     total += row.subtotal;
   }
   const materiales = total - manoObra;

@@ -91,7 +91,10 @@ export function PresupuestoPage() {
           }
         >
           <div className="mb-3 text-xs text-steel-500">
-            Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu zona y proveedor.
+            Precios editables (S/.) — se usan valores referenciales por defecto según unidad, ajústalos según tu zona
+            y proveedor. Las partidas con la etiqueta <span className="font-semibold text-navy-800">APU</span> traen
+            su Análisis de Precios Unitarios (materiales/mano de obra/equipo) desglosado y editable — tócala para
+            verlo.
           </div>
           <div className="overflow-x-auto rounded-lg border border-steel-200">
             <table className="w-full min-w-[560px] border-collapse text-sm">
@@ -113,6 +116,7 @@ export function PresupuestoPage() {
                     customItems={customItemsPorGrupo(g.label)}
                     onPriceChange={d.setPrice}
                     onRemoveCustom={d.removeCustomPresupuestoLine}
+                    onApuChange={d.setApuOverride}
                   />
                 ))}
               </tbody>

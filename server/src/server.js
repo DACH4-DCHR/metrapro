@@ -22,6 +22,7 @@ import {
   mergeIntoPriceCatalog,
   setMaterialesCustom,
   setPresupuestoCustom,
+  setApuOverrides,
   addElement,
   removeElement,
   hasFullAccess,
@@ -271,6 +272,12 @@ app.put("/api/projects/:id/materiales-custom", requireProjectOwnership, requireF
 
 app.put("/api/projects/:id/presupuesto-custom", requireProjectOwnership, requireFullAccess, async (req, res) => {
   await setPresupuestoCustom(req.projectId, Array.isArray(req.body) ? req.body : []);
+  res.json(await getProject(req.projectId));
+});
+
+app.put("/api/projects/:id/apu-overrides", requireProjectOwnership, requireFullAccess, async (req, res) => {
+  const apuOverrides = req.body && typeof req.body === "object" ? req.body : {};
+  await setApuOverrides(req.projectId, apuOverrides);
   res.json(await getProject(req.projectId));
 });
 

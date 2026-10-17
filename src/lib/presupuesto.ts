@@ -8,6 +8,7 @@ import { defaultUnitPrice, priceKey } from "./pricing";
 import { consolidateLinesByModule, type ModuleGroup } from "./consolidate";
 import { MODULE_LABELS } from "./moduleLabels";
 import type { ModuleFamily } from "./moduleGroups";
+import { calcularApu, resolveApu, type ApuDef, type ApuOverrides } from "./apu";
 
 // Gastos Generales, Utilidad e IGV se guardan como llaves reservadas dentro del
 // mismo mapa "prices" (ya persistido en el backend con setPrice/putPrices) en vez
@@ -29,6 +30,17 @@ export interface PresupuestoRow {
   line: MetradoLine;
   price: number;
   subtotal: number;
+  // true si el precio sale de un APU (plantilla por defecto o editado) en vez
+  // de un precio unitario manual — ver lib/apu.ts.
+  fromApu: boolean;
+  // Reparto REAL de este subtotal (materiales/mano de obra/equipos), ya
+  // multiplicado por la cantidad de la línea — solo si fromApu. Sin esto,
+  // dashboardCharts.ts no podría mostrar mano de obra vs. materiales exacto
+  // por partida, solo el % referencial por categoría.
+  apuBreakdown?: { materiales: number; manoObra: number; equipos: number };
+  // El APU efectivo (por unidad de partida, sin multiplicar por cantidad) —
+  // lo que se edita en el panel de APU. Mismo valor si fromApu es true.
+  apu?: ApuDef;
 }
 
 export interface PresupuestoTotales {
@@ -51,14 +63,39 @@ export interface PresupuestoTotales {
 // núcleo que reutilizan tanto el Presupuesto Referencial (que además le suma
 // Gastos Generales/Utilidad/IGV) como el costo de materiales, que no necesita
 // esa capa adicional.
-export function valorizarLineas(lines: MetradoLine[], prices: Record<string, number>): { rows: PresupuestoRow[]; total: number } {
+//
+// Si la partida tiene un APU (plantilla por defecto según su tipo, o uno
+// editado a mano — ver lib/apu.ts), el precio unitario sale de ahí en vez del
+// precio manual: el APU manda. apuOverrides es opcional porque la mayoría de
+// llamadas (materiales derivados, líneas sueltas) no tienen partidas con APU.
+export function valorizarLineas(
+  lines: MetradoLine[],
+  prices: Record<string, number>,
+  apuOverrides: ApuOverrides = {}
+): { rows: PresupuestoRow[]; total: number } {
   let total = 0;
   const rows: PresupuestoRow[] = lines.map((line) => {
     const key = priceKey(line.partida, line.unidad);
-    const price = prices[key] ?? defaultUnitPrice(line.unidad);
+    const apu = resolveApu(key, line.partida, line.unidad, apuOverrides);
+    const apuTotales = apu ? calcularApu(apu) : null;
+    const price = apuTotales ? apuTotales.total : (prices[key] ?? defaultUnitPrice(line.unidad));
     const subtotal = price * line.cantidad;
     total += subtotal;
-    return { key, line, price, subtotal };
+    return {
+      key,
+      line,
+      price,
+      subtotal,
+      fromApu: apuTotales !== null,
+      apuBreakdown: apuTotales
+        ? {
+            materiales: apuTotales.materiales * line.cantidad,
+            manoObra: apuTotales.manoObra * line.cantidad,
+            equipos: apuTotales.equipos * line.cantidad,
+          }
+        : undefined,
+      apu: apu ?? undefined,
+    };
   });
   return { rows, total };
 }
@@ -194,11 +231,12 @@ function consolidarMovimientoTierras(groups: ModuleGroup[]): ModuleGroup[] {
 // — los totales con Gastos Generales/Utilidad/IGV se siguen calculando ahí.
 export function agruparPresupuestoPorModulo(
   elements: CalculatedElement[],
-  prices: Record<string, number>
+  prices: Record<string, number>,
+  apuOverrides: ApuOverrides = {}
 ): PresupuestoModuloGroup[] {
   const groups = consolidarMovimientoTierras(consolidateLinesByModule(elements));
   return groups.map((group) => {
-    const { rows, total } = valorizarLineas(consolidarAceroParaPresupuesto(group.lines), prices);
+    const { rows, total } = valorizarLineas(consolidarAceroParaPresupuesto(group.lines), prices, apuOverrides);
     return { module: group.module, label: group.label, rows, subtotal: total };
   });
 }
@@ -210,11 +248,13 @@ export function agruparPresupuestoPorModulo(
 export function calcularPresupuesto(
   consolidated: MetradoLine[],
   prices: Record<string, number>,
-  extraLines: MetradoLine[] = []
+  extraLines: MetradoLine[] = [],
+  apuOverrides: ApuOverrides = {}
 ): PresupuestoTotales {
   const { rows, total: costoDirecto } = valorizarLineas(
     [...consolidarAceroParaPresupuesto(consolidated), ...extraLines],
-    prices
+    prices,
+    apuOverrides
   );
 
   const ggOn = (prices[GG_ON_KEY] ?? 0) === 1;

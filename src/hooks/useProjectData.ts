@@ -34,6 +34,8 @@ import {
 } from "../lib/materiales";
 import { agruparAceroPorModulo } from "../lib/calc/aceroResumen";
 import { MODULE_GROUP, type ModuleFamily } from "../lib/moduleGroups";
+import { priceKey } from "../lib/pricing";
+import type { ApuDef } from "../lib/apu";
 
 // La PWA instalada (ícono en el celular) corre en un WebView "standalone" de
 // Android que no logra entregarle un archivo a NINGUNA otra app vía Web
@@ -64,6 +66,8 @@ export function useProjectData() {
   const setMaterialesCustomStore = useProjectStore((s) => s.setMaterialesCustom);
   const presupuestoCustom = useProjectStore((s) => s.presupuestoCustom);
   const setPresupuestoCustomStore = useProjectStore((s) => s.setPresupuestoCustom);
+  const apuOverrides = useProjectStore((s) => s.apuOverrides);
+  const setApuOverrideStore = useProjectStore((s) => s.setApuOverride);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sharingPdf, setSharingPdf] = useState(false);
 
@@ -96,10 +100,13 @@ export function useProjectData() {
   const lineaMovilizacion = useMemo(() => crearLineaMovilizacion(), []);
   const presupuestoCustomLineas = useMemo(() => presupuestoCustomALineas(presupuestoCustom), [presupuestoCustom]);
   const presupuesto = useMemo(
-    () => calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]),
-    [consolidated, prices, lineaMovilizacion, presupuestoCustomLineas]
+    () => calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas], apuOverrides),
+    [consolidated, prices, lineaMovilizacion, presupuestoCustomLineas, apuOverrides]
   );
-  const presupuestoPorModulo = useMemo(() => agruparPresupuestoPorModulo(elements, prices), [elements, prices]);
+  const presupuestoPorModulo = useMemo(
+    () => agruparPresupuestoPorModulo(elements, prices, apuOverrides),
+    [elements, prices, apuOverrides]
+  );
   const movilizacionValorizado = useMemo(() => valorizarLineas([lineaMovilizacion], prices), [lineaMovilizacion, prices]);
   const presupuestoCustomValorizado = useMemo(
     () => valorizarLineas(presupuestoCustomLineas, prices),
@@ -299,6 +306,12 @@ export function useProjectData() {
     setPresupuestoCustomStore(presupuestoCustom.filter((p) => p.id !== id));
   }
 
+  // apu=null desactiva explícitamente el APU de esa partida (vuelve a precio
+  // manual aunque exista una plantilla por defecto para su tipo).
+  function setApuOverride(partida: string, unidad: string, apu: ApuDef | null) {
+    setApuOverrideStore(priceKey(partida, unidad), apu);
+  }
+
   const safeProjectName = (projectInfo.nombreObra || "proyecto").replace(/[\\/:*?"<>|]/g, "_");
 
   function setGGOn(on: boolean) {
@@ -366,6 +379,8 @@ export function useProjectData() {
     setPrice,
     materialesCustom,
     presupuestoCustom,
+    apuOverrides,
+    setApuOverride,
     generatingPdf,
     sharingPdf,
     consolidated,

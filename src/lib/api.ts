@@ -1,6 +1,7 @@
 import type { CalculatedElement } from "./types";
 import type { CustomMaterialLine } from "./materiales";
 import type { PresupuestoCustomLine } from "./presupuesto";
+import type { ApuOverrides } from "./apu";
 
 export interface ProjectInfoDto {
   id?: number;
@@ -17,6 +18,7 @@ export interface ProjectDto {
   prices: Record<string, number>;
   materialesCustom: CustomMaterialLine[];
   presupuestoCustom: PresupuestoCustomLine[];
+  apuOverrides: ApuOverrides;
   elements: CalculatedElement[];
 }
 
@@ -114,6 +116,13 @@ export function putPresupuestoCustom(projectId: number, items: PresupuestoCustom
   return request<ProjectDto>(`/projects/${projectId}/presupuesto-custom`, {
     method: "PUT",
     body: JSON.stringify(items),
+  });
+}
+
+export function putApuOverrides(projectId: number, apuOverrides: ApuOverrides): Promise<ProjectDto> {
+  return request<ProjectDto>(`/projects/${projectId}/apu-overrides`, {
+    method: "PUT",
+    body: JSON.stringify(apuOverrides),
   });
 }
 

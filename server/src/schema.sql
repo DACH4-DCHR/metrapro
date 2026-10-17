@@ -64,6 +64,13 @@ CREATE TABLE IF NOT EXISTS projects (
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS materiales_custom_json JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS presupuesto_custom_json JSONB NOT NULL DEFAULT '[]'::jsonb;
 
+-- Analisis de Precios Unitarios (APU) editados a mano por el usuario, por
+-- partida (misma llave que prices_json: "partida__unidad"). Si una partida
+-- no tiene entrada aqui, el frontend usa un APU referencial por defecto
+-- (src/lib/apu.ts) segun el tipo de partida — esto solo guarda las
+-- personalizaciones explicitas del usuario.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS apu_overrides_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 CREATE TABLE IF NOT EXISTS elements (
   id TEXT PRIMARY KEY,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

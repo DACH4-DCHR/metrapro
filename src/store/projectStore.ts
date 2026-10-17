@@ -2,12 +2,14 @@ import { create } from "zustand";
 import type { CalculatedElement } from "../lib/types";
 import type { CustomMaterialLine } from "../lib/materiales";
 import type { PresupuestoCustomLine } from "../lib/presupuesto";
+import type { ApuDef, ApuOverrides } from "../lib/apu";
 import {
   fetchProject,
   patchProjectInfo,
   putPrices,
   putMaterialesCustom,
   putPresupuestoCustom,
+  putApuOverrides,
   postElement,
   deleteElement as apiDeleteElement,
   listProjects,
@@ -55,6 +57,7 @@ interface ProjectState {
   prices: Record<string, number>;
   materialesCustom: CustomMaterialLine[];
   presupuestoCustom: PresupuestoCustomLine[];
+  apuOverrides: ApuOverrides;
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   isOffline: boolean;
@@ -72,6 +75,7 @@ interface ProjectState {
   setPrice: (key: string, value: number) => void;
   setMaterialesCustom: (items: CustomMaterialLine[]) => void;
   setPresupuestoCustom: (items: PresupuestoCustomLine[]) => void;
+  setApuOverride: (key: string, apu: ApuDef | null) => void;
   flushQueue: () => Promise<void>;
 }
 
@@ -87,9 +91,16 @@ let syncing = false;
 
 export const useProjectStore = create<ProjectState>()((set, get) => {
   function persistSnapshot() {
-    const { projectId, projectInfo, prices, materialesCustom, presupuestoCustom, elements } = get();
+    const { projectId, projectInfo, prices, materialesCustom, presupuestoCustom, apuOverrides, elements } = get();
     if (projectId == null) return;
-    writeProjectSnapshot(projectId, { projectInfo, prices, materialesCustom, presupuestoCustom, elements });
+    writeProjectSnapshot(projectId, {
+      projectInfo,
+      prices,
+      materialesCustom,
+      presupuestoCustom,
+      apuOverrides,
+      elements,
+    });
   }
 
   function persistQueue(queue: PendingQueue) {
@@ -113,6 +124,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         prices: data.prices,
         materialesCustom: data.materialesCustom ?? [],
         presupuestoCustom: data.presupuestoCustom ?? [],
+        apuOverrides: data.apuOverrides ?? {},
         elements: data.elements,
         status: "ready",
         error: null,
@@ -128,6 +140,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             prices: cached.prices,
             materialesCustom: cached.materialesCustom ?? [],
             presupuestoCustom: cached.presupuestoCustom ?? [],
+            apuOverrides: cached.apuOverrides ?? {},
             elements: cached.elements,
             status: "ready",
             isOffline: true,
@@ -151,6 +164,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     prices: {},
     materialesCustom: [],
     presupuestoCustom: [],
+    apuOverrides: {},
     status: "idle",
     error: null,
     isOffline: false,
@@ -193,6 +207,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
                 prices: cachedSnap.prices,
                 materialesCustom: cachedSnap.materialesCustom ?? [],
                 presupuestoCustom: cachedSnap.presupuestoCustom ?? [],
+                apuOverrides: cachedSnap.apuOverrides ?? {},
                 elements: cachedSnap.elements,
                 queue,
                 pendingCount: computePendingCount(queue),
@@ -220,6 +235,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         prices: {},
         materialesCustom: [],
         presupuestoCustom: [],
+        apuOverrides: {},
         status: "idle",
         error: null,
         isOffline: false,
@@ -379,6 +395,27 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         });
     },
 
+    setApuOverride: (key, apu) => {
+      const projectId = get().projectId;
+      if (projectId == null) return;
+      const previousOverrides = get().apuOverrides;
+      const nextOverrides = { ...previousOverrides, [key]: apu };
+      set({ apuOverrides: nextOverrides });
+      persistSnapshot();
+      putApuOverrides(projectId, nextOverrides)
+        .then(() => get().flushQueue())
+        .catch((e) => {
+          if (e instanceof NetworkError) {
+            persistQueue({ ...get().queue, apuOverrides: nextOverrides });
+            set({ isOffline: true });
+          } else {
+            set({ apuOverrides: previousOverrides });
+            persistSnapshot();
+            set({ error: errorMessage(e, "No se pudo guardar el APU en el servidor.") });
+          }
+        });
+    },
+
     setMaterialesCustom: (items) => {
       const projectId = get().projectId;
       if (projectId == null) return;
@@ -487,6 +524,22 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
             }
             set({ error: "No se pudieron sincronizar las partidas pendientes." });
             queue = { ...queue, presupuestoCustom: null };
+            persistQueue(queue);
+          }
+        }
+
+        if (queue.apuOverrides) {
+          try {
+            await putApuOverrides(projectId, queue.apuOverrides);
+            queue = { ...queue, apuOverrides: null };
+            persistQueue(queue);
+          } catch (e) {
+            if (e instanceof NetworkError) {
+              set({ isOffline: true });
+              return;
+            }
+            set({ error: "No se pudieron sincronizar los APU pendientes." });
+            queue = { ...queue, apuOverrides: null };
             persistQueue(queue);
           }
         }
