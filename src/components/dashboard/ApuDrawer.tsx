@@ -91,7 +91,7 @@ export function ApuDrawer({
       </div>
 
       <aside
-        className="sticky top-0 hidden h-screen w-full max-w-md shrink-0 flex-col border-l border-steel-200 bg-white shadow-lg md:flex"
+        className="sticky top-6 mb-6 mr-6 mt-6 hidden max-h-[calc(100vh-3rem)] w-full max-w-md shrink-0 flex-col self-start overflow-hidden rounded-lg border border-steel-200 bg-white shadow-md md:flex"
         aria-label="Análisis de Precio Unitario"
       >
         <ApuDrawerBody row={row} onClose={onClose} onApuChange={onApuChange} />

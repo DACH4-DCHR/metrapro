@@ -62,7 +62,9 @@ export function calcularApu(apu: ApuDef): ApuTotales {
 
 // Jornales referenciales (S/. por día) — régimen de construcción civil,
 // valores de práctica general. AJUSTA al convenio colectivo vigente.
-const JORNAL: Record<CategoriaManoObra, number> = {
+// Exportado para que el editor use el mismo default al agregar una nueva
+// categoría de mano de obra a un APU.
+export const JORNAL: Record<CategoriaManoObra, number> = {
   Operario: 84,
   Oficial: 74,
   Peón: 66,
