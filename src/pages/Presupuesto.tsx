@@ -34,10 +34,11 @@ export function PresupuestoPage() {
   };
 
   return (
-    <div className="flex min-w-0 flex-1">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-w-0 flex-1 flex-col">
       <PageHeader title="Presupuesto" subtitle="Costo directo por categoría y presupuesto referencial" icon={<Wallet size={20} />} helpKey="presupuesto" />
 
+      <div className="flex min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
       <div className="flex flex-col gap-6 p-6">
         <ScopeTabs value={tab} onChange={setTab} />
 
@@ -188,6 +189,7 @@ export function PresupuestoPage() {
       </div>
 
       <ApuDrawer row={apuDrawerRow} onClose={() => setApuDrawerKey(null)} onApuChange={d.setApuOverride} />
+      </div>
     </div>
   );
 }
