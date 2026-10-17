@@ -91,7 +91,12 @@ export function ApuDrawer({
       </div>
 
       <aside
-        className="sticky top-6 mb-6 mr-6 mt-6 hidden max-h-[calc(100vh-3rem)] w-full max-w-md shrink-0 flex-col self-start overflow-hidden rounded-lg border border-steel-200 bg-white shadow-md md:flex"
+        className="sticky mb-6 mr-6 hidden w-full max-w-md shrink-0 flex-col self-start overflow-hidden rounded-lg border border-steel-200 bg-white shadow-md md:flex"
+        style={{
+          top: "calc(var(--page-header-height, 0px) + 1.5rem)",
+          marginTop: "calc(var(--page-header-height, 0px) + 1.5rem)",
+          maxHeight: "calc(100vh - var(--page-header-height, 0px) - 3rem)",
+        }}
         aria-label="Análisis de Precio Unitario"
       >
         <ApuDrawerBody row={row} onClose={onClose} onApuChange={onApuChange} />
