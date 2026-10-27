@@ -13,6 +13,7 @@ import { useProjectData } from "../hooks/useProjectData";
 import { currencyFormatter } from "../lib/formatters";
 import { downloadExcelWorkbook, buildPresupuestoPorModuloSheet } from "../lib/reports/excelReport";
 import { GG_PCT_KEY, UT_PCT_KEY, IGV_PCT_KEY } from "../lib/presupuesto";
+import { JORNAL } from "../lib/apu";
 
 export function PresupuestoPage() {
   const d = useProjectData();
@@ -32,6 +33,19 @@ export function PresupuestoPage() {
     if (tab === "estructural") return d.presupuestoCustomEstructural;
     return d.presupuestoCustom;
   };
+
+  // Partida sin APU (una agregada a mano, por ejemplo): le crea un APU en
+  // blanco con un solo renglón de mano de obra — materiales y equipos quedan
+  // vacíos, listos para agregarse si hacen falta — y abre el panel para
+  // completarlo.
+  function handleAddApu(key: string, partida: string, unidad: string) {
+    d.setApuOverride(partida, unidad, {
+      materiales: [],
+      manoObra: [{ categoria: "Peón", cuadrilla: 1, rendimiento: 1, jornal: JORNAL.Peón }],
+      equipos: [],
+    });
+    setApuDrawerKey(key);
+  }
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
@@ -124,6 +138,7 @@ export function PresupuestoPage() {
                     onPriceChange={d.setPrice}
                     onRemoveCustom={d.removeCustomPresupuestoLine}
                     onOpenApu={setApuDrawerKey}
+                    onAddApu={handleAddApu}
                     activeApuKey={apuDrawerKey}
                   />
                 ))}

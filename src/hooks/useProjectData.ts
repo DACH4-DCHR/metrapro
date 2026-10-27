@@ -107,10 +107,13 @@ export function useProjectData() {
     () => agruparPresupuestoPorModulo(elements, prices, apuOverrides),
     [elements, prices, apuOverrides]
   );
-  const movilizacionValorizado = useMemo(() => valorizarLineas([lineaMovilizacion], prices), [lineaMovilizacion, prices]);
+  const movilizacionValorizado = useMemo(
+    () => valorizarLineas([lineaMovilizacion], prices, apuOverrides),
+    [lineaMovilizacion, prices, apuOverrides]
+  );
   const presupuestoCustomValorizado = useMemo(
-    () => valorizarLineas(presupuestoCustomLineas, prices),
-    [presupuestoCustomLineas, prices]
+    () => valorizarLineas(presupuestoCustomLineas, prices, apuOverrides),
+    [presupuestoCustomLineas, prices, apuOverrides]
   );
   const presupuestoSecciones = useMemo<PresupuestoSeccion[]>(
     () => [
@@ -131,12 +134,12 @@ export function useProjectData() {
   );
   const presupuestoCustomAcabados = useMemo(() => presupuestoCustom.filter((p) => p.grupo === "acabados"), [presupuestoCustom]);
   const presupuestoCustomValorizadoEstructural = useMemo(
-    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomEstructural), prices),
-    [presupuestoCustomEstructural, prices]
+    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomEstructural), prices, apuOverrides),
+    [presupuestoCustomEstructural, prices, apuOverrides]
   );
   const presupuestoCustomValorizadoAcabados = useMemo(
-    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomAcabados), prices),
-    [presupuestoCustomAcabados, prices]
+    () => valorizarLineas(presupuestoCustomALineas(presupuestoCustomAcabados), prices, apuOverrides),
+    [presupuestoCustomAcabados, prices, apuOverrides]
   );
 
   const presupuestoSeccionesEstructural = useMemo<PresupuestoSeccion[]>(

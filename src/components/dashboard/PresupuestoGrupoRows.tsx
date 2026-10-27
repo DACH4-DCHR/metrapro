@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Trash2, Calculator } from "lucide-react";
+import { Trash2, Calculator, Plus } from "lucide-react";
 import { numberFormatter, currencyFormatter } from "../../lib/formatters";
 import { PriceInput } from "./PriceInput";
 import { PRESUPUESTO_CUSTOM_LABEL, type PresupuestoCustomLine, type PresupuestoSeccion } from "../../lib/presupuesto";
@@ -15,6 +15,7 @@ export function PresupuestoGrupoRows({
   onPriceChange,
   onRemoveCustom,
   onOpenApu,
+  onAddApu,
   activeApuKey,
 }: {
   group: PresupuestoSeccion;
@@ -22,6 +23,7 @@ export function PresupuestoGrupoRows({
   onPriceChange: (key: string, value: number) => void;
   onRemoveCustom: (id: string) => void;
   onOpenApu: (key: string) => void;
+  onAddApu: (key: string, partida: string, unidad: string) => void;
   activeApuKey: string | null;
 }) {
   const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
@@ -36,10 +38,10 @@ export function PresupuestoGrupoRows({
       {group.rows.map((row, idx) => {
         const isActive = activeApuKey === row.key;
         return (
-          <tr key={row.key} className={isActive ? "bg-navy-900/5" : idx % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+          <tr key={row.key} className={`group ${isActive ? "bg-navy-900/5" : idx % 2 === 0 ? "bg-white" : "bg-steel-50"}`}>
             <td className="px-4 py-2 text-navy-900">
               <div className="flex items-center gap-1.5">
-                {row.apu && (
+                {row.apu ? (
                   <button
                     onClick={() => onOpenApu(row.key)}
                     className={`flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
@@ -48,6 +50,15 @@ export function PresupuestoGrupoRows({
                     title="Ver/editar APU"
                   >
                     <Calculator size={11} />
+                    APU
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onAddApu(row.key, row.line.partida, row.line.unidad)}
+                    className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-steel-400 opacity-0 transition-colors hover:bg-navy-900/10 hover:text-navy-800 group-hover:opacity-100"
+                    title="Agregar APU (desglosar en mano de obra, materiales y equipo)"
+                  >
+                    <Plus size={11} />
                     APU
                   </button>
                 )}
