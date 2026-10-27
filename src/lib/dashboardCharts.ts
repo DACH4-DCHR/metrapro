@@ -171,16 +171,26 @@ export interface ManoObraMateriales {
 // entre mano de obra y materiales, para las tarjetas del Dashboard — más
 // relevante para el cliente que ver m³ de concreto o kg de acero.
 //
-// Cuando una partida tiene APU (ver lib/apu.ts), el reparto sale del APU real
-// (equipos/herramientas se suma al lado de materiales, ya que no es trabajo
-// en obra) en vez del % referencial por categoría — más exacto mientras más
-// partidas tengan su propio APU.
+// Prioridad por partida:
+// 1. Si tiene APU (ver lib/apu.ts), el reparto sale del APU real (equipos/
+//    herramientas se suma al lado de materiales, ya que no es trabajo en
+//    obra) — el dato más exacto posible.
+// 2. Si no tiene APU pero el usuario la marcó como "Mano de obra" o
+//    "Materiales" al agregarla a mano (ver TipoCosto en types.ts), se va
+//    100% a ese lado — evita repartir con un % inventado un monto que el
+//    usuario ya sabe que es enteramente de un solo tipo.
+// 3. Si no tiene ninguno de los dos ("mixto", el default de siempre), usa el
+//    % referencial por categoría — una estimación, no un dato real.
 export function manoObraVsMateriales(rows: PresupuestoRow[]): ManoObraMateriales {
   let manoObra = 0;
   let total = 0;
   for (const row of rows) {
     if (row.apuBreakdown) {
       manoObra += row.apuBreakdown.manoObra;
+    } else if (row.line.tipoCosto === "manoObra") {
+      manoObra += row.subtotal;
+    } else if (row.line.tipoCosto === "materiales") {
+      // No suma a manoObra: el total de esta partida es íntegramente materiales.
     } else {
       manoObra += row.subtotal * PCT_MANO_OBRA[categorizarPartida(row.line.partida)];
     }

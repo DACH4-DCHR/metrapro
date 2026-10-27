@@ -18,10 +18,19 @@ export type ModuleType =
   | "pisosPavimentos"
   | "pintura";
 
+// Cómo repartir el costo de una partida entre mano de obra y materiales en el
+// Dashboard cuando no tiene un APU real. "mixto" (el default de siempre) usa
+// el % referencial por categoría — ver PCT_MANO_OBRA en dashboardCharts.ts.
+// Solo lo usan las partidas que el usuario agrega a mano (ver
+// PresupuestoCustomLine en presupuesto.ts); un APU, si existe, manda sobre
+// esto (ver manoObraVsMateriales).
+export type TipoCosto = "manoObra" | "materiales" | "mixto";
+
 export interface MetradoLine {
   partida: string;
   unidad: string;
   cantidad: number;
+  tipoCosto?: TipoCosto;
 }
 
 // Longitud de acero de refuerzo de un diámetro específico, para un rol dentro de un

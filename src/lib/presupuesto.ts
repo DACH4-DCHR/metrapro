@@ -3,7 +3,7 @@
 // opcionales) para llegar a un Total General. Lo comparten el Dashboard (pantalla)
 // y los reportes de Excel/PDF, para que el número exportado sea siempre el mismo
 // que se ve en pantalla.
-import type { CalculatedElement, MetradoLine, ModuleType } from "./types";
+import type { CalculatedElement, MetradoLine, ModuleType, TipoCosto } from "./types";
 import { defaultUnitPrice, priceKey } from "./pricing";
 import { consolidateLinesByModule, type ModuleGroup } from "./consolidate";
 import { MODULE_LABELS } from "./moduleLabels";
@@ -325,11 +325,15 @@ export interface PresupuestoCustomLine {
   // tienen — se tratan como "estructural" (ver Dashboard.tsx), igual que
   // siempre se venían mostrando.
   grupo?: PresupuestoCustomGrupo;
+  // Cómo repartirla en el gráfico Mano de Obra vs. Materiales del Dashboard
+  // cuando NO tiene un APU asignado — ver TipoCosto en types.ts. Ausente =
+  // "mixto" (comportamiento de siempre, % referencial por categoría).
+  tipoCosto?: TipoCosto;
 }
 export const PRESUPUESTO_CUSTOM_LABEL = "Otros / Partidas Adicionales";
 
 export function presupuestoCustomALineas(items: PresupuestoCustomLine[]): MetradoLine[] {
-  return items.map((i) => ({ partida: i.partida, unidad: i.unidad, cantidad: i.cantidad }));
+  return items.map((i) => ({ partida: i.partida, unidad: i.unidad, cantidad: i.cantidad, tipoCosto: i.tipoCosto }));
 }
 
 // Forma mínima que necesitan la tabla en pantalla y los exportadores para

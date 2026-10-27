@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import type { PresupuestoCustomGrupo } from "../../lib/presupuesto";
+import type { TipoCosto } from "../../lib/types";
 
 // Unidades más comunes en metrados y presupuestos de construcción en Perú —
 // cubre la gran mayoría de partidas; "Otra..." deja escribir una unidad que
@@ -23,10 +24,11 @@ export function AddCustomLineForm({
   itemLabel: string;
   placeholder: string;
   buttonLabel: string;
-  onAdd: (partida: string, unidad: string, cantidad: number, grupo?: PresupuestoCustomGrupo) => void;
+  onAdd: (partida: string, unidad: string, cantidad: number, grupo?: PresupuestoCustomGrupo, tipoCosto?: TipoCosto) => void;
   // Solo el "Agregar partida" del Presupuesto Referencial lo necesita — ahí
-  // sí importa si la partida es de Metrados Estructurales o de Acabados.
-  // "Agregar material" (Metrado de Materiales) no lo usa.
+  // sí importa si la partida es de Metrados Estructurales o de Acabados, y
+  // cómo repartirla en mano de obra/materiales. "Agregar material" (Metrado
+  // de Materiales) no lo usa.
   showGroupSelector?: boolean;
 }) {
   const [partida, setPartida] = useState("");
@@ -34,12 +36,13 @@ export function AddCustomLineForm({
   const [unidadOtra, setUnidadOtra] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [grupo, setGrupo] = useState<PresupuestoCustomGrupo>("estructural");
+  const [tipoCosto, setTipoCosto] = useState<TipoCosto>("mixto");
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const unidad = unidadSel === OTRA_UNIDAD ? unidadOtra.trim() : unidadSel;
     if (!partida.trim() || !unidad || cantidad <= 0) return;
-    onAdd(partida.trim(), unidad, cantidad, showGroupSelector ? grupo : undefined);
+    onAdd(partida.trim(), unidad, cantidad, showGroupSelector ? grupo : undefined, showGroupSelector ? tipoCosto : undefined);
     setPartida("");
     setUnidadSel("und");
     setUnidadOtra("");
@@ -107,6 +110,22 @@ export function AddCustomLineForm({
             <option value="estructural">Metrados Estructurales</option>
             <option value="acabados">Acabados y Adicionales</option>
             <option value="libre">Libre / Otros</option>
+          </select>
+        </div>
+      )}
+      {showGroupSelector && (
+        <div className="w-40">
+          <label className="mb-1 block text-xs font-medium text-navy-800" title="Si más adelante le asignas un APU, el APU manda sobre esto.">
+            Tipo de costo
+          </label>
+          <select
+            value={tipoCosto}
+            onChange={(e) => setTipoCosto(e.target.value as TipoCosto)}
+            className="w-full rounded-md border border-steel-200 bg-white px-2 py-1.5 text-sm text-navy-900 outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
+          >
+            <option value="mixto">Mixto (referencial)</option>
+            <option value="manoObra">Mano de obra</option>
+            <option value="materiales">Materiales</option>
           </select>
         </div>
       )}

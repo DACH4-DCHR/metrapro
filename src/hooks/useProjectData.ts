@@ -37,6 +37,7 @@ import { agruparAceroPorModulo } from "../lib/calc/aceroResumen";
 import { MODULE_GROUP } from "../lib/moduleGroups";
 import { priceKey } from "../lib/pricing";
 import type { ApuDef } from "../lib/apu";
+import type { TipoCosto } from "../lib/types";
 
 // La PWA instalada (ícono en el celular) corre en un WebView "standalone" de
 // Android que no logra entregarle un archivo a NINGUNA otra app vía Web
@@ -302,8 +303,14 @@ export function useProjectData() {
     setMaterialesCustomStore(materialesCustom.filter((m) => m.id !== id));
   }
 
-  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number, grupo?: PresupuestoCustomGrupo) {
-    const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad, grupo };
+  function addCustomPresupuestoLine(
+    partida: string,
+    unidad: string,
+    cantidad: number,
+    grupo?: PresupuestoCustomGrupo,
+    tipoCosto?: TipoCosto
+  ) {
+    const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad, grupo, tipoCosto };
     setPresupuestoCustomStore([...presupuestoCustom, item]);
   }
   function removeCustomPresupuestoLine(id: string) {
