@@ -20,7 +20,7 @@ import {
 import type { ApuOverrides } from "../apu";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
-import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, type ManoObraMateriales } from "../dashboardCharts";
 
 export interface ExcelSheet {
   name: string;
@@ -201,11 +201,27 @@ export function buildValorizadoSheet(name: string, rows: PresupuestoRow[], footR
 // (Costo directo/GG/Utilidad/IGV/Total General) que ya calculó calcularPresupuesto.
 export function buildPresupuestoPorModuloSheet(
   groups: PresupuestoSeccion[],
-  presupuesto: PresupuestoTotales
+  presupuesto: PresupuestoTotales,
+  manoObraMateriales?: ManoObraMateriales
 ): ExcelSheet {
   const rows: (string | number)[][] = [];
   const groupRows: number[] = [];
   const subtotalRows: number[] = [];
+  const totalRowsResumen: number[] = [];
+
+  // Mismas 3 cifras que las tarjetas del Dashboard (Mano de obra/Materiales/
+  // Presupuesto general) — antes solo vivían en pantalla, no en el Excel.
+  if (manoObraMateriales && presupuesto.costoDirecto > 0) {
+    groupRows.push(rows.length);
+    rows.push(["RESUMEN", "", "", "", ""]);
+    totalRowsResumen.push(rows.length);
+    rows.push(["", "", "", `Mano de obra (${manoObraMateriales.pctManoObra.toFixed(1)}%)`, Number(manoObraMateriales.manoObra.toFixed(2))]);
+    totalRowsResumen.push(rows.length);
+    rows.push(["", "", "", `Materiales (${manoObraMateriales.pctMateriales.toFixed(1)}%)`, Number(manoObraMateriales.materiales.toFixed(2))]);
+    totalRowsResumen.push(rows.length);
+    rows.push(["", "", "", "Presupuesto general (S/.)", Number(presupuesto.costoDirecto.toFixed(2))]);
+  }
+
   for (const group of groups) {
     groupRows.push(rows.length);
     rows.push([group.label, "", "", "", ""]);
@@ -222,7 +238,7 @@ export function buildPresupuestoPorModuloSheet(
     rows.push(["", "", "", `Subtotal ${group.label} (S/.)`, Number(group.subtotal.toFixed(2))]);
   }
   const footRows = buildPresupuestoFootRows(presupuesto, (n) => Number(n.toFixed(2)));
-  const totalRows: number[] = [];
+  const totalRows: number[] = [...totalRowsResumen];
   const footStart = rows.length;
   for (let i = 0; i < footRows.length; i++) totalRows.push(footStart + i);
   rows.push(...footRows);

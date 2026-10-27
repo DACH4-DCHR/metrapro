@@ -37,12 +37,15 @@ export function PresupuestoPage() {
   };
 
   function openExcelPreview() {
-    setExportPreview({ kind: "excel", sheet: buildPresupuestoPorModuloSheet(secciones, d.presupuesto) });
+    setExportPreview({
+      kind: "excel",
+      sheet: buildPresupuestoPorModuloSheet(secciones, d.presupuesto, d.manoObraMateriales),
+    });
   }
 
   async function openPdfPreview() {
     const { buildPresupuestoPorModuloDoc } = await import("../lib/reports/pdfReport");
-    const doc = buildPresupuestoPorModuloDoc("Presupuesto Referencial", secciones, d.presupuesto);
+    const doc = buildPresupuestoPorModuloDoc("Presupuesto Referencial", secciones, d.presupuesto, d.manoObraMateriales);
     const blobUrl = URL.createObjectURL(doc.output("blob"));
     setExportPreview({ kind: "pdf", blobUrl });
   }

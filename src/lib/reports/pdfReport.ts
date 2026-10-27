@@ -17,7 +17,7 @@ import {
 } from "../presupuesto";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
-import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales } from "../dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales, type ManoObraMateriales } from "../dashboardCharts";
 import type { ApuOverrides } from "../apu";
 
 interface ProjectInfoLike {
@@ -221,15 +221,48 @@ export function downloadValorizadoPdf(
 // Arma el documento sin guardarlo — lo reusan downloadPresupuestoPorModuloPdf
 // (descarga directa) y la vista previa del Presupuesto (ExportPreviewModal),
 // que necesita el mismo PDF pero mostrado en un visor antes de descargarlo.
-export function buildPresupuestoPorModuloDoc(tableTitle: string, groups: PresupuestoSeccion[], presupuesto: PresupuestoTotales): jsPDF {
+export function buildPresupuestoPorModuloDoc(
+  tableTitle: string,
+  groups: PresupuestoSeccion[],
+  presupuesto: PresupuestoTotales,
+  manoObraMateriales?: ManoObraMateriales
+): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const marginX = 14;
+  const pageWidth = doc.internal.pageSize.getWidth();
   let cursorY = 16;
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...NAVY);
   doc.text(tableTitle, marginX, cursorY);
   cursorY += 6;
+
+  // Mismas 3 tarjetas que el Dashboard (Mano de obra/Materiales/Presupuesto
+  // general) — antes solo salían en el reporte completo, no en el PDF propio
+  // del Presupuesto.
+  if (manoObraMateriales && presupuesto.costoDirecto > 0) {
+    cursorY = drawStatCards(doc, marginX, cursorY, pageWidth - marginX * 2, [
+      {
+        label: "Mano de obra",
+        value: currencyFormatter.format(manoObraMateriales.manoObra),
+        subLabel: `${manoObraMateriales.pctManoObra.toFixed(1)}%`,
+        color: [42, 120, 214],
+      },
+      {
+        label: "Materiales",
+        value: currencyFormatter.format(manoObraMateriales.materiales),
+        subLabel: `${manoObraMateriales.pctMateriales.toFixed(1)}%`,
+        color: [235, 104, 52],
+      },
+      {
+        label: "Presupuesto general",
+        value: currencyFormatter.format(presupuesto.costoDirecto),
+        subLabel: "Mano de obra + materiales",
+        color: [217, 140, 43],
+      },
+    ]);
+    cursorY += 4;
+  }
 
   for (const group of groups) {
     if (cursorY > 260) {
@@ -286,9 +319,10 @@ export function downloadPresupuestoPorModuloPdf(
   filename: string,
   tableTitle: string,
   groups: PresupuestoSeccion[],
-  presupuesto: PresupuestoTotales
+  presupuesto: PresupuestoTotales,
+  manoObraMateriales?: ManoObraMateriales
 ) {
-  const doc = buildPresupuestoPorModuloDoc(tableTitle, groups, presupuesto);
+  const doc = buildPresupuestoPorModuloDoc(tableTitle, groups, presupuesto, manoObraMateriales);
   doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 
