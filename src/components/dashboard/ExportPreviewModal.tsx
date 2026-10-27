@@ -71,16 +71,31 @@ export function ExportPreviewModal({
   );
 }
 
+// Misma jerarquía que el archivo .xls real (ver categoryStyleId en
+// excelReport.ts): banda ámbar por grupo, gris claro en subtotales, gris más
+// oscuro en el pie de totales — para que esta vista previa sea fiel a lo que
+// se descarga, no una aproximación distinta.
 function ExcelSheetPreview({ sheet }: { sheet: ExcelSheet }) {
   const boldSet = useMemo(() => new Set(sheet.boldRows ?? []), [sheet.boldRows]);
+  const groupSet = useMemo(() => new Set(sheet.groupRows ?? []), [sheet.groupRows]);
+  const subtotalSet = useMemo(() => new Set(sheet.subtotalRows ?? []), [sheet.subtotalRows]);
+  const totalSet = useMemo(() => new Set(sheet.totalRows ?? []), [sheet.totalRows]);
   const numericSet = useMemo(() => new Set(sheet.numericCols ?? []), [sheet.numericCols]);
 
+  function rowClass(i: number): string {
+    if (totalSet.has(i)) return "bg-steel-200 font-semibold text-navy-900 border-t-2 border-navy-900";
+    if (subtotalSet.has(i)) return "bg-steel-100 font-semibold text-navy-900";
+    if (groupSet.has(i)) return "bg-amber-500/15 font-semibold text-navy-900";
+    if (boldSet.has(i)) return "font-semibold text-navy-900";
+    return i % 2 === 0 ? "bg-white" : "bg-steel-50";
+  }
+
   return (
-    <table className="w-full min-w-[640px] border-collapse bg-white text-sm">
+    <table className="w-full min-w-[640px] border-collapse border border-steel-300 bg-white text-sm">
       <thead>
         <tr className="bg-navy-900 text-left text-white">
           {sheet.headers.map((h, i) => (
-            <th key={i} className="px-3 py-2 font-semibold">
+            <th key={i} className="border border-steel-300 px-3 py-2 font-semibold">
               {h}
             </th>
           ))}
@@ -88,9 +103,9 @@ function ExcelSheetPreview({ sheet }: { sheet: ExcelSheet }) {
       </thead>
       <tbody>
         {sheet.rows.map((row, i) => (
-          <tr key={i} className={boldSet.has(i) ? "bg-steel-100 font-semibold text-navy-900" : i % 2 === 0 ? "bg-white" : "bg-steel-50"}>
+          <tr key={i} className={rowClass(i)}>
             {row.map((cell, j) => (
-              <td key={j} className={`px-3 py-1.5 ${numericSet.has(j) ? "text-right font-mono" : ""}`}>
+              <td key={j} className={`border border-steel-300 px-3 py-1.5 ${numericSet.has(j) ? "text-right font-mono" : ""}`}>
                 {cell === "" ? "" : cell}
               </td>
             ))}

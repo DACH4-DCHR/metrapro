@@ -27,9 +27,17 @@ export interface ExcelSheet {
   headers: string[];
   rows: (string | number)[][];
   numericCols?: number[];
-  // Índices (0-based) de filas que van en negrita — separadores de módulo y
-  // subtotales, sin necesitar una hoja o tabla aparte para cada uno.
+  // Índices (0-based) de filas que van en negrita, sin color de fondo —
+  // usado por hojas simples que no necesitan la jerarquía de abajo.
   boldRows?: number[];
+  // Jerarquía visual del Presupuesto por módulo (misma que en pantalla y en
+  // ExportPreviewModal): banda de color por grupo ("MOVILIZACIÓN DE EQUIPO"),
+  // fondo gris en subtotales, fondo gris más oscuro en el pie de totales
+  // (Costo directo/GG/Utilidad/IGV/Total general). Un índice no debería
+  // repetirse entre estas tres listas ni con boldRows.
+  groupRows?: number[];
+  subtotalRows?: number[];
+  totalRows?: number[];
 }
 
 function escapeXml(value: string): string {
@@ -49,18 +57,47 @@ function cellXml(value: string | number, isNumeric: boolean, styleId?: string): 
   return `<Cell${styleAttr}><Data ss:Type="String">${escapeXml(String(value))}</Data></Cell>`;
 }
 
+// Prioridad cuando una fila cae en más de una lista (no debería pasar, pero
+// por las dudas): total > subtotal > group > bold simple > normal.
+type RowCategory = "total" | "subtotal" | "group" | "bold" | "normal";
+
+function categoryStyleId(category: RowCategory, numeric: boolean): string {
+  switch (category) {
+    case "total":
+      return numeric ? "totalNumber" : "total";
+    case "subtotal":
+      return numeric ? "subtotalNumber" : "subtotal";
+    case "group":
+      return numeric ? "groupNumber" : "group";
+    case "bold":
+      return numeric ? "numberBold" : "bold";
+    case "normal":
+      return numeric ? "number" : "normal";
+  }
+}
+
 function sheetXml(sheet: ExcelSheet): string {
   const numeric = new Set(sheet.numericCols ?? []);
   const bold = new Set(sheet.boldRows ?? []);
+  const groupRows = new Set(sheet.groupRows ?? []);
+  const subtotalRows = new Set(sheet.subtotalRows ?? []);
+  const totalRows = new Set(sheet.totalRows ?? []);
   const headerCells = sheet.headers.map((h) => cellXml(h, false, "header")).join("");
   const dataRows = sheet.rows
     .map((row, rowIdx) => {
-      const isBoldRow = bold.has(rowIdx);
+      const category: RowCategory = totalRows.has(rowIdx)
+        ? "total"
+        : subtotalRows.has(rowIdx)
+          ? "subtotal"
+          : groupRows.has(rowIdx)
+            ? "group"
+            : bold.has(rowIdx)
+              ? "bold"
+              : "normal";
       const cells = row
         .map((val, i) => {
           const isNumericValue = numeric.has(i) && typeof val === "number";
-          const styleId = isNumericValue ? (isBoldRow ? "numberBold" : "number") : isBoldRow ? "bold" : undefined;
-          return cellXml(val, isNumericValue, styleId);
+          return cellXml(val, isNumericValue, categoryStyleId(category, isNumericValue));
         })
         .join("");
       return `<Row>${cells}</Row>`;
@@ -76,11 +113,30 @@ function sheetXml(sheet: ExcelSheet): string {
 }
 
 export function buildExcelWorkbook(sheets: ExcelSheet[]): string {
+  // Mismos bordes finos en todas las celdas (incluida "normal", antes sin
+  // estilo) para que el archivo se vea como una tabla real, no texto suelto.
+  const border = `<Borders>
+      <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D7DEE3"/>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D7DEE3"/>
+      <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D7DEE3"/>
+      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D7DEE3"/>
+    </Borders>`;
+  const numberFormat = `<NumberFormat ss:Format="#,##0.00"/>`;
+  // Misma jerarquía de color que la vista previa/pantalla: ámbar para la
+  // banda de grupo, gris claro para subtotales, gris más oscuro para el pie
+  // de totales (Costo directo/GG/Utilidad/IGV/Total general).
   const stylesXml = `<Styles>
-    <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#0B1F3A" ss:Pattern="Solid"/></Style>
-    <Style ss:ID="bold"><Font ss:Bold="1"/></Style>
-    <Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/></Style>
-    <Style ss:ID="numberBold"><Font ss:Bold="1"/><NumberFormat ss:Format="#,##0.00"/></Style>
+    <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#0B1F3A" ss:Pattern="Solid"/>${border}</Style>
+    <Style ss:ID="normal">${border}</Style>
+    <Style ss:ID="number">${numberFormat}${border}</Style>
+    <Style ss:ID="bold"><Font ss:Bold="1"/>${border}</Style>
+    <Style ss:ID="numberBold"><Font ss:Bold="1"/>${numberFormat}${border}</Style>
+    <Style ss:ID="group"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#FDE8D0" ss:Pattern="Solid"/>${border}</Style>
+    <Style ss:ID="groupNumber"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#FDE8D0" ss:Pattern="Solid"/>${numberFormat}${border}</Style>
+    <Style ss:ID="subtotal"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#EEF2F5" ss:Pattern="Solid"/>${border}</Style>
+    <Style ss:ID="subtotalNumber"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#EEF2F5" ss:Pattern="Solid"/>${numberFormat}${border}</Style>
+    <Style ss:ID="total"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#DCE3E9" ss:Pattern="Solid"/>${border}</Style>
+    <Style ss:ID="totalNumber"><Font ss:Bold="1" ss:Color="#0B1F3A"/><Interior ss:Color="#DCE3E9" ss:Pattern="Solid"/>${numberFormat}${border}</Style>
   </Styles>`;
 
   const sheetsXml = sheets.map(sheetXml).join("\n");
@@ -148,9 +204,10 @@ export function buildPresupuestoPorModuloSheet(
   presupuesto: PresupuestoTotales
 ): ExcelSheet {
   const rows: (string | number)[][] = [];
-  const boldRows: number[] = [];
+  const groupRows: number[] = [];
+  const subtotalRows: number[] = [];
   for (const group of groups) {
-    boldRows.push(rows.length);
+    groupRows.push(rows.length);
     rows.push([group.label, "", "", "", ""]);
     for (const r of group.rows) {
       rows.push([
@@ -161,19 +218,22 @@ export function buildPresupuestoPorModuloSheet(
         Number(r.subtotal.toFixed(2)),
       ]);
     }
-    boldRows.push(rows.length);
+    subtotalRows.push(rows.length);
     rows.push(["", "", "", `Subtotal ${group.label} (S/.)`, Number(group.subtotal.toFixed(2))]);
   }
   const footRows = buildPresupuestoFootRows(presupuesto, (n) => Number(n.toFixed(2)));
+  const totalRows: number[] = [];
   const footStart = rows.length;
-  for (let i = 0; i < footRows.length; i++) boldRows.push(footStart + i);
+  for (let i = 0; i < footRows.length; i++) totalRows.push(footStart + i);
   rows.push(...footRows);
   return {
     name: "Presupuesto Referencial",
     headers: ["Partida", "Unidad", "Cantidad", "Precio Unit. (S/.)", "Parcial (S/.)"],
     rows,
     numericCols: [2, 3, 4],
-    boldRows,
+    groupRows,
+    subtotalRows,
+    totalRows,
   };
 }
 
