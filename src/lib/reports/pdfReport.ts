@@ -18,6 +18,7 @@ import {
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales } from "../dashboardCharts";
+import type { ApuOverrides } from "../apu";
 
 interface ProjectInfoLike {
   nombreObra: string;
@@ -293,7 +294,8 @@ function buildReportDoc(
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
   totalVarillas: number,
-  presupuestoCustom: PresupuestoCustomLine[] = []
+  presupuestoCustom: PresupuestoCustomLine[] = [],
+  apuOverrides: ApuOverrides = {}
 ): { doc: jsPDF; safeName: string } {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -348,7 +350,7 @@ function buildReportDoc(
 
   const lineaMovilizacion = crearLineaMovilizacion();
   const presupuestoCustomLineas = presupuestoCustomALineas(presupuestoCustom);
-  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]);
+  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas], apuOverrides);
   const costosCategoria = costosPorCategoria(presupuesto.rows);
   const cantidadesModulo = cantidadesPorModulo(elements);
   const chartWidth = pageWidth - marginX * 2;
@@ -507,9 +509,9 @@ function buildReportDoc(
     cursorY += 4;
   }
 
-  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
-  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices);
-  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices);
+  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices, apuOverrides);
+  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices, apuOverrides);
+  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices, apuOverrides);
   const seccionesPresupuesto: PresupuestoSeccion[] = [
     { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
     ...presupuestoPorModulo,
@@ -689,7 +691,8 @@ export function generatePdfReport(
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
   totalVarillas: number,
-  presupuestoCustom: PresupuestoCustomLine[] = []
+  presupuestoCustom: PresupuestoCustomLine[] = [],
+  apuOverrides: ApuOverrides = {}
 ) {
   const { doc, safeName } = buildReportDoc(
     projectInfo,
@@ -698,7 +701,8 @@ export function generatePdfReport(
     prices,
     materialesLines,
     totalVarillas,
-    presupuestoCustom
+    presupuestoCustom,
+    apuOverrides
   );
   doc.save(`metrado_${safeName}.pdf`);
 }
@@ -715,7 +719,8 @@ export async function sharePdfReport(
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
   totalVarillas: number,
-  presupuestoCustom: PresupuestoCustomLine[] = []
+  presupuestoCustom: PresupuestoCustomLine[] = [],
+  apuOverrides: ApuOverrides = {}
 ): Promise<boolean> {
   const { doc, safeName } = buildReportDoc(
     projectInfo,
@@ -724,7 +729,8 @@ export async function sharePdfReport(
     prices,
     materialesLines,
     totalVarillas,
-    presupuestoCustom
+    presupuestoCustom,
+    apuOverrides
   );
   const blob = doc.output("blob");
   // Nombre de archivo solo ASCII (sin tildes/ñ/espacios): algunas versiones de

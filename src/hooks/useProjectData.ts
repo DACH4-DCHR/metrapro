@@ -332,7 +332,16 @@ export function useProjectData() {
     setGeneratingPdf(true);
     try {
       const { generatePdfReport } = await import("../lib/reports/pdfReport");
-      generatePdfReport(projectInfo, allElements, consolidated, prices, materialesExportLines, materiales.totalVarillas, presupuestoCustom);
+      generatePdfReport(
+        projectInfo,
+        allElements,
+        consolidated,
+        prices,
+        materialesExportLines,
+        materiales.totalVarillas,
+        presupuestoCustom,
+        apuOverrides
+      );
     } finally {
       setGeneratingPdf(false);
     }
@@ -346,7 +355,16 @@ export function useProjectData() {
     try {
       if (isStandaloneApp()) {
         const { generatePdfReport } = await import("../lib/reports/pdfReport");
-        generatePdfReport(projectInfo, allElements, consolidated, prices, materialesExportLines, materiales.totalVarillas, presupuestoCustom);
+        generatePdfReport(
+          projectInfo,
+          allElements,
+          consolidated,
+          prices,
+          materialesExportLines,
+          materiales.totalVarillas,
+          presupuestoCustom,
+          apuOverrides
+        );
         alert(
           "La app instalada no puede compartir archivos directamente (una limitación de Android). Se descargó el PDF: ábrelo desde tus Descargas y compártelo manualmente, o entra a metrapro.vercel.app desde Chrome (sin usar el ícono instalado) para enviarlo en un solo paso."
         );
@@ -361,7 +379,8 @@ export function useProjectData() {
         prices,
         materialesExportLines,
         materiales.totalVarillas,
-        presupuestoCustom
+        presupuestoCustom,
+        apuOverrides
       );
       if (!shared) {
         alert('Tu navegador no permite compartir archivos directamente. Usa el botón "Descargar PDF" y adjúntalo manualmente donde quieras enviarlo.');

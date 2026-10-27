@@ -102,7 +102,8 @@ export function DashboardPage() {
                   d.prices,
                   d.materialesExportLines,
                   d.materiales.totalVarillas,
-                  d.presupuestoCustom
+                  d.presupuestoCustom,
+                  d.apuOverrides
                 )
               }
               disabled={!hayContenidoParaExportar}

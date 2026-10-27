@@ -17,6 +17,7 @@ import {
   type PresupuestoCustomLine,
   type PresupuestoRow,
 } from "../presupuesto";
+import type { ApuOverrides } from "../apu";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
 import { costosPorCategoria, cantidadesPorModulo } from "../dashboardCharts";
@@ -220,7 +221,8 @@ export function generateExcelReport(
   prices: Record<string, number>,
   materialesLines: MetradoLine[],
   totalVarillas: number,
-  presupuestoCustom: PresupuestoCustomLine[] = []
+  presupuestoCustom: PresupuestoCustomLine[] = [],
+  apuOverrides: ApuOverrides = {}
 ) {
   const resumenSheet: ExcelSheet = {
     name: "Resumen",
@@ -243,7 +245,7 @@ export function generateExcelReport(
 
   const lineaMovilizacion = crearLineaMovilizacion();
   const presupuestoCustomLineas = presupuestoCustomALineas(presupuestoCustom);
-  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas]);
+  const presupuesto = calcularPresupuesto(consolidated, prices, [lineaMovilizacion, ...presupuestoCustomLineas], apuOverrides);
   const costoPorCategoriaSheet = buildCostoPorCategoriaSheet(costosPorCategoria(presupuesto.rows));
   const metradosPorModuloSheet = buildMetradosPorModuloSheet(cantidadesPorModulo(elements));
 
@@ -267,9 +269,9 @@ export function generateExcelReport(
     numericCols: [2, 3, 4],
   };
 
-  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices);
-  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices);
-  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices);
+  const presupuestoPorModulo = agruparPresupuestoPorModulo(elements, prices, apuOverrides);
+  const movilizacionValorizado = valorizarLineas([lineaMovilizacion], prices, apuOverrides);
+  const presupuestoCustomValorizado = valorizarLineas(presupuestoCustomLineas, prices, apuOverrides);
   const secciones: PresupuestoSeccion[] = [
     { label: MOVILIZACION_LABEL, rows: movilizacionValorizado.rows, subtotal: movilizacionValorizado.total },
     ...presupuestoPorModulo,
