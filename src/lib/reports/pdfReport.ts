@@ -218,12 +218,10 @@ export function downloadValorizadoPdf(
 // losas, ...) — una subtabla por módulo con su propio subtotal, en vez de una
 // sola lista plana, y al final las filas de totales (costo directo/GG/UT/IGV/
 // total general) igual que el resto de exportaciones de este presupuesto.
-export function downloadPresupuestoPorModuloPdf(
-  filename: string,
-  tableTitle: string,
-  groups: PresupuestoSeccion[],
-  presupuesto: PresupuestoTotales
-) {
+// Arma el documento sin guardarlo — lo reusan downloadPresupuestoPorModuloPdf
+// (descarga directa) y la vista previa del Presupuesto (ExportPreviewModal),
+// que necesita el mismo PDF pero mostrado en un visor antes de descargarlo.
+export function buildPresupuestoPorModuloDoc(tableTitle: string, groups: PresupuestoSeccion[], presupuesto: PresupuestoTotales): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const marginX = 14;
   let cursorY = 16;
@@ -281,6 +279,16 @@ export function downloadPresupuestoPorModuloPdf(
   });
 
   pdfFooter(doc, marginX);
+  return doc;
+}
+
+export function downloadPresupuestoPorModuloPdf(
+  filename: string,
+  tableTitle: string,
+  groups: PresupuestoSeccion[],
+  presupuesto: PresupuestoTotales
+) {
+  const doc = buildPresupuestoPorModuloDoc(tableTitle, groups, presupuesto);
   doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
 

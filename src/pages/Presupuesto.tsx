@@ -8,6 +8,7 @@ import { AddCustomLineForm } from "../components/dashboard/AddCustomLineForm";
 import { BudgetLineRow } from "../components/dashboard/BudgetLineRow";
 import { PresupuestoGrupoRows } from "../components/dashboard/PresupuestoGrupoRows";
 import { ApuDrawer } from "../components/dashboard/ApuDrawer";
+import { ExportPreviewModal, type ExportPreview } from "../components/dashboard/ExportPreviewModal";
 import { ScopeTabs, type ScopeTab } from "../components/dashboard/ScopeTabs";
 import { useProjectData } from "../hooks/useProjectData";
 import { currencyFormatter } from "../lib/formatters";
@@ -19,6 +20,7 @@ export function PresupuestoPage() {
   const d = useProjectData();
   const [tab, setTab] = useState<ScopeTab>("todo");
   const [apuDrawerKey, setApuDrawerKey] = useState<string | null>(null);
+  const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const secciones =
     tab === "estructural" ? d.presupuestoSeccionesEstructural : tab === "acabados" ? d.presupuestoSeccionesAcabados : d.presupuestoSecciones;
@@ -33,6 +35,29 @@ export function PresupuestoPage() {
     if (tab === "estructural") return d.presupuestoCustomEstructural;
     return d.presupuestoCustom;
   };
+
+  function openExcelPreview() {
+    setExportPreview({ kind: "excel", sheet: buildPresupuestoPorModuloSheet(secciones, d.presupuesto) });
+  }
+
+  async function openPdfPreview() {
+    const { buildPresupuestoPorModuloDoc } = await import("../lib/reports/pdfReport");
+    const doc = buildPresupuestoPorModuloDoc("Presupuesto Referencial", secciones, d.presupuesto);
+    const blobUrl = URL.createObjectURL(doc.output("blob"));
+    setExportPreview({ kind: "pdf", blobUrl });
+  }
+
+  function handleDownloadPreview() {
+    if (!exportPreview) return;
+    if (exportPreview.kind === "excel") {
+      downloadExcelWorkbook(`presupuesto_${d.safeProjectName}`, [exportPreview.sheet]);
+    } else {
+      const link = document.createElement("a");
+      link.href = exportPreview.blobUrl;
+      link.download = `presupuesto_${d.safeProjectName}.pdf`;
+      link.click();
+    }
+  }
 
   // Partida sin APU (una agregada a mano, por ejemplo): le crea un APU en
   // blanco con un solo renglón de mano de obra — materiales y equipos quedan
@@ -100,15 +125,7 @@ export function PresupuestoPage() {
           title="Presupuesto referencial"
           icon={<Wallet size={16} className="text-navy-700" />}
           headerActions={
-            <ExportSectionButtons
-              onExcel={() =>
-                downloadExcelWorkbook(`presupuesto_${d.safeProjectName}`, [buildPresupuestoPorModuloSheet(secciones, d.presupuesto)])
-              }
-              onPdf={async () => {
-                const { downloadPresupuestoPorModuloPdf } = await import("../lib/reports/pdfReport");
-                downloadPresupuestoPorModuloPdf(`presupuesto_${d.safeProjectName}`, "Presupuesto Referencial", secciones, d.presupuesto);
-              }}
-            />
+            <ExportSectionButtons onExcel={openExcelPreview} onPdf={openPdfPreview} />
           }
         >
           <div className="mb-3 text-xs text-steel-500">
@@ -205,6 +222,8 @@ export function PresupuestoPage() {
 
       <ApuDrawer row={apuDrawerRow} onClose={() => setApuDrawerKey(null)} onApuChange={d.setApuOverride} />
       </div>
+
+      <ExportPreviewModal preview={exportPreview} onClose={() => setExportPreview(null)} onDownload={handleDownloadPreview} />
     </div>
   );
 }

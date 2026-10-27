@@ -1,9 +1,14 @@
+import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 
 // Confirmación propia en vez de window.confirm(): el confirm() nativo del
 // navegador queda bloqueado en el panel de vista previa (y en algunos
 // navegadores con bloqueo de diálogos emergentes), así que un botón que
 // dependa de él puede no hacer nada al hacer clic.
+//
+// Se monta con un portal a document.body: quien lo usa puede estar dentro de
+// una tabla (ej. el botón "Quitar partida" vive en un <tbody>) y un <div>
+// fixed ahí sería HTML inválido — el portal lo saca de ese árbol DOM.
 export function ConfirmDialog({
   open,
   title,
@@ -23,7 +28,7 @@ export function ConfirmDialog({
 }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} aria-hidden="true" />
       <div className="relative w-full max-w-sm rounded-lg bg-white p-5 shadow-xl">
@@ -51,6 +56,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
