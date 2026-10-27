@@ -81,6 +81,9 @@ export function DashboardPage() {
     e.target.value = "";
   }
 
+  const hayContenidoParaExportar =
+    d.consolidated.length > 0 || d.presupuestoCustom.length > 0 || d.materialesCustom.length > 0;
+
   return (
     <div>
       <PageHeader
@@ -102,7 +105,7 @@ export function DashboardPage() {
                   d.presupuestoCustom
                 )
               }
-              disabled={d.consolidated.length === 0}
+              disabled={!hayContenidoParaExportar}
               className="flex items-center gap-2 rounded-md border border-steel-300 bg-white px-4 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-steel-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileSpreadsheet size={16} />
@@ -110,7 +113,7 @@ export function DashboardPage() {
             </button>
             <button
               onClick={d.handleDownloadPdf}
-              disabled={d.consolidated.length === 0 || d.generatingPdf}
+              disabled={!hayContenidoParaExportar || d.generatingPdf}
               className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileDown size={16} />
@@ -118,7 +121,7 @@ export function DashboardPage() {
             </button>
             <button
               onClick={d.handleSharePdf}
-              disabled={d.consolidated.length === 0 || d.sharingPdf}
+              disabled={!hayContenidoParaExportar || d.sharingPdf}
               className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send size={16} />
