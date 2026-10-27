@@ -304,7 +304,9 @@ export const MOVILIZACION_UNIDAD = "glb";
 export const MOVILIZACION_LABEL = "Movilización de Equipo";
 
 export function crearLineaMovilizacion(): MetradoLine {
-  return { partida: MOVILIZACION_PARTIDA, unidad: MOVILIZACION_UNIDAD, cantidad: 1 };
+  // 100% mano de obra: es transporte/logística de personal y equipo, no
+  // compra de materiales — ver manoObraVsMateriales en dashboardCharts.ts.
+  return { partida: MOVILIZACION_PARTIDA, unidad: MOVILIZACION_UNIDAD, cantidad: 1, tipoCosto: "manoObra" };
 }
 
 // Partidas que el usuario agrega a mano al Presupuesto Referencial para lo

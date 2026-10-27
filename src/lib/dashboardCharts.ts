@@ -148,14 +148,16 @@ export function costosPorCategoria(rows: PresupuestoRow[]): CostoCategoriaItem[]
 // precio unitario, sin desglose de materiales/mano de obra/equipo). Acero es
 // mayormente material (el fierro corrugado es caro por kg, habilitarlo y
 // colocarlo pesa poco en el costo); Encofrado es más intensivo en mano de
-// obra. Movilización se trata como no-mano-de-obra: es un costo de traslado
-// de equipos, no de trabajo en obra.
+// obra. El valor de Movilización no se usa en la práctica (crearLineaMovilizacion
+// le pone tipoCosto: "manoObra" fijo, 100% mano de obra — ver
+// manoObraVsMateriales); queda solo como respaldo por si algún día existe una
+// partida de esa categoría sin tipoCosto propio.
 const PCT_MANO_OBRA: Record<CategoriaCosto, number> = {
   Concreto: 0.35,
   Acero: 0.15,
   Encofrado: 0.55,
   "Movimiento de Tierras": 0.45,
-  Movilización: 0.1,
+  Movilización: 1,
   Acabados: 0.55,
   Otros: 0.4,
 };
