@@ -6,9 +6,10 @@ import type { ExcelSheet } from "../../lib/reports/excelReport";
 // - PDF: el visor nativo del navegador sobre un blob URL del MISMO documento
 //   que se va a descargar (ver buildPresupuestoPorModuloDoc) — lo que se ve
 //   acá es exactamente lo que se descarga.
-// - Excel: no se puede previsualizar un .xls dentro de la página (los
-//   navegadores no lo renderizan), así que se muestra una tabla HTML con los
-//   mismos datos de la hoja (ExcelSheet) que arma el archivo real.
+// - Excel: no se puede previsualizar el .xml (SpreadsheetML) dentro de la
+//   página (los navegadores no lo renderizan como hoja de cálculo), así que
+//   se muestra una tabla HTML con los mismos datos de la hoja (ExcelSheet)
+//   que arma el archivo real.
 export type ExportPreview = { kind: "pdf"; blobUrl: string } | { kind: "excel"; sheet: ExcelSheet };
 
 export function ExportPreviewModal({
@@ -71,7 +72,7 @@ export function ExportPreviewModal({
   );
 }
 
-// Misma jerarquía que el archivo .xls real (ver categoryStyleId en
+// Misma jerarquía que el archivo .xml real (ver categoryStyleId en
 // excelReport.ts): banda ámbar por grupo, gris claro en subtotales, gris más
 // oscuro en el pie de totales — para que esta vista previa sea fiel a lo que
 // se descarga, no una aproximación distinta.

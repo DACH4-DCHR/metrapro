@@ -20,7 +20,7 @@ import {
 import type { ApuOverrides } from "../apu";
 import { agruparAceroPorModulo } from "../calc/aceroResumen";
 import { MODULE_LABELS } from "../moduleLabels";
-import { costosPorCategoria, cantidadesPorModulo, type ManoObraMateriales } from "../dashboardCharts";
+import { costosPorCategoria, cantidadesPorModulo, manoObraVsMateriales, type ManoObraMateriales } from "../dashboardCharts";
 
 export interface ExcelSheet {
   name: string;
@@ -361,7 +361,7 @@ export function generateExcelReport(
     ...presupuestoPorModulo,
     { label: PRESUPUESTO_CUSTOM_LABEL, rows: presupuestoCustomValorizado.rows, subtotal: presupuestoCustomValorizado.total },
   ];
-  const presupuestoSheet = buildPresupuestoPorModuloSheet(secciones, presupuesto);
+  const presupuestoSheet = buildPresupuestoPorModuloSheet(secciones, presupuesto, manoObraVsMateriales(presupuesto.rows));
 
   const materialesValorizado = valorizarLineas(materialesLines, prices);
   const materialesFootRows: (string | number)[][] = [
