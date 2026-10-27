@@ -311,6 +311,11 @@ export function crearLineaMovilizacion(): MetradoLine {
 // que no cubre ningún módulo calculado — van después de Muros de
 // Arquitectura, igual que "Metrado de Materiales" ya permite agregar
 // materiales sueltos (customMaterialesALineas en materiales.ts).
+// "libre" es un tercer grupo además de los dos reales (ModuleFamily): una
+// partida que no pertenece ni a Metrados Estructurales ni a Acabados, así
+// que solo aparece en la pestaña "Todo" del Presupuesto, no en las otras dos.
+export type PresupuestoCustomGrupo = ModuleFamily | "libre";
+
 export interface PresupuestoCustomLine {
   id: string;
   partida: string;
@@ -319,7 +324,7 @@ export interface PresupuestoCustomLine {
   // Opcional: partidas agregadas antes de que existiera Acabados no lo
   // tienen — se tratan como "estructural" (ver Dashboard.tsx), igual que
   // siempre se venían mostrando.
-  grupo?: ModuleFamily;
+  grupo?: PresupuestoCustomGrupo;
 }
 export const PRESUPUESTO_CUSTOM_LABEL = "Otros / Partidas Adicionales";
 

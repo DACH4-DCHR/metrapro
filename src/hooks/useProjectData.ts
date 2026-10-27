@@ -22,6 +22,7 @@ import {
   UT_ON_KEY,
   IGV_ON_KEY,
   type PresupuestoCustomLine,
+  type PresupuestoCustomGrupo,
   type PresupuestoSeccion,
 } from "../lib/presupuesto";
 import { consolidateLines } from "../lib/consolidate";
@@ -33,7 +34,7 @@ import {
   type CustomMaterialLine,
 } from "../lib/materiales";
 import { agruparAceroPorModulo } from "../lib/calc/aceroResumen";
-import { MODULE_GROUP, type ModuleFamily } from "../lib/moduleGroups";
+import { MODULE_GROUP } from "../lib/moduleGroups";
 import { priceKey } from "../lib/pricing";
 import type { ApuDef } from "../lib/apu";
 
@@ -301,7 +302,7 @@ export function useProjectData() {
     setMaterialesCustomStore(materialesCustom.filter((m) => m.id !== id));
   }
 
-  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number, grupo?: ModuleFamily) {
+  function addCustomPresupuestoLine(partida: string, unidad: string, cantidad: number, grupo?: PresupuestoCustomGrupo) {
     const item: PresupuestoCustomLine = { id: crypto.randomUUID(), partida, unidad, cantidad, grupo };
     setPresupuestoCustomStore([...presupuestoCustom, item]);
   }
