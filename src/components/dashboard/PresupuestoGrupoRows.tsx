@@ -1,8 +1,9 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Trash2, Calculator, Plus } from "lucide-react";
 import { numberFormatter, currencyFormatter } from "../../lib/formatters";
 import { PriceInput } from "./PriceInput";
 import { PRESUPUESTO_CUSTOM_LABEL, type PresupuestoCustomLine, type PresupuestoSeccion } from "../../lib/presupuesto";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 
 // Un grupo (Movilización, un módulo puntual, u "Otros") del Presupuesto
 // Referencial: banda con el nombre, sus filas editables, y su subtotal.
@@ -27,6 +28,7 @@ export function PresupuestoGrupoRows({
   activeApuKey: string | null;
 }) {
   const esOtros = group.label === PRESUPUESTO_CUSTOM_LABEL;
+  const [pendingRemove, setPendingRemove] = useState<{ id: string; partida: string } | null>(null);
 
   return (
     <Fragment key={group.label}>
@@ -82,7 +84,7 @@ export function PresupuestoGrupoRows({
             <td className="px-4 py-2 no-print">
               {esOtros && (
                 <button
-                  onClick={() => onRemoveCustom(customItems[idx].id)}
+                  onClick={() => setPendingRemove({ id: customItems[idx].id, partida: row.line.partida })}
                   aria-label="Quitar partida"
                   className="rounded p-1 text-steel-500 hover:bg-red-50 hover:text-red-600"
                 >
@@ -100,6 +102,17 @@ export function PresupuestoGrupoRows({
         <td className="px-4 py-1.5 text-right font-mono">{currencyFormatter.format(group.subtotal)}</td>
         <td className="no-print" />
       </tr>
+
+      <ConfirmDialog
+        open={pendingRemove != null}
+        title={`¿Quitar "${pendingRemove?.partida ?? "esta partida"}"?`}
+        message="Se quita del Presupuesto Referencial. Esta acción no se puede deshacer."
+        onConfirm={() => {
+          if (pendingRemove) onRemoveCustom(pendingRemove.id);
+          setPendingRemove(null);
+        }}
+        onCancel={() => setPendingRemove(null)}
+      />
     </Fragment>
   );
 }
