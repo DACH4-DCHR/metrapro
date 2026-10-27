@@ -152,6 +152,9 @@ export function ApuEditor({ apu, onChange, onRemove }: { apu: ApuDef; onChange: 
           </div>
         )}
         <AddButton onClick={addMaterial} label="Agregar material" />
+        <p className="mt-1.5 text-right text-xs font-semibold text-navy-900">
+          Subtotal materiales: {currencyFormatter.format(totales.materiales)}
+        </p>
       </div>
 
       <div className="mb-3 border-t border-dashed border-steel-300 pt-3">
@@ -185,6 +188,9 @@ export function ApuEditor({ apu, onChange, onRemove }: { apu: ApuDef; onChange: 
           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-steel-500">Mano de obra</p>
         )}
         <AddButton onClick={addManoObra} label="Agregar mano de obra" />
+        <p className="mt-1.5 text-right text-xs font-semibold text-navy-900">
+          Subtotal mano de obra: {currencyFormatter.format(totales.manoObra)}
+        </p>
       </div>
 
       <div className="mb-2 border-t border-dashed border-steel-300 pt-3">
@@ -220,9 +226,12 @@ export function ApuEditor({ apu, onChange, onRemove }: { apu: ApuDef; onChange: 
           </div>
         )}
         <AddButton onClick={addEquipo} label="Agregar equipo" />
+        <p className="mt-1.5 text-right text-xs font-semibold text-navy-900">
+          Subtotal equipos: {currencyFormatter.format(totales.equipos)}
+        </p>
       </div>
 
-      <div className="flex items-center justify-between border-t border-steel-300 pt-2">
+      <div className="flex items-center justify-between border-t-2 border-navy-900 pt-2">
         <button
           onClick={onRemove}
           className="flex items-center gap-1 text-[11px] font-medium text-steel-500 hover:text-navy-800"
@@ -230,11 +239,14 @@ export function ApuEditor({ apu, onChange, onRemove }: { apu: ApuDef; onChange: 
           <RotateCcw size={12} />
           Volver a precio manual
         </button>
-        <span className="text-xs text-steel-500">
-          M.O. {((totales.manoObra / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}% · Mat.{" "}
-          {((totales.materiales / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}% · Equipo{" "}
-          {((totales.equipos / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}%
-        </span>
+        <div className="text-right">
+          <p className="text-sm font-bold text-navy-900">Total: {currencyFormatter.format(totales.total)}</p>
+          <span className="text-[11px] text-steel-500">
+            M.O. {((totales.manoObra / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}% · Mat.{" "}
+            {((totales.materiales / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}% · Equipo{" "}
+            {((totales.equipos / Math.max(totales.total, 0.0001)) * 100).toFixed(0)}%
+          </span>
+        </div>
       </div>
     </div>
   );
