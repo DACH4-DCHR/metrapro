@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Building2, ChevronDown, Plus, Trash2, Check, CloudOff, RefreshCw } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useCompactViewport } from "../hooks/useCompactViewport";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 export function ProjectSwitcher() {
   const projects = useProjectStore((s) => s.projects);
@@ -17,13 +18,12 @@ export function ProjectSwitcher() {
   // se puede ocultar sin perder de vista en qué proyecto estás (esa parte de
   // arriba, "Proyecto activo", siempre queda visible).
   const [open, setOpen] = useState(!compact);
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; nombre: string } | null>(null);
 
-  async function handleDelete(id: number, nombre: string) {
-    const label = nombre.trim() || "este proyecto";
-    if (!window.confirm(`¿Eliminar "${label}"? Se borrarán todos sus elementos, precios y materiales. Esta acción no se puede deshacer.`)) {
-      return;
-    }
-    await deleteProject(id);
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    await deleteProject(pendingDelete.id);
+    setPendingDelete(null);
   }
 
   return (
@@ -98,7 +98,7 @@ export function ProjectSwitcher() {
               </button>
               {projects.length > 1 && (
                 <button
-                  onClick={() => handleDelete(p.id, p.nombreObra)}
+                  onClick={() => setPendingDelete({ id: p.id, nombre: p.nombreObra })}
                   aria-label="Eliminar proyecto"
                   className="shrink-0 rounded p-1 text-steel-500 opacity-0 hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
                 >
@@ -116,6 +116,14 @@ export function ProjectSwitcher() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete != null}
+        title={`¿Eliminar "${pendingDelete?.nombre.trim() || "este proyecto"}"?`}
+        message="Se borrarán todos sus elementos, precios y materiales. Esta acción no se puede deshacer."
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
