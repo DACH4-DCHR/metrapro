@@ -69,9 +69,10 @@ export function MurosAlbanileriaPage() {
   const ladrilloLabel = ladrilloActual?.label ?? "ladrillo";
 
   const lines: MetradoLine[] = [
+    // Ladrillo y mortero NO van como partidas aparte: ya están dentro del
+    // APU de esta partida (apuMuroAlbanileria en apu.ts), contarlos sueltos
+    // los duplicaría en el presupuesto.
     { partida: `Muro de soga con ladrillo ${ladrilloLabel.toLowerCase()}`, unidad: "m²", cantidad: result.areaMuroNeta },
-    { partida: `Ladrillo ${ladrilloLabel.toLowerCase()} para muro`, unidad: "und", cantidad: result.numeroUnidades },
-    { partida: "Mortero para asentado (cemento-arena 1:4)", unidad: "m³", cantidad: result.volumenMortero },
     ...(input.incluirConfinamiento
       ? [
           {
