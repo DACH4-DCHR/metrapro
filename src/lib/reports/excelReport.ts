@@ -154,11 +154,19 @@ export function buildExcelWorkbook(sheets: ExcelSheet[]): string {
 
 export function downloadExcelWorkbook(filename: string, sheets: ExcelSheet[]) {
   const xml = buildExcelWorkbook(sheets);
-  const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+  // .xml, no .xls: el contenido es SpreadsheetML (el formato "XML Spreadsheet
+  // 2003" de Microsoft), no el binario que un .xls real tiene. Guardado como
+  // .xls, Excel detecta el desfase extensión/contenido y avisa "el formato y
+  // la extensión no coinciden" — al forzar "Sí" lo abre en un modo degradado
+  // que pierde estilos y hasta filas. Con extensión .xml, la directiva
+  // <?mso-application progid="Excel.Sheet"?> del encabezado ya le dice a
+  // Windows/Excel que lo abra como libro de Excel — sin aviso y sin perder
+  // formato.
+  const blob = new Blob([xml], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = filename.endsWith(".xls") ? filename : `${filename}.xls`;
+  link.download = filename.endsWith(".xml") ? filename : `${filename}.xml`;
   link.click();
   URL.revokeObjectURL(url);
 }
