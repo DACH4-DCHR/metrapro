@@ -23,9 +23,24 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
     codigo: "01",
     titulo: "Obras Provisionales y Trabajos Preliminares",
     partidas: [
-      { codigo: "01.01", descripcion: "Cartel de identificación de la obra", unidad: "und" },
-      { codigo: "01.02", descripcion: "Cerco de obra", unidad: "m" },
-      { codigo: "01.03", descripcion: "Trazos, niveles y replanteo", unidad: "m²" },
+      {
+        codigo: "01.01",
+        descripcion: "Cartel de identificación de la obra",
+        unidad: "und",
+        modulo: { label: "Obras Provisionales", path: "/obras-provisionales" },
+      },
+      {
+        codigo: "01.02",
+        descripcion: "Cerco de obra",
+        unidad: "m",
+        modulo: { label: "Obras Provisionales", path: "/obras-provisionales" },
+      },
+      {
+        codigo: "01.03",
+        descripcion: "Trazos, niveles y replanteo",
+        unidad: "m²",
+        modulo: { label: "Obras Provisionales", path: "/obras-provisionales" },
+      },
       { codigo: "01.04", descripcion: "Trazo, niveles y replanteo preliminar", unidad: "m²" },
     ],
   },
@@ -67,7 +82,12 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
         unidad: "m³",
         modulo: { label: "Cimiento Corrido", path: "/cimiento-corrido" },
       },
-      { codigo: "03.02", descripcion: "Solado", unidad: "m²" },
+      {
+        codigo: "03.02",
+        descripcion: "Solado",
+        unidad: "m²",
+        modulo: { label: "Zapatas / Vigas de Cimentación", path: "/zapatas" },
+      },
       { codigo: "03.03", descripcion: "Sobrecimientos", unidad: "m³", modulo: { label: "Sobrecimiento", path: "/sobrecimiento" } },
       {
         codigo: "03.04",
@@ -249,7 +269,14 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
   {
     codigo: "07",
     titulo: "Arquitectura — Cielorrasos",
-    partidas: [{ codigo: "07.01", descripcion: "Cielorraso con yeso", unidad: "m²" }],
+    partidas: [
+      {
+        codigo: "07.01",
+        descripcion: "Cielorraso con yeso",
+        unidad: "m²",
+        modulo: { label: "Cielorraso", path: "/cielorraso" },
+      },
+    ],
   },
   {
     codigo: "08",
@@ -279,8 +306,18 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
     codigo: "09",
     titulo: "Arquitectura — Zócalos y Contrazócalos",
     partidas: [
-      { codigo: "09.01", descripcion: "Zócalo cerámico h=1.20 m", unidad: "m²" },
-      { codigo: "09.02", descripcion: "Contrazócalo cerámico h=0.10 m", unidad: "m" },
+      {
+        codigo: "09.01",
+        descripcion: "Zócalo cerámico h=1.20 m",
+        unidad: "m²",
+        modulo: { label: "Pisos y Pavimentos", path: "/pisos-pavimentos" },
+      },
+      {
+        codigo: "09.02",
+        descripcion: "Contrazócalo cerámico h=0.10 m",
+        unidad: "m",
+        modulo: { label: "Pisos y Pavimentos", path: "/pisos-pavimentos" },
+      },
     ],
   },
   {
@@ -335,8 +372,18 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
     codigo: "14",
     titulo: "Varios y Trabajos Finales",
     partidas: [
-      { codigo: "14.01", descripcion: "Limpieza permanente de obra", unidad: "m²" },
-      { codigo: "14.02", descripcion: "Limpieza final de obra", unidad: "m²" },
+      {
+        codigo: "14.01",
+        descripcion: "Limpieza permanente de obra",
+        unidad: "m²",
+        modulo: { label: "Obras Provisionales", path: "/obras-provisionales" },
+      },
+      {
+        codigo: "14.02",
+        descripcion: "Limpieza final de obra",
+        unidad: "m²",
+        modulo: { label: "Obras Provisionales", path: "/obras-provisionales" },
+      },
     ],
   },
 ];

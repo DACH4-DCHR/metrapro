@@ -17,6 +17,8 @@ import {
   Paintbrush,
   Grid3x3,
   PaintBucket,
+  PanelTop,
+  Cone,
 } from "lucide-react";
 import { MODULE_LABELS } from "../../lib/moduleLabels";
 import type { ModuleType } from "../../lib/types";
@@ -40,4 +42,6 @@ export const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers
   tarrajeoEscalera: { label: MODULE_LABELS.tarrajeoEscalera, icon: Paintbrush },
   pisosPavimentos: { label: MODULE_LABELS.pisosPavimentos, icon: Grid3x3 },
   pintura: { label: MODULE_LABELS.pintura, icon: PaintBucket },
+  cielorraso: { label: MODULE_LABELS.cielorraso, icon: PanelTop },
+  obrasProvisionales: { label: MODULE_LABELS.obrasProvisionales, icon: Cone },
 };

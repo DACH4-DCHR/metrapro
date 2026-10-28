@@ -32,6 +32,7 @@ import {
   PaintBucket,
   ClipboardList,
   Wallet,
+  PanelTop,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -59,8 +60,12 @@ const navGroups: {
   items: { to: string; label: string; icon: typeof Layers3 }[];
 }[] = [
   {
-    section: "Movimiento de Tierras",
+    section: "Obras Provisionales",
     macroTitle: "Metrados Estructurales",
+    items: [{ to: "/obras-provisionales", label: "Obras Provisionales", icon: HardHat }],
+  },
+  {
+    section: "Movimiento de Tierras",
     items: [{ to: "/movimiento-tierras", label: "Movimiento de Tierras", icon: Shovel }],
   },
   {
@@ -102,6 +107,7 @@ const navGroups: {
       { to: "/tarrajeo-escalera", label: "Tarrajeo de Escalera", icon: Paintbrush },
       { to: "/pisos-pavimentos", label: "Pisos y Pavimentos", icon: Grid3x3 },
       { to: "/pintura", label: "Pintura", icon: PaintBucket },
+      { to: "/cielorraso", label: "Cielorraso", icon: PanelTop },
     ],
   },
 ];

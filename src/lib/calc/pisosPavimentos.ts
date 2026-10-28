@@ -20,10 +20,12 @@ export interface PisosPavimentosInput {
 
 export interface PisosPavimentosResult {
   areaPiso: number; // m²
+  perimetro: number; // m, para zócalo/contrazócalo
   warnings: string[];
 }
 
 export function calcularPisosPavimentos(input: PisosPavimentosInput): PisosPavimentosResult {
   const areaPiso = input.largo * input.ancho;
-  return { areaPiso, warnings: [] };
+  const perimetro = 2 * (input.largo + input.ancho);
+  return { areaPiso, perimetro, warnings: [] };
 }

@@ -19,4 +19,6 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   tarrajeoEscalera: "Tarrajeo de Escalera",
   pisosPavimentos: "Pisos y Pavimentos",
   pintura: "Pintura",
+  cielorraso: "Cielorraso",
+  obrasProvisionales: "Obras Provisionales",
 };

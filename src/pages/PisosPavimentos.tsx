@@ -39,6 +39,8 @@ export function PisosPavimentosPage() {
     incluirContrapiso: true,
   });
   const [espesorContrapiso, setEspesorContrapiso] = useState(5);
+  const [incluirZocalo, setIncluirZocalo] = useState(false);
+  const [incluirContrazocalo, setIncluirContrazocalo] = useState(false);
 
   const result = useMemo(() => calcularPisosPavimentos(input), [input]);
 
@@ -51,6 +53,12 @@ export function PisosPavimentosPage() {
     });
   }
   lines.push({ partida: TIPO_PISO_LABEL[input.tipoPiso], unidad: "m²", cantidad: result.areaPiso });
+  if (incluirZocalo) {
+    lines.push({ partida: "Zócalo cerámico h=1.20m", unidad: "m²", cantidad: result.perimetro * 1.2 });
+  }
+  if (incluirContrazocalo) {
+    lines.push({ partida: "Contrazócalo cerámico h=0.10m", unidad: "m", cantidad: result.perimetro });
+  }
 
   function update<K extends keyof PisosPavimentosInput>(key: K, value: PisosPavimentosInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
@@ -76,6 +84,8 @@ export function PisosPavimentosPage() {
         Dimensiones: `${input.largo} x ${input.ancho} m`,
         "Tipo de piso": TIPO_PISO_LABEL[input.tipoPiso],
         Contrapiso: input.incluirContrapiso ? `sí, e=${espesorContrapiso}cm` : "no",
+        Zócalo: incluirZocalo ? "sí" : "no",
+        Contrazócalo: incluirContrazocalo ? "sí" : "no",
       },
     };
     addElement(el);
@@ -144,6 +154,29 @@ export function PisosPavimentosPage() {
                 )}
               </div>
             </SectionCard>
+
+            <SectionCard title="Zócalo y contrazócalo" icon={<Ruler size={16} className="text-navy-700" />}>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={incluirZocalo}
+                    onChange={(e) => setIncluirZocalo(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                  />
+                  <span className="text-sm font-medium text-navy-800">Zócalo cerámico h=1.20m (perímetro × altura)</span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={incluirContrazocalo}
+                    onChange={(e) => setIncluirContrazocalo(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-steel-300 text-navy-700 focus:ring-navy-600"
+                  />
+                  <span className="text-sm font-medium text-navy-800">Contrazócalo cerámico h=0.10m (metro lineal de perímetro)</span>
+                </label>
+              </div>
+            </SectionCard>
           </div>
 
           <div className="flex flex-col gap-6">
@@ -152,6 +185,7 @@ export function PisosPavimentosPage() {
             <SectionCard title="Resultados de cálculo" icon={<Calculator size={16} className="text-navy-700" />}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                 <ResultMetric label="Área de piso" value={result.areaPiso} unit="m²" accent="navy" />
+                <ResultMetric label="Perímetro" value={result.perimetro} unit="m" />
               </div>
             </SectionCard>
 

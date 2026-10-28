@@ -9,6 +9,7 @@ import { LosaAligeradaPage } from "./pages/LosaAligerada";
 import { VigasPage } from "./pages/Vigas";
 import { EscalerasPage } from "./pages/Escaleras";
 import { MovimientoTierrasPage } from "./pages/MovimientoTierras";
+import { ObrasProvisionalesPage } from "./pages/ObrasProvisionales";
 import { ZapatasPage } from "./pages/Zapatas";
 import { CimientoCorridoPage } from "./pages/CimientoCorrido";
 import { SobrecimientoPage } from "./pages/Sobrecimiento";
@@ -23,6 +24,7 @@ import { TarrajeoExterioresPage } from "./pages/TarrajeoExteriores";
 import { TarrajeoEscaleraPage } from "./pages/TarrajeoEscalera";
 import { PisosPavimentosPage } from "./pages/PisosPavimentos";
 import { PinturaPage } from "./pages/Pintura";
+import { CielorrasoPage } from "./pages/Cielorraso";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { TermsPage, PrivacyPage } from "./pages/Legal";
@@ -78,6 +80,7 @@ function ProjectGate() {
           <Route path="/vigas" element={<VigasPage />} />
           <Route path="/escaleras" element={<EscalerasPage />} />
           <Route path="/movimiento-tierras" element={<MovimientoTierrasPage />} />
+          <Route path="/obras-provisionales" element={<ObrasProvisionalesPage />} />
           <Route path="/zapatas" element={<ZapatasPage />} />
           <Route path="/cimiento-corrido" element={<CimientoCorridoPage />} />
           <Route path="/sobrecimiento" element={<SobrecimientoPage />} />
@@ -92,6 +95,7 @@ function ProjectGate() {
           <Route path="/tarrajeo-escalera" element={<TarrajeoEscaleraPage />} />
           <Route path="/pisos-pavimentos" element={<PisosPavimentosPage />} />
           <Route path="/pintura" element={<PinturaPage />} />
+          <Route path="/cielorraso" element={<CielorrasoPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

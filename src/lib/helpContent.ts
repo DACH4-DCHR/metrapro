@@ -585,6 +585,33 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
     ],
   },
 
+  cielorraso: {
+    title: "Cielorraso",
+    summary: "Metra el cielorraso con yeso de un ambiente, a partir de su área en planta.",
+    sections: [
+      {
+        heading: "Dimensiones del ambiente",
+        items: [{ label: "Largo / Ancho", text: "Las medidas en planta del ambiente; de ahí sale el área de cielorraso (largo × ancho)." }],
+      },
+    ],
+  },
+
+  obrasProvisionales: {
+    title: "Obras Provisionales",
+    summary: "Partidas previas al inicio de obra: cartel, cerco perimetral, trazo/replanteo y limpieza — se activan solo las que necesites.",
+    sections: [
+      {
+        heading: "Partidas",
+        items: [
+          { label: "Cartel de obra", text: "Normalmente 1 unidad por proyecto." },
+          { label: "Cerco de obra", text: "Perímetro del terreno a cercar, en metros lineales." },
+          { label: "Trazo, niveles y replanteo", text: "Área del terreno a replantear, igual al área techada en planta del primer nivel." },
+          { label: "Limpieza de obra", text: "Área del terreno; cubre tanto la limpieza permanente como la final." },
+        ],
+      },
+    ],
+  },
+
   pintura: {
     title: "Pintura",
     summary: "Metra la pintura de una superficie (muros, cielorraso, fachada) a partir de su área.",

@@ -9,6 +9,7 @@ import { MODULE_LABELS } from "./moduleLabels";
 // movimiento de tierras primero, cimentación de abajo hacia arriba, luego
 // superestructura, y arquitectura al final.
 export const MODULE_ORDER: ModuleType[] = [
+  "obrasProvisionales",
   "movimientoTierras",
   "zapata",
   "cimientoCorrido",
@@ -27,6 +28,7 @@ export const MODULE_ORDER: ModuleType[] = [
   "tarrajeoEscalera",
   "pisosPavimentos",
   "pintura",
+  "cielorraso",
 ];
 
 // Suma cantidades de partidas repetidas (mismo texto + unidad) dentro de una

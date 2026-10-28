@@ -72,6 +72,7 @@ export function VigasCimentacionPage() {
       ? [
           { partida: "Excavación de zanjas para vigas de cimentación (terreno normal)", unidad: "m³", cantidad: result.volumenExcavacion },
           { partida: "Refine y nivelación de fondo de excavación", unidad: "m²", cantidad: result.areaNivelacionFondo },
+          { partida: "Solado de concreto, mezcla 1:12, e=4\"", unidad: "m²", cantidad: result.areaNivelacionFondo },
         ]
       : []),
     { partida: "Concreto f'c=210 kg/cm² en vigas de cimentación", unidad: "m³", cantidad: result.volumenConcreto },

@@ -11,6 +11,7 @@ import type { ModuleType } from "./types";
 export type ModuleFamily = "estructural" | "acabados";
 
 export const MODULE_GROUP: Record<ModuleType, ModuleFamily> = {
+  obrasProvisionales: "estructural",
   movimientoTierras: "estructural",
   zapata: "estructural",
   cimientoCorrido: "estructural",
@@ -29,4 +30,5 @@ export const MODULE_GROUP: Record<ModuleType, ModuleFamily> = {
   tarrajeoEscalera: "acabados",
   pisosPavimentos: "acabados",
   pintura: "acabados",
+  cielorraso: "acabados",
 };
