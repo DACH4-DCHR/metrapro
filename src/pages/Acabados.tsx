@@ -23,13 +23,8 @@ import { AcabadosPlanView } from "../components/diagrams/AcabadosPlanView";
 import { AcabadosMurosElevation } from "../components/diagrams/AcabadosMurosElevation";
 import { calcularAcabados, type AcabadosInput } from "../lib/calc/acabados";
 import { calcularVanos, type VanoGrupoInput } from "../lib/calc/derrames";
-import {
-  calcularAreaTarrajeoColumnas,
-  calcularAreaTarrajeoVigas,
-  type TarrajeoColumnaInput,
-  type TarrajeoVigaInput,
-} from "../lib/calc/tarrajeoElementos";
 import { useProjectStore } from "../store/projectStore";
+import { numberFormatter } from "../lib/formatters";
 import type { CalculatedElement, MetradoLine } from "../lib/types";
 
 function nextName() {
@@ -54,13 +49,20 @@ export function AcabadosPage() {
   const [ventanas, setVentanas] = useState<VanoGrupoInput>({ cantidad: 1, ancho: 1.2, alto: 1.2 });
   const vanos = useMemo(() => calcularVanos(puertas, ventanas), [puertas, ventanas]);
 
+  // El área de tarrajeo de columnas/vigas sale directo del formworkM2 ya
+  // guardado al calcular esos elementos (área de encofrado = mismas caras
+  // expuestas que se tarrajean) — nada que volver a medir a mano.
+  const elements = useProjectStore((s) => s.elements);
+  const areaColumnasGuardadas = useMemo(
+    () => elements.filter((e) => e.module === "columna").reduce((acc, e) => acc + e.formworkM2, 0),
+    [elements]
+  );
+  const areaVigasGuardadas = useMemo(
+    () => elements.filter((e) => e.module === "viga").reduce((acc, e) => acc + e.formworkM2, 0),
+    [elements]
+  );
   const [incluirColumnas, setIncluirColumnas] = useState(false);
-  const [columnas, setColumnas] = useState<TarrajeoColumnaInput>({ cantidad: 1, ancho: 0.25, profundidad: 0.25, altura: 2.6 });
-  const areaColumnas = useMemo(() => calcularAreaTarrajeoColumnas(columnas), [columnas]);
-
   const [incluirVigas, setIncluirVigas] = useState(false);
-  const [vigas, setVigas] = useState<TarrajeoVigaInput>({ cantidad: 1, ancho: 0.25, peralte: 0.4, longitud: 4 });
-  const areaVigas = useMemo(() => calcularAreaTarrajeoVigas(vigas), [vigas]);
 
   const acabadosInput: AcabadosInput = useMemo(
     () => ({ ...input, areaVanos: vanos.areaTotal }),
@@ -83,11 +85,15 @@ export function AcabadosPage() {
       cantidad: result.areaCielorraso,
     });
   }
-  if (incluirColumnas) {
-    lines.push({ partida: "Tarrajeo de columnas, mezcla C:A 1:5, e=1.5cm", unidad: "m²", cantidad: areaColumnas });
+  if (incluirColumnas && areaColumnasGuardadas > 0) {
+    lines.push({
+      partida: "Tarrajeo de columnas, mezcla C:A 1:5, e=1.5cm",
+      unidad: "m²",
+      cantidad: areaColumnasGuardadas,
+    });
   }
-  if (incluirVigas) {
-    lines.push({ partida: "Tarrajeo de vigas, mezcla C:A 1:5, e=1.5cm", unidad: "m²", cantidad: areaVigas });
+  if (incluirVigas && areaVigasGuardadas > 0) {
+    lines.push({ partida: "Tarrajeo de vigas, mezcla C:A 1:5, e=1.5cm", unidad: "m²", cantidad: areaVigasGuardadas });
   }
   if (vanos.perimetroDerramesTotal > 0) {
     lines.push({
@@ -109,16 +115,6 @@ export function AcabadosPage() {
 
   function updateVentanas<K extends keyof VanoGrupoInput>(key: K, value: number) {
     setVentanas((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
-  }
-
-  function updateColumnas<K extends keyof TarrajeoColumnaInput>(key: K, value: number) {
-    setColumnas((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
-  }
-
-  function updateVigas<K extends keyof TarrajeoVigaInput>(key: K, value: number) {
-    setVigas((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   }
 
@@ -257,64 +253,32 @@ export function AcabadosPage() {
                 />
 
                 <div className="border-t border-steel-200 pt-3">
-                  <CheckboxField label="Tarrajeo de columnas" checked={incluirColumnas} onChange={setIncluirColumnas} />
-                  {incluirColumnas && (
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <NumberField
-                        label="Cantidad"
-                        unit="und"
-                        step={1}
-                        value={columnas.cantidad}
-                        onChange={(v) => updateColumnas("cantidad", v)}
-                      />
-                      <NumberField
-                        label="Altura"
-                        unit="m"
-                        value={columnas.altura}
-                        onChange={(v) => updateColumnas("altura", v)}
-                      />
-                      <NumberField
-                        label="Ancho de sección"
-                        unit="m"
-                        value={columnas.ancho}
-                        onChange={(v) => updateColumnas("ancho", v)}
-                      />
-                      <NumberField
-                        label="Profundidad de sección"
-                        unit="m"
-                        value={columnas.profundidad}
-                        onChange={(v) => updateColumnas("profundidad", v)}
-                      />
-                    </div>
+                  {areaColumnasGuardadas > 0 ? (
+                    <CheckboxField
+                      label={`Tarrajeo de columnas (usa el área ya calculada en Columnas: ${numberFormatter.format(areaColumnasGuardadas)} m²)`}
+                      checked={incluirColumnas}
+                      onChange={setIncluirColumnas}
+                    />
+                  ) : (
+                    <p className="text-xs text-steel-500">
+                      Tarrajeo de columnas: no hay columnas guardadas en este proyecto todavía. Calcúlalas en el
+                      módulo Columnas y guárdalas para que aparezcan acá.
+                    </p>
                   )}
                 </div>
 
                 <div className="border-t border-steel-200 pt-3">
-                  <CheckboxField label="Tarrajeo de vigas" checked={incluirVigas} onChange={setIncluirVigas} />
-                  {incluirVigas && (
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <NumberField
-                        label="Cantidad"
-                        unit="und"
-                        step={1}
-                        value={vigas.cantidad}
-                        onChange={(v) => updateVigas("cantidad", v)}
-                      />
-                      <NumberField
-                        label="Longitud"
-                        unit="m"
-                        value={vigas.longitud}
-                        onChange={(v) => updateVigas("longitud", v)}
-                      />
-                      <NumberField label="Ancho" unit="m" value={vigas.ancho} onChange={(v) => updateVigas("ancho", v)} />
-                      <NumberField
-                        label="Peralte"
-                        unit="m"
-                        value={vigas.peralte}
-                        onChange={(v) => updateVigas("peralte", v)}
-                        helper="Solo se tarrajean fondo y caras laterales"
-                      />
-                    </div>
+                  {areaVigasGuardadas > 0 ? (
+                    <CheckboxField
+                      label={`Tarrajeo de vigas (usa el área ya calculada en Vigas: ${numberFormatter.format(areaVigasGuardadas)} m²)`}
+                      checked={incluirVigas}
+                      onChange={setIncluirVigas}
+                    />
+                  ) : (
+                    <p className="text-xs text-steel-500">
+                      Tarrajeo de vigas: no hay vigas guardadas en este proyecto todavía. Calcúlalas en el módulo
+                      Vigas y guárdalas para que aparezcan acá.
+                    </p>
                   )}
                 </div>
               </div>
