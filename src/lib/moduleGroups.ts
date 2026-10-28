@@ -31,4 +31,5 @@ export const MODULE_GROUP: Record<ModuleType, ModuleFamily> = {
   pisosPavimentos: "acabados",
   pintura: "acabados",
   cielorraso: "acabados",
+  carpinteria: "acabados",
 };

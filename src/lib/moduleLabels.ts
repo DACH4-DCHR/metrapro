@@ -21,4 +21,5 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   pintura: "Pintura",
   cielorraso: "Cielorraso",
   obrasProvisionales: "Obras Provisionales",
+  carpinteria: "Carpintería y Vidrios",
 };

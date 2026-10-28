@@ -33,6 +33,7 @@ import {
   ClipboardList,
   Wallet,
   PanelTop,
+  DoorOpen,
 } from "lucide-react";
 import { useProjectStore } from "../store/projectStore";
 import { useAuthStore } from "../store/authStore";
@@ -108,6 +109,7 @@ const navGroups: {
       { to: "/pisos-pavimentos", label: "Pisos y Pavimentos", icon: Grid3x3 },
       { to: "/pintura", label: "Pintura", icon: PaintBucket },
       { to: "/cielorraso", label: "Cielorraso", icon: PanelTop },
+      { to: "/carpinteria", label: "Carpintería y Vidrios", icon: DoorOpen },
     ],
   },
 ];

@@ -612,6 +612,27 @@ export const HELP_CONTENT: Record<HelpKey, HelpContent> = {
     ],
   },
 
+  carpinteria: {
+    title: "Carpintería y Vidrios",
+    summary: "Puertas, ventanas, vidrio y cerraduras de un ambiente — el vidrio y las cerraduras salen de las ventanas/puertas que ya ingresaste, no se vuelven a medir.",
+    sections: [
+      {
+        heading: "Puertas y ventanas",
+        items: [
+          { label: "Cantidad / Ancho / Alto", text: "Un grupo por tipo de puerta o ventana (si repites el mismo tamaño varias veces, usa la cantidad en vez de agregar una por una)." },
+          {
+            label: "Vidrio en ventanas",
+            text: "Si está activo, el área de vidrio sale del ancho × alto × cantidad de las ventanas ingresadas arriba.",
+          },
+          {
+            label: "Cerraduras",
+            text: "Si está activo, se agrega 1 cerradura por cada puerta ingresada.",
+          },
+        ],
+      },
+    ],
+  },
+
   pintura: {
     title: "Pintura",
     summary: "Metra la pintura de una superficie (muros, cielorraso, fachada) a partir de su área.",

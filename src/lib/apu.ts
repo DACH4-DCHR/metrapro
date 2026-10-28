@@ -414,6 +414,46 @@ function apuTrazoReplanteo(): ApuDef {
   };
 }
 
+// Carpintería y vidrios: precio de la unidad instalada (incluye su mano de
+// obra de instalación, no solo el insumo).
+function apuPuertaMadera(): ApuDef {
+  return {
+    materiales: [{ insumo: "Puerta contraplacada de madera (con marco)", unidad: "und", cantidad: 1, precio: 280 }],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 4, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 0.5, rendimiento: 4, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuVentanaMadera(): ApuDef {
+  return {
+    materiales: [{ insumo: "Ventana de madera (con marco, sin vidrio)", unidad: "und", cantidad: 1, precio: 180 }],
+    manoObra: [
+      { categoria: "Operario", cuadrilla: 1, rendimiento: 5, jornal: JORNAL.Operario },
+      { categoria: "Peón", cuadrilla: 0.5, rendimiento: 5, jornal: JORNAL.Peón },
+    ],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuVidrioSimple(): ApuDef {
+  return {
+    materiales: [{ insumo: "Vidrio simple incoloro 4mm", unidad: "m²", cantidad: 1.05, precio: 45 }],
+    manoObra: [{ categoria: "Operario", cuadrilla: 1, rendimiento: 15, jornal: JORNAL.Operario }],
+    equipos: [herramientas3pct()],
+  };
+}
+
+function apuCerraduraPerilla(): ApuDef {
+  return {
+    materiales: [{ insumo: "Cerradura de perilla", unidad: "und", cantidad: 1, precio: 35 }],
+    manoObra: [{ categoria: "Operario", cuadrilla: 1, rendimiento: 10, jornal: JORNAL.Operario }],
+    equipos: [herramientas3pct()],
+  };
+}
+
 function apuLimpiezaObra(): ApuDef {
   return {
     materiales: [],
@@ -457,6 +497,10 @@ export function defaultApuFor(partida: string, unidad: string): ApuDef | null {
   if (unidad === "m" && /cerco de obra/i.test(partida)) return apuCercoObra();
   if (unidad === "m²" && /trazos?,?\s*niveles\s*y\s*replanteo/i.test(partida)) return apuTrazoReplanteo();
   if (unidad === "m²" && /limpieza/i.test(partida)) return apuLimpiezaObra();
+  if (unidad === "und" && /puerta/i.test(partida) && /madera/i.test(partida)) return apuPuertaMadera();
+  if (unidad === "und" && /ventana/i.test(partida) && /madera/i.test(partida)) return apuVentanaMadera();
+  if (unidad === "m²" && /vidrio/i.test(partida)) return apuVidrioSimple();
+  if (unidad === "und" && /cerradura/i.test(partida)) return apuCerraduraPerilla();
   return null;
 }
 

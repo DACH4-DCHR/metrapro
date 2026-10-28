@@ -106,7 +106,13 @@ export const ESTRUCTURAL_SECCION_COLOR: Record<(typeof ESTRUCTURAL_SECCIONES_ORD
 // "Acabados" comunica mejor esa relación que inventarles colores categóricos
 // nuevos (que ya no caben en la paleta fija de 8 matices del proyecto).
 export const ACABADOS_MODULO_COLOR: Record<
-  "tarrajeoInteriores" | "tarrajeoExteriores" | "tarrajeoEscalera" | "pisosPavimentos" | "pintura" | "cielorraso",
+  | "tarrajeoInteriores"
+  | "tarrajeoExteriores"
+  | "tarrajeoEscalera"
+  | "pisosPavimentos"
+  | "pintura"
+  | "cielorraso"
+  | "carpinteria",
   string
 > = {
   tarrajeoInteriores: "#4a3aa7",
@@ -115,6 +121,7 @@ export const ACABADOS_MODULO_COLOR: Record<
   pisosPavimentos: "#b3a3e8",
   pintura: "#d6cef2",
   cielorraso: "#e4defa",
+  carpinteria: "#ece8fb",
 };
 
 // Costo directo del presupuesto (sin GG/Utilidad/IGV, que son porcentajes

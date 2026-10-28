@@ -18,7 +18,8 @@ export type ModuleType =
   | "pisosPavimentos"
   | "pintura"
   | "cielorraso"
-  | "obrasProvisionales";
+  | "obrasProvisionales"
+  | "carpinteria";
 
 // Cómo repartir el costo de una partida entre mano de obra y materiales en el
 // Dashboard cuando no tiene un APU real. "mixto" (el default de siempre) usa

@@ -25,6 +25,7 @@ import { TarrajeoEscaleraPage } from "./pages/TarrajeoEscalera";
 import { PisosPavimentosPage } from "./pages/PisosPavimentos";
 import { PinturaPage } from "./pages/Pintura";
 import { CielorrasoPage } from "./pages/Cielorraso";
+import { CarpinteriaPage } from "./pages/Carpinteria";
 import { LoginPage } from "./pages/Login";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { TermsPage, PrivacyPage } from "./pages/Legal";
@@ -96,6 +97,7 @@ function ProjectGate() {
           <Route path="/pisos-pavimentos" element={<PisosPavimentosPage />} />
           <Route path="/pintura" element={<PinturaPage />} />
           <Route path="/cielorraso" element={<CielorrasoPage />} />
+          <Route path="/carpinteria" element={<CarpinteriaPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

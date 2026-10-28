@@ -324,10 +324,30 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
     codigo: "10",
     titulo: "Arquitectura — Carpintería y Vidrios",
     partidas: [
-      { codigo: "10.01", descripcion: "Puerta contraplacada de madera", unidad: "und" },
-      { codigo: "10.02", descripcion: "Ventana de madera", unidad: "und" },
-      { codigo: "10.03", descripcion: "Vidrio simple incoloro", unidad: "m²" },
-      { codigo: "10.04", descripcion: "Cerradura de perilla para puerta", unidad: "und" },
+      {
+        codigo: "10.01",
+        descripcion: "Puerta contraplacada de madera",
+        unidad: "und",
+        modulo: { label: "Carpintería y Vidrios", path: "/carpinteria" },
+      },
+      {
+        codigo: "10.02",
+        descripcion: "Ventana de madera",
+        unidad: "und",
+        modulo: { label: "Carpintería y Vidrios", path: "/carpinteria" },
+      },
+      {
+        codigo: "10.03",
+        descripcion: "Vidrio simple incoloro",
+        unidad: "m²",
+        modulo: { label: "Carpintería y Vidrios", path: "/carpinteria" },
+      },
+      {
+        codigo: "10.04",
+        descripcion: "Cerradura de perilla para puerta",
+        unidad: "und",
+        modulo: { label: "Carpintería y Vidrios", path: "/carpinteria" },
+      },
     ],
   },
   {

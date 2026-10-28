@@ -29,6 +29,7 @@ export const MODULE_ORDER: ModuleType[] = [
   "pisosPavimentos",
   "pintura",
   "cielorraso",
+  "carpinteria",
 ];
 
 // Suma cantidades de partidas repetidas (mismo texto + unidad) dentro de una

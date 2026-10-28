@@ -19,6 +19,7 @@ import {
   PaintBucket,
   PanelTop,
   Cone,
+  DoorOpen,
 } from "lucide-react";
 import { MODULE_LABELS } from "../../lib/moduleLabels";
 import type { ModuleType } from "../../lib/types";
@@ -44,4 +45,5 @@ export const moduleMeta: Record<ModuleType, { label: string; icon: typeof Layers
   pintura: { label: MODULE_LABELS.pintura, icon: PaintBucket },
   cielorraso: { label: MODULE_LABELS.cielorraso, icon: PanelTop },
   obrasProvisionales: { label: MODULE_LABELS.obrasProvisionales, icon: Cone },
+  carpinteria: { label: MODULE_LABELS.carpinteria, icon: DoorOpen },
 };
