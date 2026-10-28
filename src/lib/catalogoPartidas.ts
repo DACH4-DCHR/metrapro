@@ -226,9 +226,24 @@ export const CATALOGO_PARTIDAS: CapituloCatalogo[] = [
         unidad: "m²",
         modulo: { label: "Tarrajeo de Exteriores", path: "/tarrajeo-exteriores" },
       },
-      { codigo: "06.03", descripcion: "Tarrajeo en columnas", unidad: "m²" },
-      { codigo: "06.04", descripcion: "Tarrajeo en vigas", unidad: "m²" },
-      { codigo: "06.05", descripcion: "Vestidura de derrames", unidad: "m" },
+      {
+        codigo: "06.03",
+        descripcion: "Tarrajeo en columnas",
+        unidad: "m²",
+        modulo: { label: "Tarrajeo de Interiores", path: "/acabados" },
+      },
+      {
+        codigo: "06.04",
+        descripcion: "Tarrajeo en vigas",
+        unidad: "m²",
+        modulo: { label: "Tarrajeo de Interiores", path: "/acabados" },
+      },
+      {
+        codigo: "06.05",
+        descripcion: "Vestidura de derrames",
+        unidad: "m",
+        modulo: { label: "Tarrajeo de Interiores", path: "/acabados" },
+      },
     ],
   },
   {
