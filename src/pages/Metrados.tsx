@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { ListChecks, ClipboardList, Weight, ShoppingCart, Trash2 } from "lucide-react";
+import { ListChecks, ClipboardList, Weight, ShoppingCart, Trash2, BookMarked } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { ResultTable } from "../components/ui/ResultTable";
 import { ElementosGuardadosTable } from "../components/dashboard/ElementosGuardadosTable";
 import { ExportSectionButtons } from "../components/dashboard/ExportSectionButtons";
 import { AddCustomLineForm } from "../components/dashboard/AddCustomLineForm";
+import { CatalogoPartidasSection } from "../components/dashboard/CatalogoPartidasSection";
 import { PriceInput } from "../components/dashboard/PriceInput";
 import { ScopeTabs, type ScopeTab } from "../components/dashboard/ScopeTabs";
 import { moduleMeta } from "../components/dashboard/moduleMeta";
@@ -41,6 +42,20 @@ export function MetradosPage() {
 
       <div className="flex flex-col gap-6 p-6">
         <ScopeTabs value={tab} onChange={setTab} />
+
+        <SectionCard
+          title="Catálogo de partidas"
+          icon={<BookMarked size={16} className="text-navy-700" />}
+          collapsible
+          defaultCollapsed
+        >
+          <div className="mb-4 text-xs text-steel-500">
+            Las 68 partidas típicas de un presupuesto de edificación, por capítulo. Las que ya tienen un módulo en
+            MetraPro llevan un enlace directo; las marcadas "Sin módulo" se cargan a mano en Presupuesto mientras no
+            tengan uno propio.
+          </div>
+          <CatalogoPartidasSection />
+        </SectionCard>
 
         <SectionCard title="Elementos guardados" icon={<ListChecks size={16} className="text-navy-700" />} collapsible>
           {elementosGuardados.length === 0 ? (
